@@ -1,0 +1,68 @@
+name: Branch And Commit Policy
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  policy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate branch naming
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}"
+
+          if [[ "$BRANCH" =~ ^(main|master)$ ]]; then
+            echo "Branch '$BRANCH' is exempt."
+            exit 0
+          fi
+
+          if [[ "$BRANCH" =~ ^(feat|fix|chore)\/[a-z0-9][a-z0-9\-]*$ ]]; then
+            echo "Branch '$BRANCH' passes policy."
+            exit 0
+          fi
+
+          echo "Branch '$BRANCH' violates policy. Use feat/<scope>, fix/<scope>, or chore/<scope>."
+          exit 1
+
+      - name: Validate commit messages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            BASE_REF="${{ github.base_ref }}"
+            git fetch origin "$BASE_REF" --depth=1
+            RANGE="origin/$BASE_REF..HEAD"
+          else
+            if git rev-parse HEAD~1 >/dev/null 2>&1; then
+              RANGE="HEAD~1..HEAD"
+            else
+              RANGE="HEAD"
+            fi
+          fi
+
+          BAD=0
+          while IFS= read -r msg; do
+            [[ -z "$msg" ]] && continue
+            if [[ ! "$msg" =~ ^(feat|fix|chore|docs|test)\([a-z0-9\-]+\):\ .+ ]]; then
+              echo "Invalid commit message: $msg"
+              BAD=1
+            fi
+          done < <(git log --format=%s $RANGE)
+
+          if [[ "$BAD" -ne 0 ]]; then
+            echo "Commit message policy failed."
+            exit 1
+          fi
+
+          echo "Commit message policy passed."
