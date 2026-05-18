@@ -1,0 +1,28 @@
+# Nested repository
+/admin/
+
+# Flutter artifacts
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+
+# Node artifacts
+**/node_modules/
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.p12
+*.key
+
+# Supabase local runtime artifacts
+supabase/.temp/
+supabase/.branches/
+
+# Editor/system
+.vscode/
+.DS_Store
+Thumbs.db
