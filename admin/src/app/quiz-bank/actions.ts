@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import {
+  bulkCreateQuestions,
   createQuestionRecord,
   createQuizRecord,
   deactivateQuestionRecord,
@@ -13,9 +14,12 @@ import {
   parseUpdateQuizInput,
   updateQuestionRecord,
   updateQuizRecord,
+  type BulkCreateQuestionsResult,
+  type BulkQuestionInput,
   type QuestionRecord,
   type QuizRecord,
 } from "@/lib/quiz-write";
+import type { CsvQuestionDraft } from "@/lib/quiz-csv";
 
 export type QuizActionResult<T> =
   | { ok: true; data: T }
@@ -142,5 +146,43 @@ export async function deactivateQuestionAction(
     return { ok: true, data: question };
   } catch (err) {
     return fail(err, "Failed to deactivate question.");
+  }
+}
+
+/* ============================================================================
+ * Bulk CSV import
+ * ========================================================================== */
+
+function draftsToBulkInputs(drafts: CsvQuestionDraft[]): BulkQuestionInput[] {
+  return drafts.map((d) => ({
+    prompt: d.prompt,
+    options: d.options,
+    correctIndex: d.correctIndex,
+    explanation: d.explanation,
+    clinicalArea: d.clinicalArea,
+    tags: d.tags,
+    position: d.position,
+    isActive: d.isActive,
+  }));
+}
+
+export async function importQuestionsAction(
+  quizId: string,
+  quizSlug: string,
+  drafts: CsvQuestionDraft[],
+): Promise<QuizActionResult<BulkCreateQuestionsResult>> {
+  if (!quizId || !quizSlug) {
+    return { ok: false, message: "quizId and quizSlug are required." };
+  }
+  if (!Array.isArray(drafts) || drafts.length === 0) {
+    return { ok: false, message: "No rows to import." };
+  }
+  try {
+    const result = await bulkCreateQuestions(quizId, draftsToBulkInputs(drafts));
+    revalidatePath(`/quiz-bank/${quizSlug}`);
+    revalidatePath("/quiz-bank");
+    return { ok: true, data: result };
+  } catch (err) {
+    return fail(err, "Failed to import questions.");
   }
 }

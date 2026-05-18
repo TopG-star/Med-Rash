@@ -5,6 +5,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
 import { getAdminQuizDetailBySlug } from "@/lib/quiz-detail-queries";
 
+import { CsvImportPanel } from "./csv-import-panel";
 import { QuestionManager } from "./question-manager";
 import { QuizEditForm } from "./quiz-edit-form";
 
@@ -77,6 +78,13 @@ export default async function QuizDetailPage({ params }: PageProps) {
             Questions
           </h2>
           <QuestionManager quizId={quiz.id} quizSlug={quiz.slug} questions={questions} />
+        </PanelCard>
+
+        <PanelCard className="space-y-4">
+          <h2 className="font-[family-name:var(--font-anybody)] text-xl font-extrabold uppercase tracking-tight">
+            CSV Bulk Import
+          </h2>
+          <CsvImportPanel quizId={quiz.id} quizSlug={quiz.slug} />
         </PanelCard>
       </div>
     </AdminShell>

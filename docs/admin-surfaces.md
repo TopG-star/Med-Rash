@@ -132,13 +132,46 @@ type AdminQuestion = {
   through the admin app's own deployment-gate.
 
 ### 3.8 Risks / future hooks
-- **CSV bulk upload** is still a UI stub (ships in Phase 4c).
+- **CSV bulk upload** ships in §3.9 (Phase 4c).
 - **Versioning** — when a question is edited mid-session, attempts.answers
   rows already reference the old prompt; the soft-delete + immutable
   `created_at` model preserves the trail, but the UI should warn before
   editing a quiz that has live sessions.
 - **Reorder** is not yet a single transaction; for now position is
   manually editable per-question via the update op.
+
+### 3.9 CSV bulk import (Phase 4c)
+
+- **UI:** `CsvImportPanel` mounted on `/quiz-bank/[slug]`. Browser parses
+  the CSV with `papaparse` (dynamic-imported to keep it out of the initial
+  route bundle), shows a preview of valid drafts + a per-row error list,
+  and only commits on the **Import N Questions** button press.
+- **Validator:** `admin/src/lib/quiz-csv.ts` (client-safe — no
+  `server-only` deps so the panel can reuse it). `parseCsvQuestionRows`
+  emits `{ drafts, errors }` with one `CsvRowError` per offending source
+  row.
+- **Server commit:** `importQuestionsAction(quizId, quizSlug, drafts)` →
+  `bulkCreateQuestions(quizId, inputs)` in `quiz-write.ts`. Quiz existence
+  is verified once; positions auto-assign sequentially from
+  `nextQuestionPosition` (skipped on per-row failure so the next row
+  reuses the slot). Per-row failures are returned as
+  `{ index, message }[]` so partial imports tell the admin exactly which
+  drafts didn't land.
+- **Netlify op:** `POST /.netlify/functions/quiz-bank-write` with
+  `{ op: "bulk_create_questions", payload: { quizId, rows: CsvRowInput[] } }`.
+  The function re-runs `parseCsvQuestionRows` server-side so external
+  callers can't bypass validation; response is
+  `{ ok, createdCount, failures, rowErrors }`.
+- **CSV format:**
+  - Required columns: `prompt, option_1, option_2, option_3, option_4,
+    correct_index, explanation`.
+  - Optional columns: `clinical_area, tags, position, is_active`.
+  - `correct_index` is **1-based** (1..4) for human friendliness; the
+    validator converts to the DB's 0-based index.
+  - `tags` cell is pipe-separated, e.g. `guideline|product`.
+  - `is_active` accepts `true/false/1/0/yes/no/y/n/active/inactive`,
+    defaults to `true`.
+- **Cap:** 500 rows per call (matches `bulkCreateQuestions` guardrail).
 
 ---
 

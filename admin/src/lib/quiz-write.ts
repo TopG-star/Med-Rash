@@ -531,3 +531,92 @@ export async function deactivateQuestionRecord(id: string): Promise<QuestionReco
   }
   return mapQuestion(data as QuestionRowDb);
 }
+
+/* ============================================================================
+ * Bulk question import (CSV)
+ * ========================================================================== */
+
+export type BulkQuestionInput = Omit<CreateQuestionInput, "quizId" | "position"> & {
+  position?: number | null;
+};
+
+export type BulkCreateQuestionsResult = {
+  created: QuestionRecord[];
+  failures: Array<{ index: number; message: string }>;
+};
+
+/**
+ * Insert many questions for a single quiz. Quiz existence is verified once
+ * up-front. Positions auto-increment from the current max if not provided,
+ * keeping insert order deterministic.
+ *
+ * Per-row failures are captured (so a partial import still tells the caller
+ * exactly which CSV rows didn't land) rather than aborting the whole batch
+ * — matches the UX where the admin sees a preview and chooses to commit
+ * everything that validated.
+ */
+export async function bulkCreateQuestions(
+  quizId: string,
+  inputs: BulkQuestionInput[],
+): Promise<BulkCreateQuestionsResult> {
+  if (inputs.length === 0) {
+    return { created: [], failures: [] };
+  }
+  if (inputs.length > 500) {
+    throw new Error("bulkCreateQuestions accepts at most 500 rows per call.");
+  }
+
+  const supabase = getAdminSupabaseClient();
+
+  const { data: quiz, error: quizErr } = await supabase
+    .from("quizzes")
+    .select("id")
+    .eq("id", quizId)
+    .maybeSingle();
+  if (quizErr) {
+    throw new Error(`Failed to verify quiz: ${quizErr.message}`);
+  }
+  if (!quiz) {
+    throw new Error("Quiz not found for the supplied quizId.");
+  }
+
+  let nextPos = await nextQuestionPosition(quizId);
+
+  const created: QuestionRecord[] = [];
+  const failures: Array<{ index: number; message: string }> = [];
+
+  for (let i = 0; i < inputs.length; i += 1) {
+    const row = inputs[i];
+    const position =
+      row.position === undefined || row.position === null ? nextPos++ : row.position;
+
+    const { data, error } = await supabase
+      .from("questions")
+      .insert({
+        quiz_id: quizId,
+        prompt: row.prompt,
+        options: row.options,
+        correct_index: row.correctIndex,
+        explanation: row.explanation,
+        clinical_area: row.clinicalArea,
+        tags: row.tags,
+        position,
+        is_active: row.isActive,
+      })
+      .select(QUESTION_COLUMNS)
+      .single();
+
+    if (error) {
+      failures.push({ index: i, message: error.message });
+      // If we used an auto-assigned slot, recycle it so the next row reuses it.
+      if (row.position === undefined || row.position === null) {
+        nextPos -= 1;
+      }
+      continue;
+    }
+
+    created.push(mapQuestion(data as QuestionRowDb));
+  }
+
+  return { created, failures };
+}

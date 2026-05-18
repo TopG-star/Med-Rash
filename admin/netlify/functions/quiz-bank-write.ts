@@ -1,6 +1,7 @@
 import { HandlerEvent, jsonResponse, parseJsonBody, requirePost } from "./_shared/http";
 import { requireAdminWriteAuthorization } from "./_shared/admin-gate";
 import {
+  bulkCreateQuestions,
   createQuestionRecord,
   createQuizRecord,
   deactivateQuestionRecord,
@@ -11,7 +12,9 @@ import {
   parseUpdateQuizInput,
   updateQuestionRecord,
   updateQuizRecord,
+  type BulkQuestionInput,
 } from "../../src/lib/quiz-write";
+import { parseCsvQuestionRows, type CsvRowInput } from "../../src/lib/quiz-csv";
 
 type Operation =
   | "create_quiz"
@@ -19,7 +22,8 @@ type Operation =
   | "deactivate_quiz"
   | "create_question"
   | "update_question"
-  | "deactivate_question";
+  | "deactivate_question"
+  | "bulk_create_questions";
 
 const SUPPORTED_OPS: ReadonlySet<Operation> = new Set([
   "create_quiz",
@@ -28,6 +32,7 @@ const SUPPORTED_OPS: ReadonlySet<Operation> = new Set([
   "create_question",
   "update_question",
   "deactivate_question",
+  "bulk_create_questions",
 ]);
 
 function isOperation(value: unknown): value is Operation {
@@ -119,6 +124,52 @@ export async function handler(event: HandlerEvent) {
         }
         const question = await deactivateQuestionRecord(id);
         return jsonResponse(200, { ok: true, question });
+      }
+      case "bulk_create_questions": {
+        const quizId = typeof payload!.quizId === "string" ? payload!.quizId : "";
+        if (!quizId) {
+          return jsonResponse(400, {
+            ok: false,
+            code: "MISSING_QUIZ_ID",
+            message: "payload.quizId is required.",
+          });
+        }
+        const rowsRaw = payload!.rows;
+        if (!Array.isArray(rowsRaw)) {
+          return jsonResponse(400, {
+            ok: false,
+            code: "INVALID_INPUT",
+            message: "payload.rows must be an array of CSV row objects.",
+          });
+        }
+        const { drafts, errors: rowErrors } = parseCsvQuestionRows(
+          rowsRaw as CsvRowInput[],
+        );
+        if (drafts.length === 0) {
+          return jsonResponse(400, {
+            ok: false,
+            code: "NO_VALID_ROWS",
+            message: "No rows passed validation.",
+            rowErrors,
+          });
+        }
+        const inputs: BulkQuestionInput[] = drafts.map((d) => ({
+          prompt: d.prompt,
+          options: d.options,
+          correctIndex: d.correctIndex,
+          explanation: d.explanation,
+          clinicalArea: d.clinicalArea,
+          tags: d.tags,
+          position: d.position,
+          isActive: d.isActive,
+        }));
+        const result = await bulkCreateQuestions(quizId, inputs);
+        return jsonResponse(201, {
+          ok: true,
+          createdCount: result.created.length,
+          failures: result.failures,
+          rowErrors,
+        });
       }
     }
   } catch (err) {
