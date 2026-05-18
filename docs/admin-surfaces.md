@@ -125,50 +125,62 @@ it before any DB write so admin UI and any future API share rules.
 ## 4. Surface 2 — Sessions
 
 ### 4.1 Page route
-`admin/src/app/sessions/page.tsx` — currently UI stub.
+`admin/src/app/sessions/page.tsx` — list + create form **implemented**.
 
 ### 4.2 Data shapes
 
 ```ts
-type AdminSession = {
+type AdminSessionRow = {
   id: string;
-  joinCode: string;       // human-friendly e.g. "KBTH-CME-2026"
-  title: string;
-  quizSlug: string;
-  host: string;
+  joinCode: string;       // 6-char unambiguous (excludes 0/O/1/I/L)
+  name: string;
+  hostName: string | null;
+  quizId: string;
+  quizTitle: string | null;
   startsAt: string | null;
   endsAt: string | null;
-  isActive: boolean;
-  participantsCount: number;     // distinct attempts.user_id
-  completionRate: number | null; // 0..1
-  shareUrl: string;              // deep link for QR
+  isActiveNow: boolean;          // computed from clock vs [starts_at, ends_at]
+  attemptCount: number;
+  createdAt: string;
 };
 ```
 
-### 4.3 Server reads
-- `listSessions({ activeOnly?: boolean })` — joins `app.sessions` with
-  aggregates from `app.attempts`. Uses the existing `app.session_kpis(uuid)`
-  RPC for per-session metrics.
-- `getSession(id)` — full session + computed KPIs.
+### 4.3 Server reads (implemented)
+- `listAdminSessions()` — `admin/src/lib/session-queries.ts`. Newest first,
+  limit 50, joins `quizzes(title)` and `attempts(id)` for counts, computes
+  `isActiveNow` server-side.
+- `listActiveQuizOptions()` — drop-down source for the create form.
 
-### 4.4 Server actions (future)
-- `createSession(input)` — generates `joinCode` (5-char alphanumeric with
-  collision retry), sets `is_active=true`, returns `{ id, joinCode,
-  shareUrl }`. Share URL is composed from `NEXT_PUBLIC_APP_DEEP_LINK_BASE`.
-- `endSession(id)` — sets `is_active=false`; no destructive delete.
-- `exportSessionData(id, format: 'csv'|'xlsx')` — streams a download.
+### 4.4 Writes (implemented)
+- **Server Action** `createSessionAction` (`admin/src/app/sessions/actions.ts`)
+  — used by the in-app form; delegates to `createSessionRecord` and
+  `revalidatePath('/sessions')`.
+- **Netlify Function** `POST /.netlify/functions/session-create` — same
+  canonical logic, gated by `MEDRASH_ADMIN_WRITE_KEY` via header
+  `x-medrash-admin-write-key`. For scripted/external admin use.
+- Both paths call `createSessionRecord` in `admin/src/lib/session-create.ts`:
+  validates quiz exists + is_active, generates 6-char join code from
+  alphabet `ABCDEFGHJKMNPQRSTUVWXYZ23456789`, retries up to 8× on PG
+  unique-violation (`23505`), inserts into `app.sessions`, returns
+  `{ session, joinUrl }`.
 
-### 4.5 QR generation
-- QR rendering happens **client-side** from `shareUrl` via `qrcode.react`
-  (to be added). Server returns the URL; client renders the bitmap. This
-  keeps the server stateless.
+### 4.5 QR generation (implemented)
+- Canonical payload: HTTPS web link `${MEDRASH_APP_PUBLIC_BASE_URL}/session/{joinCode}`
+  (matches Flutter route in `app/lib/core/routing/user_router.dart`).
+- Rendered **client-side** via dynamic `import('qrcode')` →
+  `toDataURL(joinUrl, { margin: 1, width: 220 })` inside the create form's
+  success state.
 
-### 4.6 Risks / future hooks
-- Join-code collisions are rare but possible; the create action must retry
-  up to N times with a unique-violation guard, mirroring the pattern in
-  `_shared/supabase.ts` (`isUniqueViolation`).
-- Cohort-level filtering (facility, specialty) belongs to a future analytics
-  panel layered on top of `app.facility_performance()`.
+### 4.6 Required env vars
+- `MEDRASH_ADMIN_WRITE_KEY` — shared secret for admin-write Netlify
+  endpoints (required for `session-create`; future writes will reuse).
+- `MEDRASH_APP_PUBLIC_BASE_URL` — origin used to compose join URLs; must
+  resolve to the participant entry point.
+
+### 4.7 Risks / future hooks
+- `endSession(id)` and `exportSessionData(id, format)` are still TODO.
+- Cohort-level filtering (facility, specialty) belongs to a future
+  analytics panel layered on top of `app.facility_performance()`.
 
 ---
 
