@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
 import { listAdminQuizzes, type AdminQuizSummary } from "@/lib/quiz-bank-queries";
@@ -28,13 +30,12 @@ export default async function QuizBankPage() {
           >
             Bulk Upload (CSV)
           </button>
-          <button
-            className="arena-button bg-[var(--arena-primary)] px-5 py-3 font-semibold opacity-60"
-            disabled
-            title="Create flow ships in a follow-up commit."
+          <Link
+            href="/quiz-bank/new"
+            className="arena-button bg-[var(--arena-primary)] px-5 py-3 font-semibold"
           >
             Create New Quiz
-          </button>
+          </Link>
         </>
       }
     >
@@ -82,9 +83,17 @@ export default async function QuizBankPage() {
                     <span>{quiz.isActive ? "active" : "inactive"}</span>
                   </div>
                 </div>
-                <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
-                  {quiz.questionCount} Question{quiz.questionCount === 1 ? "" : "s"}
-                </p>
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
+                    {quiz.questionCount} Question{quiz.questionCount === 1 ? "" : "s"}
+                  </p>
+                  <Link
+                    href={`/quiz-bank/${quiz.slug}`}
+                    className="arena-button bg-[var(--arena-surface)] px-4 py-2 text-sm font-semibold"
+                  >
+                    Manage
+                  </Link>
+                </div>
               </div>
               {quiz.sampleQuestions.length > 0 ? (
                 <div className="overflow-hidden rounded-[16px] border-[3px] border-[var(--arena-outline)]">
@@ -98,22 +107,6 @@ export default async function QuizBankPage() {
                           Q-{101 + index}
                         </p>
                         <p className="mt-1 font-medium">{prompt}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          className="arena-button bg-[var(--arena-surface)] px-3 py-2 text-sm font-semibold opacity-60"
-                          disabled
-                          title="Edit flow ships in a follow-up commit."
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="arena-button bg-[var(--arena-danger)] px-3 py-2 text-sm font-semibold opacity-60"
-                          disabled
-                          title="Delete flow ships in a follow-up commit."
-                        >
-                          Delete
-                        </button>
                       </div>
                     </div>
                   ))}

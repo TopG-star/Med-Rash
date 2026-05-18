@@ -87,38 +87,58 @@ type AdminQuestion = {
 ### 3.3 Server reads
 - `listAdminQuizzes()` — joins `app.quizzes` left-join `count(app.questions)`,
   ordered by `updated_at desc`. Returns `AdminQuizSummary[]`.
-- `getAdminQuiz(slug)` — returns one quiz + ordered questions.
+- `getAdminQuizDetailBySlug(slug)` — returns one quiz + all questions
+  (active + inactive) ordered by position. Source for `/quiz-bank/[slug]`.
 
-### 3.4 Server actions (future commit)
-- `upsertQuiz(input)` — create or update by slug. Validates slug
-  uniqueness, non-empty title, product enum.
-- `deleteQuiz(slug)` — soft-delete by setting `is_active=false`. Hard
-  delete only if `attempts` and `questions` cascades have run. Add a
-  confirmation modal in the UI.
-- `upsertQuestion(input)` — create or update. Validates options length ≥ 2,
-  `correct_index` within bounds, position auto-increments.
-- `reorderQuestions(slug, orderedIds[])` — bulk-update positions in a
-  single transaction.
-- `deleteQuestion(id)` — hard delete. Block if `app.answers` reference it
-  (FK guard).
+### 3.4 Writes (implemented)
+- **Canonical lib** `admin/src/lib/quiz-write.ts` —
+  `createQuizRecord`, `updateQuizRecord`, `deactivateQuizRecord` (soft
+  delete via `is_active=false`), `createQuestionRecord` (auto-positions
+  to end if `position` not provided), `updateQuestionRecord`,
+  `deactivateQuestionRecord`. Validates slug shape, exactly 4 options
+  (pilot), `correct_index` in 0..3, non-empty explanation, tag
+  normalization (lowercase, dedup, ≤48 chars each).
+- **Server Actions** `admin/src/app/quiz-bank/actions.ts` — used by the
+  in-app forms; revalidate `/quiz-bank` and `/quiz-bank/{slug}`.
+- **Netlify Function** `POST /.netlify/functions/quiz-bank-write` —
+  shared-secret gated via `MEDRASH_ADMIN_WRITE_KEY` header
+  `x-medrash-admin-write-key`. Body shape:
+  `{ op: 'create_quiz'|'update_quiz'|'deactivate_quiz'|'create_question'|'update_question'|'deactivate_question', payload?: {...}, id?: string }`.
 
 ### 3.5 Validation contract
-- Slug: `^[a-z0-9][a-z0-9-]{2,63}$`
-- Title: trimmed, 3..160 chars
-- Product: one of the values seeded in `003_quiz_product_and_position.sql`
-  (extendable via migration)
-- Question options: 2..6 items, each trimmed, 1..240 chars
+- Slug: `^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$` (1..64 chars, lowercase)
+- Title: trimmed, ≤160 chars
+- Product: optional free text ≤80 chars (no enum yet)
+- Question options: **exactly 4** for pilot (`PILOT_QUESTION_OPTION_COUNT`
+  in `admin/src/lib/quiz-bank-types.ts`), each trimmed, non-empty, unique
+  case-insensitively, ≤400 chars
+- Explanation: required, ≤1200 chars (consumed by Flutter end-of-game
+  review and the planned "intelligent reveal after repeated misses" flow)
+- Tags: free-form string array, lowercased + deduped, each ≤48 chars
+  (suggested chips: `guideline`, `product`)
 
-Validation lives in a single `validators.ts` per surface; server actions call
-it before any DB write so admin UI and any future API share rules.
+### 3.6 Deletion policy
+- **Soft delete only.** Both `deactivateQuizRecord` and
+  `deactivateQuestionRecord` flip `is_active=false`. Historical
+  `app.attempts` + `app.answers` rows that reference the row continue to
+  resolve, so analytics (most-missed, KPI exports) remain accurate.
+- A future commit may add a hard-delete admin op gated by an explicit
+  "no historical references" precondition.
 
-### 3.6 Risks / future hooks
-- **CSV bulk upload** button is currently a UI stub. Future: a Server Action
-  accepts a parsed CSV (papaparse in client), validates rows, opens a
-  preview, then commits in a transaction.
-- **Versioning** — when a quiz is edited mid-session, the `app.attempts`
-  rows already reference the old question IDs. The schema supports this; UI
-  should warn before bulk-editing an active quiz.
+### 3.7 Required env vars
+- `MEDRASH_ADMIN_WRITE_KEY` — shared secret used by both the
+  `session-create` and `quiz-bank-write` Netlify endpoints. Required only
+  when those endpoints are exposed; the in-app server actions are reached
+  through the admin app's own deployment-gate.
+
+### 3.8 Risks / future hooks
+- **CSV bulk upload** is still a UI stub (ships in Phase 4c).
+- **Versioning** — when a question is edited mid-session, attempts.answers
+  rows already reference the old prompt; the soft-delete + immutable
+  `created_at` model preserves the trail, but the UI should warn before
+  editing a quiz that has live sessions.
+- **Reorder** is not yet a single transaction; for now position is
+  manually editable per-question via the update op.
 
 ---
 
