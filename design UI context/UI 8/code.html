@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Session Join Landing Page</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@700;800&amp;family=Hanken+Grotesk:wght@500;600;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error": "#ba1a1a",
+                        "surface-container": "#eeeeee",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#73f6fb",
+                        "on-secondary-fixed": "#002021",
+                        "surface-tint": "#705d00",
+                        "secondary": "#00696c",
+                        "surface-container-highest": "#e2e2e2",
+                        "primary-fixed-dim": "#e4c542",
+                        "primary-container": "#ffde59",
+                        "tertiary-fixed": "#ffd8e9",
+                        "on-tertiary-fixed": "#3c0029",
+                        "primary": "#705d00",
+                        "on-surface": "#1b1b1b",
+                        "on-secondary-container": "#007073",
+                        "inverse-primary": "#e4c542",
+                        "background": "#f9f9f9",
+                        "secondary-fixed-dim": "#52d9de",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e2e2e2",
+                        "outline-variant": "#cfc6af",
+                        "on-background": "#1b1b1b",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container-high": "#e8e8e8",
+                        "tertiary-fixed-dim": "#ffaed8",
+                        "tertiary-container": "#ffd4e7",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f3f3f3",
+                        "inverse-surface": "#303030",
+                        "outline": "#7e7763",
+                        "on-secondary-fixed-variant": "#004f52",
+                        "surface-bright": "#f9f9f9",
+                        "tertiary": "#ad1d7f",
+                        "primary-fixed": "#ffe16e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#b22383",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#4c4735",
+                        "on-primary-fixed-variant": "#544600",
+                        "surface-dim": "#dadada",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#890063",
+                        "secondary-fixed": "#73f6fb",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#756100",
+                        "on-primary-fixed": "#221b00",
+                        "surface": "#f9f9f9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "shadow-offset": "4px",
+                        "container-margin": "20px",
+                        "gutter": "16px",
+                        "stack-sm": "8px",
+                        "base": "8px",
+                        "stack-lg": "24px",
+                        "border-width": "3px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Hanken Grotesk", "sans-serif"],
+                        "label-caps": ["Hanken Grotesk", "sans-serif"],
+                        "headline-md": ["Anybody", "sans-serif"],
+                        "headline-lg": ["Anybody", "sans-serif"],
+                        "headline-lg-mobile": ["Anybody", "sans-serif"],
+                        "headline-sm": ["Anybody", "sans-serif"],
+                        "data-point": ["Anybody", "sans-serif"],
+                        "body-lg": ["Hanken Grotesk", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "500" }],
+                        "label-caps": ["12px", { "lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "800" }],
+                        "headline-md": ["24px", { "lineHeight": "1.2", "fontWeight": "800" }],
+                        "headline-lg": ["32px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800" }],
+                        "headline-lg-mobile": ["28px", { "lineHeight": "1.1", "fontWeight": "800" }],
+                        "headline-sm": ["20px", { "lineHeight": "1.2", "fontWeight": "700" }],
+                        "data-point": ["16px", { "lineHeight": "1", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.5", "fontWeight": "600" }]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        /* Neo-Brutalist utility classes for explicit borders and shadows */
+        .brutal-border {
+            border: 3px solid #1b1b1b;
+        }
+        .brutal-shadow {
+            box-shadow: 4px 4px 0px 0px #1b1b1b;
+        }
+        .brutal-shadow-sm {
+             box-shadow: 2px 2px 0px 0px #1b1b1b;
+        }
+        .brutal-button-active:active {
+            box-shadow: 0px 0px 0px 0px #1b1b1b;
+            transform: translate(4px, 4px);
+            transition: all 0.1s ease-in-out;
+        }
+        
+        /* Dot grid background pattern */
+        .dot-pattern {
+            background-image: radial-gradient(#cfc6af 1.5px, transparent 1.5px);
+            background-size: 16px 16px;
+            background-position: 0 0;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background dot-pattern min-h-screen flex flex-col font-body-md antialiased selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar (Transactional - Hidden or Minimal) -->
+<header class="w-full top-0 px-container-margin py-base border-b-3 border-on-background bg-background flex items-center justify-between h-16 z-10 sticky">
+<button aria-label="Go back" class="text-on-background hover:opacity-80 active:translate-x-1 active:translate-y-1 transition-all flex items-center justify-center p-2 rounded-full hover:bg-surface-container">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_back</span>
+</button>
+<h1 class="font-anybody text-headline-sm uppercase text-on-background flex-1 text-center pr-10 tracking-wide">
+            JOIN SESSION
+        </h1>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-container-margin py-stack-lg flex flex-col items-center justify-center max-w-2xl mx-auto w-full gap-stack-lg">
+<!-- Session Details Card -->
+<div class="w-full bg-surface-container-lowest brutal-border brutal-shadow rounded-2xl p-stack-lg flex flex-col gap-stack-md relative overflow-hidden">
+<!-- Decorative accent -->
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary-container rounded-bl-full -z-0 opacity-50 brutal-border border-t-0 border-r-0"></div>
+<div class="z-10 flex flex-col gap-stack-sm">
+<div class="flex flex-wrap gap-2 mb-2">
+<span class="bg-secondary-container text-on-secondary-fixed-variant text-label-caps uppercase px-3 py-1 rounded-full brutal-border border-2">Cardiology</span>
+<span class="bg-tertiary-container text-on-tertiary-container text-label-caps uppercase px-3 py-1 rounded-full brutal-border border-2">CME</span>
+</div>
+<h2 class="font-anybody text-headline-lg-mobile md:text-headline-lg text-on-background leading-tight">
+                    Korle Bu CME - May 2026
+                </h2>
+<p class="text-body-lg text-on-surface-variant mt-2">
+                    Advanced Electrocardiogram Interpretation for Emergency Scenarios.
+                </p>
+</div>
+<div class="z-10 grid grid-cols-2 gap-gutter mt-stack-sm p-4 bg-surface-variant brutal-border rounded-xl">
+<div class="flex flex-col items-center justify-center p-2 text-center">
+<span class="material-symbols-outlined text-4xl mb-1 text-primary" style="font-variation-settings: 'FILL' 1;">quiz</span>
+<span class="font-anybody text-headline-md">25</span>
+<span class="text-label-caps text-on-surface-variant uppercase">Questions</span>
+</div>
+<div class="flex flex-col items-center justify-center p-2 text-center border-l-3 border-on-background">
+<span class="material-symbols-outlined text-4xl mb-1 text-secondary" style="font-variation-settings: 'FILL' 1;">timer</span>
+<span class="font-anybody text-headline-md">30m</span>
+<span class="text-label-caps text-on-surface-variant uppercase">Time Limit</span>
+</div>
+</div>
+<div class="z-10 mt-2 flex items-center gap-3 bg-surface-container p-3 rounded-lg brutal-border border-2">
+<img alt="Dr. Kwame Profile Picture" class="w-10 h-10 rounded-full brutal-border border-2 object-cover" data-alt="A small, stylized profile portrait of a confident male doctor in a modern, slightly abstracted digital art style. Bright, flat colors, light background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQ96rLa8PDeqUQ_Wnt0fjV74L-sLcymcNLUWK6Go5vERbFUrFdijxglrLfkLzRIPyKHN3Pc63GYa3gHTPq8Dljs9A-tHchu1bMIdOnS4DcXm36pPVt2pZecnXBkSLQT7MqXG_GDUCW7cylZE0SjGJ-Ye1LJi-0waovs3b6_pBhRT0dfeqCSGLIOReDp-1GsfUvaVK2YqWwWgW6jPZGFn-8IVTqGRMDgqOElryZyqq11bLEKcIvSx9sW0r1QEZJoYTGRFXIc4lKA"/>
+<div>
+<p class="text-label-caps text-on-surface-variant uppercase">Hosted by</p>
+<p class="font-body-md text-on-background font-bold">Dr. Kwame (Admin)</p>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="w-full flex flex-col gap-stack-md mt-stack-sm">
+<button class="w-full bg-primary-container text-on-primary-container brutal-border brutal-shadow brutal-button-active rounded-xl py-4 px-6 flex flex-col items-center justify-center relative group overflow-hidden">
+<div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+<div class="relative z-10 flex flex-col items-center gap-1">
+<span class="font-anybody text-headline-sm uppercase tracking-wide">Ranked Mode</span>
+<span class="text-label-caps opacity-80 uppercase">1 Attempt • Competitive Scoring</span>
+</div>
+<span class="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 opacity-50 group-hover:opacity-100 group-hover:translate-x-2 transition-all" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+</button>
+<button class="w-full bg-surface-container-lowest text-on-background brutal-border brutal-shadow brutal-button-active rounded-xl py-4 px-6 flex flex-col items-center justify-center relative group overflow-hidden">
+<div class="absolute inset-0 bg-secondary-container/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+<div class="relative z-10 flex flex-col items-center gap-1">
+<span class="font-anybody text-headline-sm uppercase tracking-wide">Learning Mode</span>
+<span class="text-label-caps text-on-surface-variant uppercase">Unlimited Attempts • Explanations</span>
+</div>
+<span class="material-symbols-outlined absolute right-6 top-1/2 -translate-y-1/2 opacity-50 group-hover:opacity-100 group-hover:translate-x-2 transition-all text-secondary" style="font-variation-settings: 'FILL' 0;">school</span>
+</button>
+</div>
+</main>
+<!-- Suppressed BottomNav - Transactional Page -->
+<!-- Nav intentionally omitted per Semantic Shell Mandate for focused journeys -->
+</body></html>

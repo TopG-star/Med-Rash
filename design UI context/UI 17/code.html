@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quiz Runner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-dot-pattern {
+            background-image: radial-gradient(circle, #4d4354 1px, transparent 1px);
+            background-size: 8px 8px;
+        }
+    </style>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+                "surface-dim": "#131313",
+                "secondary-fixed": "#6bff8f",
+                "on-secondary-container": "#004119",
+                "surface-container-low": "#1c1b1b",
+                "primary-fixed-dim": "#ddb7ff",
+                "inverse-primary": "#842bd2",
+                "tertiary-container": "#009eb9",
+                "secondary-container": "#00b954",
+                "secondary": "#4ae176",
+                "on-secondary-fixed": "#002109",
+                "secondary-fixed-dim": "#4ae176",
+                "on-primary-fixed-variant": "#6900b3",
+                "on-background": "#e5e2e1",
+                "on-surface": "#e5e2e1",
+                "outline": "#988d9f",
+                "surface-container": "#201f1f",
+                "on-primary": "#490080",
+                "outline-variant": "#4d4354",
+                "surface-tint": "#ddb7ff",
+                "tertiary": "#4cd7f6",
+                "inverse-on-surface": "#313030",
+                "primary-fixed": "#f0dbff",
+                "on-error-container": "#ffdad6",
+                "inverse-surface": "#e5e2e1",
+                "on-tertiary": "#003640",
+                "surface-container-lowest": "#0e0e0e",
+                "error": "#ffb4ab",
+                "surface": "#131313",
+                "surface-variant": "#353534",
+                "surface-bright": "#3a3939",
+                "on-surface-variant": "#cfc2d6",
+                "on-primary-container": "#400071",
+                "on-secondary-fixed-variant": "#005321",
+                "on-tertiary-container": "#002f38",
+                "surface-container-high": "#2a2a2a",
+                "tertiary-fixed": "#acedff",
+                "error-container": "#93000a",
+                "surface-container-highest": "#353534",
+                "background": "#131313",
+                "on-secondary": "#003915",
+                "on-primary-fixed": "#2c0051",
+                "tertiary-fixed-dim": "#4cd7f6",
+                "on-error": "#690005",
+                "primary": "#ddb7ff",
+                "primary-container": "#b76dff",
+                "on-tertiary-fixed": "#001f26",
+                "on-tertiary-fixed-variant": "#004e5c"
+        },
+        "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+        },
+        "spacing": {
+                "margin-desktop": "48px",
+                "shadow-offset": "6px",
+                "gutter": "24px",
+                "margin-mobile": "16px",
+                "border-width": "3px",
+                "base": "8px"
+        },
+        "fontFamily": {
+                "headline-md": [
+                        "Space Grotesk"
+                ],
+                "headline-lg-mobile": [
+                        "Space Grotesk"
+                ],
+                "headline-xl": [
+                        "Space Grotesk"
+                ],
+                "body-lg": [
+                        "Inter"
+                ],
+                "label-sm": [
+                        "Space Mono"
+                ],
+                "label-md": [
+                        "Space Mono"
+                ],
+                "body-md": [
+                        "Inter"
+                ],
+                "headline-lg": [
+                        "Space Grotesk"
+                ]
+        },
+        "fontSize": {
+                "headline-md": [
+                        "24px",
+                        {
+                                "lineHeight": "1.3",
+                                "fontWeight": "600"
+                        }
+                ],
+                "headline-lg-mobile": [
+                        "32px",
+                        {
+                                "lineHeight": "1.2",
+                                "fontWeight": "700"
+                        }
+                ],
+                "headline-xl": [
+                        "64px",
+                        {
+                                "lineHeight": "1.1",
+                                "letterSpacing": "-0.02em",
+                                "fontWeight": "700"
+                        }
+                ],
+                "body-lg": [
+                        "18px",
+                        {
+                                "lineHeight": "1.6",
+                                "fontWeight": "400"
+                        }
+                ],
+                "label-sm": [
+                        "12px",
+                        {
+                                "lineHeight": "1.0",
+                                "fontWeight": "500"
+                        }
+                ],
+                "label-md": [
+                        "14px",
+                        {
+                                "lineHeight": "1.0",
+                                "letterSpacing": "0.05em",
+                                "fontWeight": "500"
+                        }
+                ],
+                "body-md": [
+                        "16px",
+                        {
+                                "lineHeight": "1.5",
+                                "fontWeight": "400"
+                        }
+                ],
+                "headline-lg": [
+                        "40px",
+                        {
+                                "lineHeight": "1.2",
+                                "fontWeight": "700"
+                        }
+                ]
+        }
+},
+    },
+  }
+</script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md h-screen flex flex-col bg-dot-pattern">
+<!-- TopAppBar -->
+<header class="bg-background text-on-background w-full top-0 px-margin-mobile py-base border-b-border-width border-outline flex items-center justify-between h-16 sticky z-50">
+<button aria-label="Go back" class="text-on-background hover:text-primary active:translate-x-1 active:translate-y-1 transition-all">
+<span class="material-symbols-outlined text-2xl" data-icon="close">close</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background uppercase text-center flex-1">QUIZ</h1>
+<div class="w-6"></div> <!-- Spacer for balance -->
+</header>
+<!-- Main Canvas -->
+<main class="flex-1 flex flex-col p-margin-mobile gap-gutter overflow-y-auto">
+<!-- Progress Bar & Meta -->
+<div class="flex flex-col gap-base w-full max-w-md mx-auto">
+<div class="flex justify-between items-center px-1">
+<span class="font-label-md text-label-md text-on-surface-variant">Question 2 of 5</span>
+<div class="flex items-center gap-1 text-tertiary">
+<span class="material-symbols-outlined" data-icon="timer" style="font-variation-settings: 'FILL' 1;">timer</span>
+<span class="font-label-md text-label-md">00:45</span>
+</div>
+</div>
+<!-- Progress Bar Neo-Brutalist -->
+<div class="w-full h-4 bg-surface-container-lowest border-border-width border-outline rounded-full overflow-hidden relative shadow-[2px_2px_0_0_#988d9f]">
+<div class="h-full bg-primary absolute left-0 top-0 border-r-border-width border-outline" style="width: 40%;"></div>
+</div>
+</div>
+<!-- Question Category Chip -->
+<div class="flex justify-center w-full">
+<span class="bg-secondary text-on-secondary px-3 py-2 rounded-full border-border-width border-outline font-label-sm text-label-sm uppercase inline-flex items-center gap-1 shadow-[2px_2px_0_0_#988d9f]">
+<span class="material-symbols-outlined text-sm" data-icon="medication">medication</span>
+                Infectious Diseases
+            </span>
+</div>
+<!-- Question Card -->
+<div class="bg-surface-container border-border-width border-outline rounded-xl p-gutter shadow-[4px_4px_0_0_#988d9f] w-full max-w-md mx-auto flex flex-col gap-gutter relative mt-4">
+<!-- Pin decoration top right -->
+<div class="absolute -top-3 -right-3 w-6 h-6 bg-tertiary border-border-width border-outline rounded-full shadow-[2px_2px_0_0_#988d9f] z-10 flex items-center justify-center">
+<div class="w-2 h-2 bg-on-tertiary rounded-full"></div>
+</div>
+<h2 class="font-headline-md text-headline-md text-center">What is the recommended first-line treatment for uncomplicated malaria in Ghana?</h2>
+<!-- Options Form -->
+<form class="flex flex-col gap-margin-mobile">
+<!-- Option 1: Inactive -->
+<label class="group relative block cursor-pointer">
+<input class="peer sr-only" name="quiz_option" type="radio" value="A"/>
+<div class="bg-surface-container-low border-border-width border-outline rounded-xl p-margin-mobile flex items-center gap-margin-mobile transition-all shadow-[4px_4px_0_0_#988d9f] peer-checked:bg-primary-container peer-checked:shadow-[0px_0px_0_0_#988d9f] peer-checked:translate-y-[4px] peer-checked:translate-x-[4px] hover:bg-surface-container-high">
+<div class="w-8 h-8 flex-shrink-0 bg-surface-variant border-border-width border-outline rounded-full flex items-center justify-center font-label-md text-label-md peer-checked:bg-on-primary-container peer-checked:text-primary-container peer-checked:border-on-primary-container transition-colors">A</div>
+<span class="font-body-lg text-body-lg flex-1 peer-checked:text-on-primary-container">Artesunate-Amodiaquine</span>
+</div>
+</label>
+<!-- Option 2: Active/Selected State Example -->
+<label class="group relative block cursor-pointer">
+<input checked="" class="peer sr-only" name="quiz_option" type="radio" value="B"/>
+<div class="bg-surface-container-low border-border-width border-outline rounded-xl p-margin-mobile flex items-center gap-margin-mobile transition-all shadow-[4px_4px_0_0_#988d9f] peer-checked:bg-primary-container peer-checked:shadow-[0px_0px_0_0_#988d9f] peer-checked:translate-y-[4px] peer-checked:translate-x-[4px] hover:bg-surface-container-high">
+<div class="w-8 h-8 flex-shrink-0 bg-on-primary-container text-primary-container border-border-width border-on-primary-container rounded-full flex items-center justify-center font-label-md text-label-md transition-colors">B</div>
+<span class="font-body-lg text-body-lg flex-1 font-bold text-on-primary-container">Artemether-Lumefantrine</span>
+</div>
+</label>
+<!-- Option 3: Inactive -->
+<label class="group relative block cursor-pointer">
+<input class="peer sr-only" name="quiz_option" type="radio" value="C"/>
+<div class="bg-surface-container-low border-border-width border-outline rounded-xl p-margin-mobile flex items-center gap-margin-mobile transition-all shadow-[4px_4px_0_0_#988d9f] peer-checked:bg-primary-container peer-checked:shadow-[0px_0px_0_0_#988d9f] peer-checked:translate-y-[4px] peer-checked:translate-x-[4px] hover:bg-surface-container-high">
+<div class="w-8 h-8 flex-shrink-0 bg-surface-variant border-border-width border-outline rounded-full flex items-center justify-center font-label-md text-label-md peer-checked:bg-on-primary-container peer-checked:text-primary-container peer-checked:border-on-primary-container transition-colors">C</div>
+<span class="font-body-lg text-body-lg flex-1 peer-checked:text-on-primary-container">Quinine</span>
+</div>
+</label>
+<!-- Option 4: Inactive -->
+<label class="group relative block cursor-pointer">
+<input class="peer sr-only" name="quiz_option" type="radio" value="D"/>
+<div class="bg-surface-container-low border-border-width border-outline rounded-xl p-margin-mobile flex items-center gap-margin-mobile transition-all shadow-[4px_4px_0_0_#988d9f] peer-checked:bg-primary-container peer-checked:shadow-[0px_0px_0_0_#988d9f] peer-checked:translate-y-[4px] peer-checked:translate-x-[4px] hover:bg-surface-container-high">
+<div class="w-8 h-8 flex-shrink-0 bg-surface-variant border-border-width border-outline rounded-full flex items-center justify-center font-label-md text-label-md peer-checked:bg-on-primary-container peer-checked:text-primary-container peer-checked:border-on-primary-container transition-colors">D</div>
+<span class="font-body-lg text-body-lg flex-1 peer-checked:text-on-primary-container">Sulfadoxine-Pyrimethamine</span>
+</div>
+</label>
+</form>
+</div>
+<!-- Action Area (Submit/Next) - Anchored bottom in flow -->
+<div class="w-full max-w-md mx-auto mt-auto pt-gutter pb-gutter">
+<button class="w-full bg-secondary text-on-secondary border-border-width border-outline rounded-xl py-4 px-6 font-headline-md text-headline-md uppercase shadow-[4px_4px_0_0_#988d9f] hover:bg-secondary-container active:translate-y-[4px] active:translate-x-[4px] active:shadow-[0px_0px_0_0_#988d9f] transition-all flex items-center justify-center gap-2" type="button">
+                Submit Answer
+                <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</main>
+<!-- Suppressed BottomNavBar & NavigationDrawer as this is a linear/transactional focused task -->
+</body></html>

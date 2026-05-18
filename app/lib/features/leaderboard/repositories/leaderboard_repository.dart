@@ -1,0 +1,33 @@
+import '../models/leaderboard_row.dart';
+
+enum LeaderboardPeriod { monthly, allTime }
+
+abstract class LeaderboardRepository {
+  Future<List<LeaderboardRow>> fetchLeaderboard(LeaderboardPeriod period);
+}
+
+class InMemoryLeaderboardRepository implements LeaderboardRepository {
+  static const List<LeaderboardRow> _allTimeRows = <LeaderboardRow>[
+    LeaderboardRow(rank: 1, name: 'Setor', score: 22200),
+    LeaderboardRow(rank: 2, name: 'Papa Ekow', score: 11807),
+    LeaderboardRow(rank: 3, name: 'eddykay7', score: 11338),
+    LeaderboardRow(rank: 4, name: 'rpsjosh', score: 9088, isCurrentUser: true),
+    LeaderboardRow(rank: 5, name: 'LordRa', score: 2566),
+    LeaderboardRow(rank: 6, name: 'Ssstylar', score: 2100),
+    LeaderboardRow(rank: 7, name: 'haadi', score: 1710),
+    LeaderboardRow(rank: 8, name: 'manuelson', score: 684),
+  ];
+
+  static const List<LeaderboardRow> _monthlyRows = <LeaderboardRow>[
+    LeaderboardRow(rank: 1, name: 'rpsjosh', score: 1200, isCurrentUser: true),
+    LeaderboardRow(rank: 2, name: 'Setor', score: 1100),
+    LeaderboardRow(rank: 3, name: 'Papa Ekow', score: 1020),
+    LeaderboardRow(rank: 4, name: 'eddykay7', score: 980),
+    LeaderboardRow(rank: 5, name: 'LordRa', score: 720),
+  ];
+
+  @override
+  Future<List<LeaderboardRow>> fetchLeaderboard(LeaderboardPeriod period) async {
+    return period == LeaderboardPeriod.allTime ? _allTimeRows : _monthlyRows;
+  }
+}

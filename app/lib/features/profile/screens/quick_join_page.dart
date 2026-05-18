@@ -1,0 +1,199 @@
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/di/get_it.dart';
+import '../../../core/infra/auth_state_manager.dart';
+import '../../../core/ui/operation_runner_state.dart';
+import '../../../core/ui/widgets/arena_button.dart';
+import '../../../core/ui/widgets/arena_card.dart';
+import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../../core/theme/theme_extensions.dart';
+import '../repositories/profile_repository.dart';
+
+class QuickJoinPage extends StatefulWidget {
+  const QuickJoinPage({super.key});
+
+  @override
+  State<QuickJoinPage> createState() => _QuickJoinPageState();
+}
+
+class _QuickJoinPageState extends State<QuickJoinPage>
+    with OperationRunnerState<QuickJoinPage> {
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _facilityController = TextEditingController();
+  late final ProfileRepository _profileRepository;
+  String _specialty = 'Doctor';
+  String _nickname = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _profileRepository = getIt<ProfileRepository>();
+    _nickname = _profileRepository.generateNickname();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _facilityController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+
+    return ArenaScaffold(
+      title: 'Join The Academy',
+      showBack: false,
+      child: ListView(
+        children: <Widget>[
+          Text('FULL NAME', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 8),
+          _ArenaTextField(
+            controller: _nameController,
+            hintText: 'Enter your full name',
+            onChanged: (String value) {
+              setState(() {
+                if (value.trim().isNotEmpty) {
+                  _nickname = _profileRepository.generateNickname(fullName: value);
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 20),
+          Text('FACILITY', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 8),
+          _ArenaTextField(
+            controller: _facilityController,
+            hintText: 'e.g. Korle-Bu Teaching Hospital',
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 20),
+          Text('SPECIALTY', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 8),
+          ArenaCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: DropdownButtonFormField<String>(
+              initialValue: _specialty,
+              decoration: const InputDecoration(border: InputBorder.none),
+              items: const <String>['Doctor', 'Pharmacist', 'Nurse', 'Medical Rep']
+                  .map(
+                    (String value) => DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (String? value) {
+                if (value == null) {
+                  return;
+                }
+                setState(() {
+                  _specialty = value;
+                });
+              },
+            ),
+          ),
+          const SizedBox(height: 28),
+          Text(
+            'YOUR AUTO-GENERATED TAG',
+            style: Theme.of(context).textTheme.labelMedium,
+          ),
+          const SizedBox(height: 8),
+          ArenaCard(
+            color: tokens.secondary,
+            child: Row(
+              children: <Widget>[
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: tokens.primary,
+                  child: const Icon(Icons.person, color: Colors.black),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(_nickname, style: Theme.of(context).textTheme.titleLarge),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Ready for the leaderboard',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _nickname = _profileRepository.generateNickname(
+                        fullName: _nameController.text,
+                      );
+                    });
+                  },
+                  icon: const Icon(Icons.edit_outlined),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 40),
+          ArenaButton(
+            label: 'Start Playing',
+            onPressed: _canStart
+                ? () async {
+                    await runOperation(() async {
+                      await _profileRepository.quickJoin(
+                        fullName: _nameController.text,
+                        facility: _facilityController.text,
+                        specialty: _specialty,
+                        nickname: _nickname,
+                      );
+                      await getIt<AuthStateManager>().markJoined();
+                    });
+                    if (context.mounted) {
+                      context.go('/home');
+                    }
+                  }
+                : null,
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool get _canStart {
+    return _nameController.text.trim().isNotEmpty &&
+        _facilityController.text.trim().isNotEmpty;
+  }
+}
+
+class _ArenaTextField extends StatelessWidget {
+  const _ArenaTextField({
+    required this.controller,
+    required this.hintText,
+    this.onChanged,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+
+    return ArenaCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: TextField(
+        controller: controller,
+        decoration: InputDecoration(
+          hintText: hintText,
+          border: InputBorder.none,
+          hintStyle: TextStyle(color: tokens.textSecondary),
+        ),
+        onChanged: onChanged,
+      ),
+    );
+  }
+}

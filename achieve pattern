@@ -1,0 +1,569 @@
+The Core Idea
+Every feature follows the same shape:
+
+Model — define the data
+
+Repository — fetch, cache, and mutate it
+
+Screen — extend DataPage, implement three methods, done
+
+Route — register it
+
+That's what a developer thinks about. Everything else — loading states, error handling, caching, auth refresh, analytics, token expiry, maintenance mode — is handled by the architecture. A screen doesn't catch errors. It doesn't manage loading spinners. It doesn't know auth tokens exist. It calls a repository, assigns the result to a field, and returns widgets.
+
+The rest of this article explains the pieces that make that possible — and what a screen doesn't have to do because of them.
+
+How the App Boots
+Before any screen renders, the app initializes in a specific order:
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  await initCore(); // registers all repositories, event bus, services
+  runApp(const App());
+}
+
+initCore() is where all the wiring happens — every repository, the EventBus, analytics, the network client — registered in GetIt as singletons or lazy singletons. By the time the first widget builds, every service is accessible via getIt.get<T>().
+
+The App widget listens to auth state and swaps between two completely separate routers:
+
+if (authStateManager.isAuthenticated) {
+  return UserHost(routerConfig: userRouter);
+}
+return GuestHost(routerConfig: guestRouter);
+
+The guest router handles login, registration, and onboarding. The user router handles everything else. They don't know about each other. When auth state changes, the entire router is replaced — which naturally clears the navigation stack. No redirect guards, no "if not logged in, push to login" scattered across screens.
+
+Data Layer
+Repository + Caching Mixin
+Each feature has a repository: abstract interface + concrete implementation. The implementation mixes in RepositoryMixin, which gives you three caching strategies:
+
+class GoalRepositoryImpl with RepositoryMixin implements GoalRepository {
+  @override
+  Future<List<Goal>> fetchGoals() {
+    return runPersistedQuery(
+      key: 'goals',
+      remote: () => apiClient.runQuery(const FetchGoalsRequest()),
+      deserialize: (data) => (data['goals'] as List)
+          .map((e) => Goal.fromJson(e))
+          .toList(),
+    );
+  }
+}
+
+runPersistedQuery — On first call, it fetches from the network and saves the result to SharedPreferences. On subsequent calls, it returns the cached version immediately — no network call at all. The screen renders instantly. When the data needs to be fresh (pull-to-refresh, after a mutation, or a screen that always wants the latest), pass remoteOnly: true to skip the cache and hit the network. This is what you'd use for things like a user's list of savings goals or their profile — data that doesn't change every second. Combined with DataPage's auto-refresh on focus, the cache gets updated naturally as the user navigates around the app.
+
+runSecureQuery — Same cache-then-refresh pattern, but stores data in encrypted storage instead of SharedPreferences. For anything you wouldn't want exposed if someone pulled the app's local storage — auth tokens, account balances, transaction history.
+
+runEphemeralQuery — Caches in memory only. The data lives for the app session and disappears on restart. Good for search results, filtered lists, or anything that's contextual to what the user is doing right now rather than something you'd want to persist.
+
+runOperation — No caching at all, just error wrapping. This is for mutations — creating a goal, making a withdrawal, updating a profile. You don't cache writes.
+
+You can pass remoteOnly: true to any of the cached methods when you need a guaranteed fresh fetch — useful for pull-to-refresh or after a mutation when you know the cached data is stale. And if cached data fails to deserialize (say, after a schema change in an app update), it doesn't crash — it silently falls through to a network fetch. The cache is a performance optimization, not something the app depends on for correctness.
+
+GetIt — Service Locator
+All repositories are registered as lazy singletons in a single file:
+
+final getIt = GetIt.instance;
+
+Future<void> initCore() async {
+  getIt.registerSingleton<EventBus>(EventBus());
+  getIt.registerLazySingleton<GoalRepository>(() => GoalRepositoryImpl());
+  getIt.registerLazySingleton<WalletRepository>(() => WalletRepositoryImpl());
+  // ...
+}
+
+Accessed anywhere via getIt.get<GoalRepository>(). Register against the abstract interface so you can swap implementations for testing or backend migration.
+
+We chose GetIt over Riverpod/Provider because repositories need to be accessible outside the widget tree — in interceptors, in other repositories, in utility classes. GetIt doesn't care about BuildContext.
+
+Screen Layer
+DataPage — The Screen Lifecycle
+This is probably the highest-impact pattern. Every screen that loads async data extends DataPage and implements three methods:
+
+class _GoalListPageState extends DataPage<GoalListPage> {
+  List<Goal> goals = [];
+
+  @override
+  Future<void> onLoad() async {
+    goals = await getIt.get<GoalRepository>().fetchGoals();
+  }
+
+  @override
+  Future<void> onRefresh() => onLoad();
+
+  @override
+  Widget buildPage(BuildContext context) {
+    return ListView.builder(
+      itemCount: goals.length,
+      itemBuilder: (_, i) => GoalTile(goal: goals[i]),
+    );
+  }
+}
+
+No initState. No setState. No loading spinners. No error handling. No try/catch.
+
+DataPage provides all of it:
+
+Shows a loading state until onLoad completes
+
+Shows an error widget with retry if it throws
+
+Only calls buildPage when data is ready
+
+Manages setState internally — just assign your fields in onLoad
+
+onLoad is called the first time the page gains focus. onRefresh is called on every subsequent focus — when the user navigates back, switches tabs, or resumes the app. Most screens just point onRefresh at onLoad to reload everything. The separation exists for screens where the initial load is heavier than a refresh — say, a screen that fetches a list and runs an expensive aggregation on first load, but only re-fetches the list on refresh.
+
+The key detail: DataPage wraps everything in FocusDetector. When a user navigates away and comes back (pop, tab switch, app resume), onRefresh fires automatically. The list always shows fresh data without any coordination between screens.
+
+This eliminates an entire class of bugs. "I created a goal but it didn't show up in the list" — gone. Every DataPage refreshes on focus.
+
+OperationRunnerState — User Actions
+DataPage handles reads. OperationRunnerState handles writes — and DataPage extends it, so every screen gets both.
+
+When a user taps Submit, Save, or Delete:
+
+await runOperation('create_goal', () async {
+  await goalRepository.createGoal(request);
+  await onRefresh(); // reload the list
+}, showLoader: true);
+
+That's it. runOperation handles:
+
+Showing a loading overlay (via OverlayManager — more on that below)
+
+Hiding it when done
+
+Catching errors
+
+Showing an error dialog
+
+Logging the operation for analytics
+
+Sometimes the default error dialog isn't the right response. For example, during login, if the API returns "account deactivated", you don't want a generic error — you want to offer the user a reactivation flow. The errorHandler callback lets you intercept specific failures:
+
+await runOperation('create_session', () async {
+  await authRepository.createSession(email, password);
+}, errorHandler: (error) async {
+  if (!error.message.toLowerCase().contains('deactivated')) return false;
+
+  // Handle deactivated accounts with a custom reactivation flow
+  if (await maybeActivateAccount()) {
+    await authRepository.createSession(email, password);
+  }
+  return true; // suppress default error dialog
+});
+
+Return true from the handler to suppress the default dialog (you've handled it). Return false to let the default dialog show.
+
+Child Widgets and PageReloaded
+DataPage handles page-level data loading. But real screens aren't a single flat list — they're composed of multiple widgets that each have their own data. A portfolio page might have a balance card, a goals list, a recent transactions section, and a promotions banner. Each loads different data from different repositories.
+
+You could put all of that in the page's onLoad and pass everything down as constructor params. But that makes the page fat and the child widgets dumb. We prefer child widgets that know how to load their own data.
+
+The problem: when DataPage refreshes (user comes back to the page), it calls onRefresh which reloads the page-level data. But the child widgets don't know the page refreshed — they're sitting there with stale data.
+
+PageReloaded solves this. When DataPage refreshes, it emits a PageReloaded event via EventBus. Any child widget that manages its own data can listen for it:
+
+class _BalanceCardState extends State<BalanceCard> 
+    implements EventBusListener {
+
+  double balance = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    getIt.get<EventBus>().registerListener<PageReloaded>(this);
+    _loadBalance();
+  }
+
+  @override
+  void onEvent(event) {
+    if (event is PageReloaded) _loadBalance();
+  }
+
+  Future<void> _loadBalance() async {
+    balance = await getIt.get<WalletRepository>().getBalance();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    getIt.get<EventBus>().unregisterListener<PageReloaded>(this);
+    super.dispose();
+  }
+}
+
+The page doesn't know or care what child widgets it contains. It just says "I refreshed" and each child independently decides whether it needs to reload. You can add, remove, or rearrange child widgets without touching the page's onLoad.
+
+Navigation
+Routing and Data Passing
+We use GoRouter with two separate routers — a guest router for unauthenticated screens (login, registration, onboarding) and a user router for everything else. The swap happens at the app level based on auth state (described in "How the App Boots" above).
+
+Path Parameters for IDs
+When navigating to a detail screen, IDs go in the path. This makes routes bookmarkable and deep-linkable:
+
+GoRoute(
+  path: 'goals/:id',
+  builder: (context, state) => GoalDetailsPage(
+    goalId: state.pathParameters['id']!,
+  ),
+),
+
+Navigation: context.pushNamed(UserRoutes.goalDetails, pathParameters: {'id': goalId}).
+
+Extra for Objects
+Sometimes you already have the full object — you loaded it on the previous screen, and passing just the ID would mean the next screen loads it again from the API. extra lets you pass the object directly:
+
+GoRoute(
+  path: 'detail',
+  builder: (context, state) =>
+      PayslipDetailPage(payslip: state.extra as PayrollPaySlip),
+),
+
+Navigation: context.pushNamed(UserRoutes.payslipDetail, extra: payslip).
+
+The tradeoff is that extra doesn't survive app restarts or deep links — if the user opens the URL directly, extra is null. So we use it for drill-down navigation where the parent screen always exists, and fall back to fetching by ID when extra is null:
+
+class _PayslipDetailPageState extends DataPage<PayslipDetailPage> {
+  late PayrollPaySlip payslip;
+
+  @override
+  Future<void> onLoad() async {
+    // Use the passed object if available, otherwise fetch
+    payslip = widget.payslip ?? 
+        await getIt.get<PayrollRepository>().getPayslip(widget.payslipId);
+  }
+}
+
+This gives you instant navigation (no loading spinner when drilling down from a list) with a fallback for direct access.
+
+What Doesn't Go in Routes
+Business state — like "which step of a multi-screen flow am I on" or "what filters are currently applied" — doesn't belong in route parameters. That lives in a state manager or repository, accessed via GetIt. Routes are for navigation identity (which screen, which entity), not for transient state.
+
+Infrastructure
+OverlayManager — App-Level Loading
+The loading overlay lives above all routes. It's a widget that wraps the entire app in a Stack:
+
+MaterialApp.router(
+  builder: (context, child) => OverlayManager(child: child!),
+  routerConfig: router,
+);
+
+When any screen calls OverlayManager.pageBusy(), a scrim + spinner appears on top of everything. OverlayManager.pageIdle() hides it. Back navigation is blocked while busy.
+
+Why not show the overlay per-screen? Because screens can dispose during async operations. User taps Submit, then quickly navigates back — the operation completes, tries to hide the overlay, but the screen's State is already disposed. With a per-screen OverlayEntry, that's a crash or a leaked overlay. The app-level OverlayManager doesn't have this problem — it outlives every screen.
+
+Here's how the pieces connect: when runOperation needs to show a loader, it calls OverlayManager.pageBusy(). That's a static method that emits a PageBusyStateChanged(true) event through the EventBus. The OverlayManager widget — sitting at the top of the widget tree — is listening for that event. When it receives it, it sets busy = true and rebuilds, which adds the LoaderView to the stack. When the operation finishes, OverlayManager.pageIdle() emits PageBusyStateChanged(false), and the loader disappears.
+
+runOperation never touches the overlay directly. It doesn't hold a reference to the OverlayManager widget or know where it lives in the tree. The EventBus decouples them completely — which is why the overlay survives screen disposal.
+
+EventBus — Decoupled Communication
+Simple typed pub/sub for cross-feature side effects:
+
+// Emit from anywhere
+getIt.get<EventBus>().emit(AuthStateChanged.loggedOut());
+
+// Listen from anywhere
+eventBus.registerListener<AuthStateChanged>(this);
+
+@override
+void onEvent(event) {
+  if (event is AuthStateChanged) handleLogout();
+}
+
+We use it for:
+
+PageBusyStateChanged — OverlayManager listens, shows/hides loader
+
+AuthStateChanged — app-level auth state transitions
+
+UserDataChanged — KYC completion, profile updates
+
+NetworkStateChanged — maintenance mode, token expiry
+
+PageReloaded — DataPage telling child widgets to refresh
+
+Not for direct data passing between screens. That goes through route parameters or the repository layer. The EventBus is for "something happened" — fire-and-forget notifications.
+
+The Error Flow
+This is where the architecture earns its keep. Every piece described above participates in error handling, and no screen has to think about any of it.
+
+Layer 1: Network Interceptors
+Dio interceptors sit at the bottom of the stack. Every HTTP request passes through them, and they handle infrastructure-level errors before any repository or screen ever sees them.
+
+Auth expiry — the GraphQL error interceptor watches for UNAUTHENTICATED responses. When it catches one, it doesn't throw. Instead, it pauses all in-flight requests, calls a token refresh function, and if the refresh succeeds, resumes and retries every queued request with the new token. The user never knows it happened — their operation just takes a beat longer.
+
+Future<bool> onGraphQLError(List<GraphQLError?> errors) async {
+  final authError = errors.firstWhereOrNull(
+    (e) => e?.extensions?['code'] == 'UNAUTHENTICATED',
+  );
+
+  if (authError != null) {
+    gqlClient.pauseRequests();
+    final isSuccess = await refreshSession();
+    gqlClient.resumeRequests();
+
+    if (isSuccess) return true; // retry the failed request
+
+    // Refresh failed — session is dead
+    getIt.get<EventBus>().emit(NetworkStateChanged.authTokenExpired());
+  }
+  return false;
+}
+
+If the token refresh fails, it emits NetworkStateChanged.authTokenExpired() via EventBus. The AppStateManager listens for that event and transitions the entire app to the login screen. No screen handles this. No screen even knows auth tokens exist.
+
+Maintenance mode — the network error interceptor watches for 503 responses and emits NetworkStateChanged.maintenance(). The app transitions to a maintenance screen. Again, no screen handles this — it happens at the app level.
+
+void onNetworkError(NetworkError error) {
+  if (error.message.contains('503')) {
+    getIt.get<EventBus>().emit(NetworkStateChanged.maintenance());
+  }
+}
+
+Layer 2: Repository Mixin
+Errors that make it past the interceptors (validation errors, business logic errors, unexpected failures) hit the repository mixin. runOperation wraps them into typed OperationFailure objects with human-readable messages. Raw Dio exceptions, JSON parse errors, null pointer exceptions — the mixin catches all of them and wraps them so the UI layer never sees a stack trace.
+
+Layer 3: OperationRunnerState
+This is where the user finally sees something. When runOperation catches an OperationFailure, it does three things:
+
+Hides the loading overlay — calls OverlayManager.pageIdle() so the scrim disappears
+
+Logs an analytics event — operation name + failure reason, so you can track error rates per feature
+
+Shows an error dialog — clean message, OK button, no stack trace
+
+} catch (e) {
+  if (showLoader) OverlayManager.pageIdle();
+
+  if (e is OperationFailure) {
+    logOperationEvent(name, OperationState.failed(e.message));
+    if (await errorHandler?.call(e) ?? false) return null;
+  }
+
+  if (mounted) await showError(context, e.toString());
+}
+
+The errorHandler callback is the escape hatch. Most errors get the default dialog. But if a specific error needs a custom response — like offering account reactivation on a "deactivated" login error — the screen provides a handler that returns true to suppress the default dialog.
+
+What Screens Don't Handle
+This is the important part. A screen in Achieve:
+
+Never catches auth errors — the interceptor handles token refresh transparently, or emits a logout event
+
+Never catches 503s — the interceptor emits a maintenance event and the app transitions
+
+Never catches raw exceptions — the repository mixin wraps them
+
+Never shows error UI manually — runOperation shows the dialog
+
+Never manages loading state for operations — OverlayManager handles the overlay
+
+A screen calls runOperation, provides the happy path, and optionally handles one or two business-specific errors. Everything else is the architecture's problem.
+
+What a Feature Looks Like
+In Achieve, a "feature" is a vertical slice of the app — a self-contained domain with its own data, its own API calls, and its own screens. Goals is a feature. Wallet is a feature. Insurance is a feature. We have 30+ of them.
+
+Each feature follows the same file structure:
+
+features/goal/
+  └── goal_repository.dart       # Abstract interface + implementation
+
+core/models/
+  └── goal.dart                   # Data model
+
+ui/pages/user/goals/
+  ├── goal_list_page.dart         # List screen (extends DataPage)
+  ├── goal_details_page.dart      # Detail screen (extends DataPage)
+  ├── create_goal_page.dart       # Form screen (extends OperationRunnerState)
+  └── widgets/
+      ├── goal_tile.dart          # List item
+      └── goal_progress_card.dart # Reusable widget (may listen to PageReloaded)
+
+router/
+  └── user_router.dart            # Routes registered here
+
+The repository is the boundary. Everything above it (screens, widgets) only knows the abstract interface — never the implementation, never the network client, never the cache strategy. Everything below it (API calls, caching, error wrapping) is hidden behind RepositoryMixin.
+
+Adding a New Feature
+Say you're adding a Rewards feature — users earn points and redeem them for prizes.
+
+Step 1 — Model. Define what a reward looks like:
+
+@JsonSerializable()
+class Reward extends Equatable {
+  final String id;
+  final String title;
+  final int points;
+  final bool redeemed;
+  // fromJson, toJson, props, copyWith...
+}
+
+Step 2 — Repository. Define the data operations and implement them:
+
+abstract class RewardRepository {
+  Future<List<Reward>> fetchRewards();
+  Future<Reward> redeemReward(String rewardId);
+}
+
+class RewardRepositoryImpl with RepositoryMixin implements RewardRepository {
+  @override
+  Future<List<Reward>> fetchRewards() {
+    return runPersistedQuery(
+      key: 'rewards',
+      remote: () => apiClient.runQuery(const FetchRewardsRequest()),
+      deserialize: (data) => (data['rewards'] as List)
+          .map((e) => Reward.fromJson(e))
+          .toList(),
+    );
+  }
+
+  @override
+  Future<Reward> redeemReward(String rewardId) {
+    return runOperation(() async {
+      final result = await apiClient.runMutation(
+        RedeemRewardRequest(rewardId: rewardId),
+      );
+      return Reward.fromJson(result['redeemReward']);
+    });
+  }
+}
+
+You've already made decisions here that matter: fetchRewards uses runPersistedQuery so the list loads instantly from cache on return visits. redeemReward uses runOperation because it's a mutation — no caching.
+
+Step 3 — Register. One line in the injection container:
+
+getIt.registerLazySingleton<RewardRepository>(() => RewardRepositoryImpl());
+
+Step 4 — Screen. Extend DataPage, implement three methods:
+
+class _RewardListPageState extends DataPage<RewardListPage> {
+  List<Reward> rewards = [];
+
+  @override
+  Future<void> onLoad() async {
+    rewards = await getIt.get<RewardRepository>().fetchRewards();
+  }
+
+  @override
+  Future<void> onRefresh() => onLoad();
+
+  @override
+  Widget buildPage(BuildContext context) {
+    return ListView.builder(
+      itemCount: rewards.length,
+      itemBuilder: (_, i) => RewardTile(
+        reward: rewards[i],
+        onRedeem: () => _redeem(rewards[i].id),
+      ),
+    );
+  }
+
+  Future<void> _redeem(String id) async {
+    await runOperation('redeem_reward', () async {
+      await getIt.get<RewardRepository>().redeemReward(id);
+      await onRefresh();
+    });
+  }
+}
+
+That screen has loading states, error handling, caching, auto-refresh on focus, a loading overlay during redemption, an error dialog if redemption fails, and analytics logging for the redeem operation. You didn't write any of that — the architecture provides it.
+
+Step 5 — Route. Register in the router and you're done.
+
+A new developer doesn't need to understand interceptors, the EventBus, or the caching mixin to ship this feature. They follow the shape, and the architecture handles the rest. That's the whole point.
+
+If We Were Starting Today
+Achieve's codebase started in 2020 — before Dart 3, before sealed classes, before pattern matching. The architecture itself holds up, but some of the implementation has accumulated boilerplate that Dart 3 eliminates. We're currently building a new app on the same architecture, and here's what we're doing differently.
+
+Freezed for Models
+In Achieve, every model is ~20 lines of manual code: @JsonSerializable(), Equatable mixin, hand-written copyWith, props list, fromJson factory. Multiply that by 80+ models and it's a lot of code that looks the same.
+
+Freezed replaces all of it with a single annotation. Here's the same Reward model from the example above:
+
+@freezed
+class Reward with _$Reward {
+  const factory Reward({
+    required String id,
+    required String title,
+    required int points,
+    @Default(false) bool redeemed,
+  }) = _Reward;
+
+  factory Reward.fromJson(Map<String, dynamic> json) => _$RewardFromJson(json);
+}
+
+That generates immutability, equality, copyWith, toString, and JSON serialization. The model definition reads like a schema — you see the fields and their defaults, nothing else. Run build_runner and move on.
+
+Sealed Classes + Result Type for Errors
+In Achieve, repositories throw OperationFailure and OperationRunnerState catches it. This works, but the compiler can't tell you if you've missed a failure type. You find out at runtime when a user hits an unhandled case.
+
+Dart 3 sealed classes fix this. You define a closed set of failure types:
+
+sealed class AppFailure {
+  const AppFailure(this.message);
+  final String message;
+}
+class ServerFailure extends AppFailure { const ServerFailure(super.message); }
+class ValidationFailure extends AppFailure { const ValidationFailure(super.message); }
+class UnknownFailure extends AppFailure { const UnknownFailure(super.message); }
+
+And repositories return a Result<T> instead of throwing:
+
+Future<Result<List<Reward>>> fetchRewards() async {
+  try {
+    final data = await apiClient.runQuery(const FetchRewardsRequest());
+    return Result.ok(data.map((e) => Reward.fromJson(e)).toList());
+  } on NetworkError catch (e) {
+    return Result.error(ServerFailure(e.message));
+  }
+}
+
+The calling code uses pattern matching, and the compiler enforces that every case is handled:
+
+final result = await rewardRepository.fetchRewards();
+switch (result) {
+  case Ok(value: final rewards): showRewards(rewards);
+  case Error(error: ServerFailure()): showRetry();
+  case Error(error: ValidationFailure(:final message)): showValidation(message);
+  // If you add a new failure type and forget to handle it here,
+  // the compiler tells you. Not your users.
+}
+
+The architecture is identical — repositories as the data boundary, OperationRunnerState for user actions, OverlayManager for loading. The error flow just gets compile-time safety instead of runtime hope.
+
+Type-Safe Routing with go_router_builder
+In Achieve, navigation looks like this:
+
+context.pushNamed(
+  UserRoutes.goalDetails,
+  pathParameters: {'id': goalId},
+);
+
+String-based route names, string-based parameter keys. Typo in 'id'? Runtime crash. Wrong number of parameters? Runtime crash. Renamed a route constant but missed one callsite? Runtime crash.
+
+go_router_builder generates route classes from annotations:
+
+@TypedGoRoute<GoalDetailsRoute>(path: 'goals/:id')
+class GoalDetailsRoute extends GoRouteData {
+  final String id;
+  const GoalDetailsRoute({required this.id});
+
+  @override
+  Widget build(BuildContext context, GoRouterState state) =>
+      GoalDetailsPage(goalId: id);
+}
+
+Navigation becomes:
+
+GoalDetailsRoute(id: goalId).push(context);
+
+Missing parameter? Compiler error. Wrong type? Compiler error. Route doesn't exist? Compiler error. You literally can't navigate to a route that doesn't accept the parameters you're passing.
+
+The Architecture Stays the Same
+These are implementation upgrades, not architectural changes. The five pieces — repository with caching mixin, DataPage, OperationRunnerState with OverlayManager, EventBus, GetIt — are all still there. They work the same way. You just get less boilerplate and more compile-time safety around the edges.
+
+Use It
+This isn't a framework. There's no package to install. It's a set of patterns — a DataPage base class, a repository mixin, an overlay manager, an event bus, and a service locator — that work together to let screens be simple while the infrastructure handles the hard stuff.

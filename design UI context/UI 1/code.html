@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Exports &amp; Reports</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:ital,wght@0,100..900;1,100..900&amp;family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "error": "#ba1a1a",
+                        "surface-container": "#eeeeee",
+                        "on-primary": "#ffffff",
+                        "secondary-container": "#73f6fb",
+                        "on-secondary-fixed": "#002021",
+                        "surface-tint": "#705d00",
+                        "secondary": "#00696c",
+                        "surface-container-highest": "#e2e2e2",
+                        "primary-fixed-dim": "#e4c542",
+                        "primary-container": "#ffde59",
+                        "tertiary-fixed": "#ffd8e9",
+                        "on-tertiary-fixed": "#3c0029",
+                        "primary": "#705d00",
+                        "on-surface": "#1b1b1b",
+                        "on-secondary-container": "#007073",
+                        "inverse-primary": "#e4c542",
+                        "background": "#f9f9f9",
+                        "secondary-fixed-dim": "#52d9de",
+                        "on-error-container": "#93000a",
+                        "surface-variant": "#e2e2e2",
+                        "outline-variant": "#cfc6af",
+                        "on-background": "#1b1b1b",
+                        "inverse-on-surface": "#f1f1f1",
+                        "surface-container-high": "#e8e8e8",
+                        "tertiary-fixed-dim": "#ffaed8",
+                        "tertiary-container": "#ffd4e7",
+                        "on-secondary": "#ffffff",
+                        "surface-container-low": "#f3f3f3",
+                        "inverse-surface": "#303030",
+                        "outline": "#7e7763",
+                        "on-secondary-fixed-variant": "#004f52",
+                        "surface-bright": "#f9f9f9",
+                        "tertiary": "#ad1d7f",
+                        "primary-fixed": "#ffe16e",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#b22383",
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#4c4735",
+                        "on-primary-fixed-variant": "#544600",
+                        "surface-dim": "#dadada",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#890063",
+                        "secondary-fixed": "#73f6fb",
+                        "on-error": "#ffffff",
+                        "on-primary-container": "#756100",
+                        "on-primary-fixed": "#221b00",
+                        "surface": "#f9f9f9"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "stack-md": "16px",
+                        "shadow-offset": "4px",
+                        "container-margin": "20px",
+                        "gutter": "16px",
+                        "stack-sm": "8px",
+                        "base": "8px",
+                        "stack-lg": "24px",
+                        "border-width": "3px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Hanken Grotesk"],
+                        "label-caps": ["Hanken Grotesk"],
+                        "headline-md": ["Anybody"],
+                        "headline-lg": ["Anybody"],
+                        "headline-lg-mobile": ["Anybody"],
+                        "headline-sm": ["Anybody"],
+                        "data-point": ["Anybody"],
+                        "body-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "body-md": ["16px", {"lineHeight": "1.5", "fontWeight": "500"}],
+                        "label-caps": ["12px", {"lineHeight": "1", "letterSpacing": "0.05em", "fontWeight": "800"}],
+                        "headline-md": ["24px", {"lineHeight": "1.2", "fontWeight": "800"}],
+                        "headline-lg": ["32px", {"lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "800"}],
+                        "headline-lg-mobile": ["28px", {"lineHeight": "1.1", "fontWeight": "800"}],
+                        "headline-sm": ["20px", {"lineHeight": "1.2", "fontWeight": "700"}],
+                        "data-point": ["16px", {"lineHeight": "1", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "1.5", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .neo-brutalist-bg {
+            background-image: radial-gradient(circle at center, #cfc6af 1px, transparent 1px);
+            background-size: 8px 8px;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body-md neo-brutalist-bg min-h-screen flex flex-col md:flex-row">
+<!-- Navigation Drawer (Desktop) -->
+<nav class="hidden md:flex flex-col gap-stack-sm py-stack-lg bg-surface h-screen w-80 border-r-3 border-on-background shrink-0">
+<div class="px-4 mb-6 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-3 border-on-background overflow-hidden bg-primary-container">
+<img alt="Admin User Profile" class="w-full h-full object-cover" data-alt="A close up portrait of a confident male doctor wearing a stethoscope, against a plain background, brightly lit, embodying a modern medical professional avatar style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBD9c--1eV-BaHvDLMp2Whx_oVog_YyTfFin7Jy3y4Ii_7vkV_rBr75MhT1P2Pe_kTykzTV6NLZzpIDS9iOSgED-DmT5zK6XII2BMz5JOVq1lYp8Sc3Vd_gMqu8EO-8ysKthNGcpDBI58cKma7fuA7bQ09UwT0XvISueDwYGiR7nSbySFL42doXGHwVG5dOE00FcixWbBUDIFpzvzHkxrBnQd41W46mRG499TD8C0VB7LvOpHZnoI-eFY6eu82p20ckc4BorSHkHw"/>
+</div>
+<div>
+<h2 class="font-headline-sm text-primary">Dr. Kwame</h2>
+<p class="font-body-md text-on-surface-variant">Administrator</p>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<a class="text-on-surface-variant px-4 py-3 mx-2 my-1 flex items-center gap-3 hover:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body-lg">Dashboard</span>
+</a>
+<a class="text-on-surface-variant px-4 py-3 mx-2 my-1 flex items-center gap-3 hover:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-body-lg">Users</span>
+</a>
+<a class="text-on-surface-variant px-4 py-3 mx-2 my-1 flex items-center gap-3 hover:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">menu_book</span>
+<span class="font-body-lg">Quiz Bank</span>
+</a>
+<a class="bg-secondary-container text-on-secondary-fixed-variant border-3 border-on-background shadow-[4px_4px_0_0_rgba(0,0,0,1)] mx-2 my-1 px-4 py-3 flex items-center gap-3 rounded-lg transform active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span class="font-body-lg">Analytics</span>
+</a>
+<a class="text-on-surface-variant px-4 py-3 mx-2 my-1 flex items-center gap-3 hover:bg-surface-container-highest rounded-lg" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body-lg">Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="flex-1 flex flex-col min-h-screen">
+<!-- TopAppBar -->
+<header class="flex items-center justify-between w-full h-16 bg-background px-container-margin py-base border-b-3 border-on-background shrink-0">
+<button class="md:hidden flex items-center justify-center p-2 text-on-background hover:opacity-80 active:translate-x-1 active:translate-y-1 transition-all">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h1 class="font-anybody text-headline-lg-mobile md:text-headline-lg uppercase text-on-background flex-1 text-center md:text-left">REPORTS</h1>
+<div class="w-10 h-10 md:hidden"></div> <!-- Spacer -->
+</header>
+<!-- Scrollable Content -->
+<div class="flex-1 overflow-y-auto p-container-margin md:p-stack-lg pb-32 md:pb-stack-lg">
+<div class="max-w-4xl mx-auto space-y-stack-lg">
+<!-- New Report Configuration Card -->
+<section class="bg-surface-container-lowest border-3 border-on-background rounded-xl p-stack-md shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+<h2 class="font-headline-sm text-on-background mb-stack-md border-b-3 border-on-background pb-base">Generate New Report</h2>
+<form class="space-y-stack-md">
+<!-- Data Types -->
+<div>
+<h3 class="font-body-lg text-on-surface mb-stack-sm">Select Data to Include:</h3>
+<div class="flex flex-col gap-stack-sm sm:flex-row sm:flex-wrap">
+<label class="flex items-center gap-3 p-3 bg-white border-3 border-on-background rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors">
+<input checked="" class="w-6 h-6 rounded-md border-3 border-on-background text-secondary focus:ring-secondary focus:ring-offset-0 bg-white" type="checkbox"/>
+<span class="font-body-md">All Attempts</span>
+</label>
+<label class="flex items-center gap-3 p-3 bg-white border-3 border-on-background rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors">
+<input checked="" class="w-6 h-6 rounded-md border-3 border-on-background text-secondary focus:ring-secondary focus:ring-offset-0 bg-white" type="checkbox"/>
+<span class="font-body-md">Detailed Answers</span>
+</label>
+<label class="flex items-center gap-3 p-3 bg-white border-3 border-on-background rounded-lg cursor-pointer hover:bg-surface-container-low transition-colors">
+<input class="w-6 h-6 rounded-md border-3 border-on-background text-secondary focus:ring-secondary focus:ring-offset-0 bg-white" type="checkbox"/>
+<span class="font-body-md">User Demographics</span>
+</label>
+</div>
+</div>
+<!-- Date Range (Example addition for realistic reporting) -->
+<div>
+<h3 class="font-body-lg text-on-surface mb-stack-sm">Date Range:</h3>
+<div class="flex flex-col sm:flex-row gap-stack-md">
+<div class="flex-1">
+<input class="w-full bg-white border-3 border-on-background rounded-lg p-3 font-body-md text-on-surface focus:ring-0 focus:border-on-background" type="date"/>
+</div>
+<div class="flex-1">
+<input class="w-full bg-white border-3 border-on-background rounded-lg p-3 font-body-md text-on-surface focus:ring-0 focus:border-on-background" type="date"/>
+</div>
+</div>
+</div>
+<!-- Format Selection -->
+<div>
+<h3 class="font-body-lg text-on-surface mb-stack-sm">Export Format:</h3>
+<div class="flex gap-stack-md">
+<label class="flex-1">
+<input checked="" class="peer sr-only" name="format" type="radio" value="csv"/>
+<div class="p-4 bg-white border-3 border-on-background rounded-xl text-center cursor-pointer hover:bg-surface-container-low peer-checked:bg-secondary-container peer-checked:shadow-[4px_4px_0_0_rgba(0,0,0,1)] peer-checked:-translate-y-1 transition-all">
+<span class="material-symbols-outlined text-4xl mb-2 text-on-background">description</span>
+<p class="font-headline-sm">CSV</p>
+</div>
+</label>
+<label class="flex-1">
+<input class="peer sr-only" name="format" type="radio" value="excel"/>
+<div class="p-4 bg-white border-3 border-on-background rounded-xl text-center cursor-pointer hover:bg-surface-container-low peer-checked:bg-secondary-container peer-checked:shadow-[4px_4px_0_0_rgba(0,0,0,1)] peer-checked:-translate-y-1 transition-all">
+<span class="material-symbols-outlined text-4xl mb-2 text-on-background">table</span>
+<p class="font-headline-sm">Excel</p>
+</div>
+</label>
+</div>
+</div>
+<!-- Submit Button -->
+<div class="pt-stack-md">
+<button class="w-full bg-primary-container text-on-background font-headline-sm py-4 rounded-xl border-3 border-on-background shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all flex justify-center items-center gap-2" type="button">
+<span class="material-symbols-outlined">download</span>
+                                Generate Report
+                            </button>
+</div>
+</form>
+</section>
+<!-- Previous Reports List -->
+<section class="space-y-stack-md">
+<h2 class="font-headline-sm text-on-background">Previous Exports</h2>
+<div class="space-y-stack-sm">
+<!-- Report Item 1 -->
+<div class="bg-surface-container-lowest border-3 border-on-background rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+<div>
+<h3 class="font-body-lg font-bold text-on-background">Weekly Usage Stats</h3>
+<p class="font-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">calendar_today</span> Oct 24, 2023 • CSV
+                                </p>
+</div>
+<button class="bg-secondary-container text-on-background px-4 py-2 border-3 border-on-background rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all flex items-center gap-2 shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">download</span>
+                                Download
+                            </button>
+</div>
+<!-- Report Item 2 -->
+<div class="bg-surface-container-lowest border-3 border-on-background rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+<div>
+<h3 class="font-body-lg font-bold text-on-background">Q3 Detailed Answers Dump</h3>
+<p class="font-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">calendar_today</span> Oct 01, 2023 • Excel
+                                </p>
+</div>
+<button class="bg-white hover:bg-surface-container-highest text-on-background px-4 py-2 border-3 border-on-background rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all flex items-center gap-2 shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">download</span>
+                                Download
+                            </button>
+</div>
+<!-- Report Item 3 -->
+<div class="bg-surface-container-lowest border-3 border-on-background rounded-xl p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)]">
+<div>
+<h3 class="font-body-lg font-bold text-on-background">All Users Demographics</h3>
+<p class="font-body-md text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">calendar_today</span> Sep 15, 2023 • CSV
+                                </p>
+</div>
+<button class="bg-white hover:bg-surface-container-highest text-on-background px-4 py-2 border-3 border-on-background rounded-lg shadow-[4px_4px_0_0_rgba(0,0,0,1)] active:translate-y-[4px] active:translate-x-[4px] active:shadow-none transition-all flex items-center gap-2 shrink-0">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">download</span>
+                                Download
+                            </button>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 h-20 bg-surface border-t-3 border-on-background shadow-[0_-4px_0_0_rgba(0,0,0,1)] flex justify-around items-center px-4 pb-safe">
+<a class="text-on-surface-variant p-2 flex flex-col items-center" href="#">
+<span class="material-symbols-outlined text-3xl">home</span>
+</a>
+<a class="text-on-surface-variant p-2 flex flex-col items-center" href="#">
+<span class="material-symbols-outlined text-3xl">leaderboard</span>
+</a>
+<a class="bg-primary-container text-on-primary-container border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 p-2 rounded-xl flex flex-col items-center transition-all duration-100" href="#">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">monitoring</span>
+</a>
+<a class="text-on-surface-variant p-2 flex flex-col items-center" href="#">
+<span class="material-symbols-outlined text-3xl">person</span>
+</a>
+</nav>
+</body></html>

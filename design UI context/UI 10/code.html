@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>WORLD RANK</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:wght@700;800&amp;family=Hanken+Grotesk:wght@500;600;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+          font-variation-settings:
+          'FILL' 0,
+          'wght' 400,
+          'GRAD' 0,
+          'opsz' 24
+        }
+        
+        .dot-pattern {
+            background-image: radial-gradient(var(--tw-colors-outline-variant) 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error": "#ba1a1a",
+                      "surface-container": "#eeeeee",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#73f6fb",
+                      "on-secondary-fixed": "#002021",
+                      "surface-tint": "#705d00",
+                      "secondary": "#00696c",
+                      "surface-container-highest": "#e2e2e2",
+                      "primary-fixed-dim": "#e4c542",
+                      "primary-container": "#ffde59",
+                      "tertiary-fixed": "#ffd8e9",
+                      "on-tertiary-fixed": "#3c0029",
+                      "primary": "#705d00",
+                      "on-surface": "#1b1b1b",
+                      "on-secondary-container": "#007073",
+                      "inverse-primary": "#e4c542",
+                      "background": "#f9f9f9",
+                      "secondary-fixed-dim": "#52d9de",
+                      "on-error-container": "#93000a",
+                      "surface-variant": "#e2e2e2",
+                      "outline-variant": "#cfc6af",
+                      "on-background": "#1b1b1b",
+                      "inverse-on-surface": "#f1f1f1",
+                      "surface-container-high": "#e8e8e8",
+                      "tertiary-fixed-dim": "#ffaed8",
+                      "tertiary-container": "#ffd4e7",
+                      "on-secondary": "#ffffff",
+                      "surface-container-low": "#f3f3f3",
+                      "inverse-surface": "#303030",
+                      "outline": "#7e7763",
+                      "on-secondary-fixed-variant": "#004f52",
+                      "surface-bright": "#f9f9f9",
+                      "tertiary": "#ad1d7f",
+                      "primary-fixed": "#ffe16e",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#b22383",
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#4c4735",
+                      "on-primary-fixed-variant": "#544600",
+                      "surface-dim": "#dadada",
+                      "error-container": "#ffdad6",
+                      "on-tertiary-fixed-variant": "#890063",
+                      "secondary-fixed": "#73f6fb",
+                      "on-error": "#ffffff",
+                      "on-primary-container": "#756100",
+                      "on-primary-fixed": "#221b00",
+                      "surface": "#f9f9f9"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-md": "16px",
+                      "shadow-offset": "4px",
+                      "container-margin": "20px",
+                      "gutter": "16px",
+                      "stack-sm": "8px",
+                      "base": "8px",
+                      "stack-lg": "24px",
+                      "border-width": "3px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "hankenGrotesk"
+                      ],
+                      "label-caps": [
+                              "hankenGrotesk"
+                      ],
+                      "headline-md": [
+                              "anybody"
+                      ],
+                      "headline-lg": [
+                              "anybody"
+                      ],
+                      "headline-lg-mobile": [
+                              "anybody"
+                      ],
+                      "headline-sm": [
+                              "anybody"
+                      ],
+                      "data-point": [
+                              "anybody"
+                      ],
+                      "body-lg": [
+                              "hankenGrotesk"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "data-point": [
+                              "16px",
+                              {
+                                      "lineHeight": "1",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md dot-pattern min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-background w-full top-0 px-container-margin py-base border-b-3 border-on-background sticky z-40">
+<div class="flex items-center justify-between w-full h-16">
+<button class="text-on-background hover:opacity-80 transition-opacity">
+<span class="material-symbols-outlined" style="font-size: 28px;">arrow_back</span>
+</button>
+<h1 class="font-anybody text-headline-md uppercase text-on-background tracking-tight">WORLD RANK</h1>
+<div class="w-8"></div> <!-- Spacer for centering -->
+</div>
+</header>
+<main class="px-container-margin pt-stack-lg max-w-md mx-auto">
+<!-- Top 3 Podium -->
+<div class="flex justify-between items-end gap-stack-sm mb-stack-lg">
+<!-- Rank 2 -->
+<div class="flex-1 bg-secondary-fixed text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col items-center justify-center min-h-[160px] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+<span class="font-anybody text-headline-sm mb-2">#2</span>
+<div class="w-16 h-16 rounded-full border-2 border-on-background overflow-hidden mb-2 bg-white">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCQXqd14XElRKrHRcfzegS0_q_QlsBYxITa-EQX5Vq0hE_2m1kshIdyDOCM05pCqDYXhqkD0r7BRW2CFuTWZYncNWEUX0F-Z7WGOxJSoyhFZZtIwbKgfyvMJbumBRqnwfThahJnhgIz6uhf2UmuDn7UsR8vGN2WEFVeZnz5BI050-6l_jLVAeIzKZYSRAYLMGTtclgUNWWEFACutHZVwKTivB0QAQlEi0Ha7myphWNAgrifcS5M9vCyLN8uDwQ4WaZqSrj2TDe1Yg"/>
+</div>
+<span class="font-body-md text-sm truncate w-full text-center">Papa Ekow</span>
+<span class="font-anybody text-data-point mt-1">11,807</span>
+</div>
+<!-- Rank 1 -->
+<div class="flex-1 bg-primary-container text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col items-center justify-center min-h-[180px] -translate-y-4 hover:translate-x-1 hover:translate-y-[-12px] hover:shadow-none transition-all cursor-pointer z-10 relative">
+<div class="absolute -top-3 -right-2 bg-white border-2 border-on-background rounded-full p-1 shadow-[2px_2px_0_0_rgba(0,0,0,1)]">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<span class="font-anybody text-headline-md mb-2">#1</span>
+<div class="w-16 h-16 rounded-full border-2 border-on-background overflow-hidden mb-2 bg-white">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDkBWmF3ltXUTFU2WoBoAgzLof1FD3wKiOHLwWFMPKWoNczpE7Dc2RTYYpZ4RTjKL5YxykR5SyR20TM61nMlichf1u4naJDuL_M8s_5lYT2xb9ttBTSd1wWHRutEN6WjcJmNn9Yw_C-kTLuC0Y0q3PJwzdvhD15Vxd2HU3XfA4brTUEvZhq8VcT5WG3ZLIIIh5fsWP7BhzU-Gy_ButHBXSnfDYJHgku6yozSwQoZ-kG4ANDw7NPz0O_xcA1Zh2zvojMhBCC96Lg_A"/>
+</div>
+<span class="font-body-md text-sm truncate w-full text-center">Setor</span>
+<span class="font-anybody text-data-point mt-1">22,200</span>
+</div>
+<!-- Rank 3 -->
+<div class="flex-1 bg-tertiary-container text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex flex-col items-center justify-center min-h-[150px] hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+<span class="font-anybody text-headline-sm mb-2">#3</span>
+<div class="w-16 h-16 rounded-full border-2 border-on-background overflow-hidden mb-2 bg-white">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAANCfrBvAXNErtWeOyhEj3Rku5z-iFl_8NyVc8YXOmR5aNRO38iasYj5v258jI2bSjrgckijBQJnGs6ciduzhpXpZZWvLk454au3AlyLU4rZ6xw7_QjuyKmqu5FfyeZH0WqheRmqPHF8KoC07APGZSVPW6Wd0VR69nI_Mw1xqadTqrKIwvMO4v4kUo2BYuOdqCfJPSZFlxlSjIL8hX21_6KdUQJTUV21IibPc2rRnyvMLUKfrKdsb2Zf5iYX3yW-sXgw7Tn23zPQ"/>
+</div>
+<span class="font-body-md text-sm truncate w-full text-center">eddykay7</span>
+<span class="font-anybody text-data-point mt-1">11,338</span>
+</div>
+</div>
+<!-- Leaderboard List -->
+<div class="flex flex-col gap-stack-md">
+<!-- Current User Rank -->
+<div class="bg-primary-container text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center justify-between hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="font-anybody text-headline-sm text-white drop-shadow-[1px_1px_0_rgba(0,0,0,1)] w-8">#4</span>
+<div class="w-10 h-10 rounded-full border-2 border-on-background overflow-hidden bg-white">
+<img alt="Your Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAi6j-t9pZ81xXRQYp_YYAlBPuf8nh032mU-Eh8hz2gF8smT3AGCJbFaNoHcaz8cwK2hHXmA2R_IPFmeYVcvTQDrLjvu3WE2zdTDWnS2l5jXRflg8zBT8cs7ENBeKjgij0yxHRvR9g_plOx4OVcRp6pcMpx3MRcXB-KU-9qb9H3oigkrwroAvK4_PzHot0dpYWQCpOy_HuqBFrkHE9kPFkbtVloaLYf9L9A-4K6bmsT56sBlGPGq7qGD5Okys0CpW2c0kqpSt_HRg"/>
+</div>
+<span class="font-body-md text-white drop-shadow-[1px_1px_0_rgba(0,0,0,1)]">rpsjosh (YOU)</span>
+</div>
+<span class="font-anybody text-data-point text-white drop-shadow-[1px_1px_0_rgba(0,0,0,1)]">9,088</span>
+</div>
+<!-- Rank 5 -->
+<div class="bg-surface-container-lowest text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center justify-between hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="font-anybody text-data-point w-8">#5</span>
+<div class="w-10 h-10 rounded-full border-2 border-on-background overflow-hidden bg-white">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB3mItvdo-mJPEEIA3KYJW2m4s-eQinyDvdKOLbhoQfrlGD4a5qZvws-g6UmXxpJvgfdvRSMAr0w5l2jrZ44yVM6tu4WTBUJShY6DQntTs30YgCskqfYNHcdh3ypZV70gl46plZENu3_eGuHlL6fEoor3uGOqwV1srFfuMaAdoWbdBDLyEd1SKTJ-_YdICzweE0uW-QXEZoesb38f-CLwWpyvIU6kR9I9WWIA_aEIEM3h0cSsUX5IZHIG6LObKWy2HDx92bsbCW_A"/>
+</div>
+<span class="font-body-md">LordRa</span>
+</div>
+<span class="font-anybody text-data-point">2,566</span>
+</div>
+<!-- Rank 6 -->
+<div class="bg-surface-container-lowest text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center justify-between hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="font-anybody text-data-point w-8">#6</span>
+<div class="w-10 h-10 rounded-full border-2 border-on-background overflow-hidden bg-white">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoHZ-OzTrhTS13hstbXV3rAZ-S922EAWq9fLzKkdYKOJfiI_ES-VXBMcQBz86NpT9-XIHKIoichhKvXsWXgiJgr8AJFqwqhT1OOfaz9moV1M2p3VKjgsAJqHjYzmLtUse1VNZUuXI3qSmBEnoTukjT2-9MpHj-8jxv_ZSDdI5zkUpMF2HGEm5__FPG0S-ZnoklMBBsL8gdt_hl7VFt_26w48TL6F_enA47gMr0Q2AvCDTa2JHLwKP4axQpdOLTcY98QF6fFa7v7A"/>
+</div>
+<span class="font-body-md">Ssstylar</span>
+</div>
+<span class="font-anybody text-data-point">2,100</span>
+</div>
+<!-- Rank 7 -->
+<div class="bg-surface-container-lowest text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center justify-between hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="font-anybody text-data-point w-8">#7</span>
+<div class="w-10 h-10 rounded-full border-2 border-on-background overflow-hidden bg-white">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZr1wnsA_9Vdyjuo7fPDVJzBbixV3KmOwfkccWhcdqtkLOcqWhQKXx1JCOiucm6OQEXRWM7cCmCLZt9Wt_3Zcx43voHeYiw3SoR5mHHQ9Qc1clgHtR8CC6NSLyrnZ4gUFujbaP2cUQK3GR-17yrPuBKwJK644aXyNTnA_dzq791dpZZkBgbXpDccZMVL8T88juBS-8rJkgZLKnV2NQ2OuwNrZrLnUb5wHlXs3gKBuW5Ht14WfkRPM4zAroXh0SOsf4Q05w7LrfDg"/>
+</div>
+<span class="font-body-md">haadi</span>
+</div>
+<span class="font-anybody text-data-point">1,710</span>
+</div>
+<!-- Rank 8 -->
+<div class="bg-surface-container-lowest text-on-background border-border-width border-on-background rounded-xl p-4 shadow-[4px_4px_0_0_rgba(0,0,0,1)] flex items-center justify-between hover:translate-x-1 hover:translate-y-1 hover:shadow-none transition-all cursor-pointer">
+<div class="flex items-center gap-4">
+<span class="font-anybody text-data-point w-8">#8</span>
+<div class="w-10 h-10 rounded-full border-2 border-on-background overflow-hidden bg-white">
+<img alt="Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRiI4kULvz9KNRiGNUkCPuXL2T2gEi-g52bXMzmMVzf4vib6Q5GL3Cbsce6w8VgWUCzyphSh0UZlQ-un2vQqwHfDR14Fei-pLZ40VbJZvL0D19UaM_tx9XOHqnBvHicTGGbjanFjKC8g_cl6gjHb2jdq3EH9AVnRGiC-bDAtifiZMgh6iQAp13FNSVAeDVXZ2HSeR9P4yfwj9yKtfAtkvvW6btbGBHAOv5JqS-Di411XbWLbQz1jzSCacSQmpN8eKfObn7lzSAZg"/>
+</div>
+<span class="font-body-md">manuelson</span>
+</div>
+<span class="font-anybody text-data-point">684</span>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-surface fixed bottom-0 w-full z-50 h-20 shadow-[0_-4px_0_0_rgba(0,0,0,1)] md:hidden">
+<div class="flex justify-around items-center px-4 h-full pb-safe">
+<button class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant p-2 hover:bg-surface-container-high rounded-xl transition-colors">
+<span class="material-symbols-outlined mb-1">home</span>
+</button>
+<button class="flex flex-col items-center justify-center w-16 h-14 bg-primary-container text-on-primary-container border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 p-2 rounded-xl transition-all duration-100">
+<span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">leaderboard</span>
+</button>
+<button class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant p-2 hover:bg-surface-container-high rounded-xl transition-colors">
+<span class="material-symbols-outlined mb-1">school</span>
+</button>
+<button class="flex flex-col items-center justify-center w-16 h-14 text-on-surface-variant p-2 hover:bg-surface-container-high rounded-xl transition-colors">
+<span class="material-symbols-outlined mb-1">person</span>
+</button>
+</div>
+</nav>
+</body></html>

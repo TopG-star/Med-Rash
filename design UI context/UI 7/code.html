@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Quiz Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Anybody:ital,wght@0,100..900;1,100..900&amp;family=Hanken+Grotesk:ital,wght@0,100..900;1,100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error": "#ba1a1a",
+                      "surface-container": "#eeeeee",
+                      "on-primary": "#ffffff",
+                      "secondary-container": "#73f6fb",
+                      "on-secondary-fixed": "#002021",
+                      "surface-tint": "#705d00",
+                      "secondary": "#00696c",
+                      "surface-container-highest": "#e2e2e2",
+                      "primary-fixed-dim": "#e4c542",
+                      "primary-container": "#ffde59",
+                      "tertiary-fixed": "#ffd8e9",
+                      "on-tertiary-fixed": "#3c0029",
+                      "primary": "#705d00",
+                      "on-surface": "#1b1b1b",
+                      "on-secondary-container": "#007073",
+                      "inverse-primary": "#e4c542",
+                      "background": "#f9f9f9",
+                      "secondary-fixed-dim": "#52d9de",
+                      "on-error-container": "#93000a",
+                      "surface-variant": "#e2e2e2",
+                      "outline-variant": "#cfc6af",
+                      "on-background": "#1b1b1b",
+                      "inverse-on-surface": "#f1f1f1",
+                      "surface-container-high": "#e8e8e8",
+                      "tertiary-fixed-dim": "#ffaed8",
+                      "tertiary-container": "#ffd4e7",
+                      "on-secondary": "#ffffff",
+                      "surface-container-low": "#f3f3f3",
+                      "inverse-surface": "#303030",
+                      "outline": "#7e7763",
+                      "on-secondary-fixed-variant": "#004f52",
+                      "surface-bright": "#f9f9f9",
+                      "tertiary": "#ad1d7f",
+                      "primary-fixed": "#ffe16e",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#b22383",
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#4c4735",
+                      "on-primary-fixed-variant": "#544600",
+                      "surface-dim": "#dadada",
+                      "error-container": "#ffdad6",
+                      "on-tertiary-fixed-variant": "#890063",
+                      "secondary-fixed": "#73f6fb",
+                      "on-error": "#ffffff",
+                      "on-primary-container": "#756100",
+                      "on-primary-fixed": "#221b00",
+                      "surface": "#f9f9f9"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "stack-md": "16px",
+                      "shadow-offset": "4px",
+                      "container-margin": "20px",
+                      "gutter": "16px",
+                      "stack-sm": "8px",
+                      "base": "8px",
+                      "stack-lg": "24px",
+                      "border-width": "3px"
+              },
+              "fontFamily": {
+                      "body-md": [
+                              "Hanken Grotesk"
+                      ],
+                      "label-caps": [
+                              "Hanken Grotesk"
+                      ],
+                      "headline-md": [
+                              "Anybody"
+                      ],
+                      "headline-lg": [
+                              "Anybody"
+                      ],
+                      "headline-lg-mobile": [
+                              "Anybody"
+                      ],
+                      "headline-sm": [
+                              "Anybody"
+                      ],
+                      "data-point": [
+                              "Anybody"
+                      ],
+                      "body-lg": [
+                              "Hanken Grotesk"
+                      ]
+              },
+              "fontSize": {
+                      "body-md": [
+                              "16px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-caps": [
+                              "12px",
+                              {
+                                      "lineHeight": "1",
+                                      "letterSpacing": "0.05em",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "1.1",
+                                      "fontWeight": "800"
+                              }
+                      ],
+                      "headline-sm": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "data-point": [
+                              "16px",
+                              {
+                                      "lineHeight": "1",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "600"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        .dot-grid {
+            background-image: radial-gradient(#cfc6af 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+      </style>
+</head>
+<body class="bg-background dot-grid text-on-background min-h-screen flex flex-col md:flex-row">
+<!-- TopAppBar (Mobile) -->
+<header class="md:hidden w-full top-0 px-container-margin py-base bg-background dark:bg-background border-b-3 border-on-background flex items-center justify-between w-full h-16 z-40 sticky">
+<div class="flex items-center gap-4">
+<button class="text-on-background hover:opacity-80 transition-all active:translate-x-1 active:translate-y-1">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">arrow_back</span>
+</button>
+<h1 class="font-anybody text-headline-md uppercase text-on-background">WORLD RANK</h1>
+</div>
+</header>
+<!-- NavigationDrawer (Web) -->
+<nav class="hidden md:flex h-screen w-80 border-r-3 border-on-background bg-surface dark:bg-surface flex flex-col gap-stack-sm py-stack-lg sticky top-0">
+<div class="px-4 mb-8 flex items-center gap-4">
+<div class="w-12 h-12 rounded-full border-3 border-on-background overflow-hidden shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] bg-primary-container">
+<img alt="Admin User Profile" class="w-full h-full object-cover" data-alt="A close up portrait of a professional administrator looking directly at the camera with a confident expression. The lighting is bright and clean, typical of a modern light-mode interface. The background is a flat, bright yellow echoing the primary brand color. The overall style is sharp, high-contrast, and professional yet approachable." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC97fCxGs7atLC7f1gouxNZsxDNn7yJ4ViHMUxC04sC_IlSPLsJuMM6Hq7wu9ixvKaFI9vSojylYApjqd6By1e1dCoMv3qStM5VBsSObE7zwz8SL426B25kh8K5hRwRVH-IDCq4V_HrMrCaKcB6hXzeIvHJb0-LX1c403Un7EBSDpg4ABjkF28ooLHFni6H_EReTsgY8rNQfiCnfi2pbSm3XMl2yW3LlOGS791yr4Qi-kIXDJnGaqYXS6IBxauw4VRg3KKmWTsQqg"/>
+</div>
+<div>
+<h2 class="font-anybody text-headline-sm text-primary">Dr. Kwame</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">Administrator</p>
+</div>
+</div>
+<div class="flex flex-col flex-grow">
+<a class="flex items-center gap-4 px-4 py-3 mx-2 my-1 text-on-surface-variant font-hankenGrotesk text-body-lg hover:bg-surface-container-highest transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 mx-2 my-1 text-on-surface-variant font-hankenGrotesk text-body-lg hover:bg-surface-container-highest transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">group</span>
+<span>Users</span>
+</a>
+<a class="flex items-center gap-4 bg-secondary-container text-on-secondary-fixed-variant border-3 border-on-background shadow-[4px_4px_0_0_rgba(0,0,0,1)] mx-2 my-1 font-hankenGrotesk text-body-lg px-4 py-3 rounded-lg active:scale-95 transition-transform" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span>Quiz Bank</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 mx-2 my-1 text-on-surface-variant font-hankenGrotesk text-body-lg hover:bg-surface-container-highest transition-colors rounded-lg" href="#">
+<span class="material-symbols-outlined">monitoring</span>
+<span>Analytics</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 mx-2 my-1 text-on-surface-variant font-hankenGrotesk text-body-lg hover:bg-surface-container-highest transition-colors rounded-lg mt-auto" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Settings</span>
+</a>
+</div>
+</nav>
+<!-- Main Content -->
+<main class="flex-grow p-container-margin md:p-8 overflow-y-auto pb-32 md:pb-8">
+<div class="max-w-5xl mx-auto space-y-stack-lg">
+<!-- Header Actions -->
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+<div>
+<h2 class="font-anybody text-headline-lg-mobile md:text-headline-lg">Quiz Bank Management</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Manage medical quizzes, questions, and categories.</p>
+</div>
+<div class="flex flex-wrap gap-4">
+<button class="bg-surface text-on-background border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-lg px-6 py-3 font-anybody text-headline-sm hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all flex items-center gap-2">
+<span class="material-symbols-outlined">upload_file</span>
+                        Bulk Upload (CSV)
+                    </button>
+<button class="bg-primary-container text-on-background border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-lg px-6 py-3 font-anybody text-headline-sm hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all flex items-center gap-2">
+<span class="material-symbols-outlined">add</span>
+                        Create New Quiz
+                    </button>
+</div>
+</div>
+<!-- Quiz List/Accordion -->
+<div class="space-y-4">
+<!-- Quiz Item 1 (Expanded) -->
+<div class="bg-surface border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl overflow-hidden">
+<!-- Header -->
+<div class="p-6 border-b-3 border-on-background bg-surface-container-low flex justify-between items-center cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="bg-secondary-container border-2 border-on-background text-on-background font-hankenGrotesk text-label-caps px-3 py-1 rounded-full uppercase tracking-wider">Cardiology</div>
+<h3 class="font-anybody text-headline-sm">Advanced ECG Interpretation</h3>
+</div>
+<div class="flex items-center gap-6">
+<span class="font-body-md text-body-md text-on-surface-variant">15 Questions</span>
+<span class="material-symbols-outlined">expand_less</span>
+</div>
+</div>
+<!-- Content (Questions Table) -->
+<div class="p-6 bg-surface">
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b-2 border-outline-variant">
+<th class="font-hankenGrotesk text-label-caps text-on-surface-variant uppercase pb-3 pl-2">ID</th>
+<th class="font-hankenGrotesk text-label-caps text-on-surface-variant uppercase pb-3">Question Prompt</th>
+<th class="font-hankenGrotesk text-label-caps text-on-surface-variant uppercase pb-3">Type</th>
+<th class="font-hankenGrotesk text-label-caps text-on-surface-variant uppercase pb-3 text-right pr-2">Actions</th>
+</tr>
+</thead>
+<tbody>
+<tr class="border-b border-surface-dim hover:bg-surface-container-lowest transition-colors">
+<td class="py-4 pl-2 font-body-md text-body-md text-on-surface-variant">Q-101</td>
+<td class="py-4 font-body-md text-body-md pr-4">What is the most common cause of a wide complex tachycardia?</td>
+<td class="py-4 font-body-md text-body-md"><span class="bg-surface-container-high px-2 py-1 rounded text-sm">Multiple Choice</span></td>
+<td class="py-4 text-right pr-2">
+<button class="text-secondary hover:opacity-80 p-1"><span class="material-symbols-outlined">edit</span></button>
+<button class="text-error hover:opacity-80 p-1"><span class="material-symbols-outlined">delete</span></button>
+</td>
+</tr>
+<tr class="border-b border-surface-dim hover:bg-surface-container-lowest transition-colors">
+<td class="py-4 pl-2 font-body-md text-body-md text-on-surface-variant">Q-102</td>
+<td class="py-4 font-body-md text-body-md pr-4">Identify the rhythm shown in the attached tracing.</td>
+<td class="py-4 font-body-md text-body-md"><span class="bg-tertiary-container px-2 py-1 rounded text-sm">Image Based</span></td>
+<td class="py-4 text-right pr-2">
+<button class="text-secondary hover:opacity-80 p-1"><span class="material-symbols-outlined">edit</span></button>
+<button class="text-error hover:opacity-80 p-1"><span class="material-symbols-outlined">delete</span></button>
+</td>
+</tr>
+<tr>
+<td class="py-4 text-center" colspan="4">
+<button class="text-on-background font-body-md text-body-md underline hover:text-primary transition-colors flex items-center justify-center gap-2 mx-auto">
+<span class="material-symbols-outlined">add_circle</span> Add Question
+                                            </button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Quiz Item 2 (Collapsed) -->
+<div class="bg-surface border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl overflow-hidden hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all">
+<div class="p-6 flex justify-between items-center cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="bg-tertiary-container border-2 border-on-background text-on-background font-hankenGrotesk text-label-caps px-3 py-1 rounded-full uppercase tracking-wider">Emergency</div>
+<h3 class="font-anybody text-headline-sm">Trauma Resuscitation Protocols</h3>
+</div>
+<div class="flex items-center gap-6">
+<span class="font-body-md text-body-md text-on-surface-variant">22 Questions</span>
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Quiz Item 3 (Collapsed) -->
+<div class="bg-surface border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl overflow-hidden hover:translate-y-1 hover:translate-x-1 hover:shadow-none transition-all">
+<div class="p-6 flex justify-between items-center cursor-pointer">
+<div class="flex items-center gap-4">
+<div class="bg-surface-container-high border-2 border-on-background text-on-background font-hankenGrotesk text-label-caps px-3 py-1 rounded-full uppercase tracking-wider">Pharmacology</div>
+<h3 class="font-anybody text-headline-sm">Antibiotic Stewardship Basics</h3>
+</div>
+<div class="flex items-center gap-6">
+<span class="font-body-md text-body-md text-on-surface-variant">10 Questions</span>
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile) -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 h-20 bg-surface dark:bg-surface border-t-3 border-on-background shadow-[0_-4px_0_0_rgba(0,0,0,1)] flex justify-around items-center px-4 pb-safe">
+<a class="text-on-surface-variant p-2 flex flex-col items-center" href="#">
+<span class="material-symbols-outlined text-3xl">home</span>
+</a>
+<a class="text-on-surface-variant p-2 flex flex-col items-center" href="#">
+<span class="material-symbols-outlined text-3xl">leaderboard</span>
+</a>
+<a class="bg-primary-container text-on-primary-container border-3 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -translate-y-1 p-2 rounded-xl flex flex-col items-center transition-all duration-100" href="#">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">school</span>
+</a>
+<a class="text-on-surface-variant p-2 flex flex-col items-center" href="#">
+<span class="material-symbols-outlined text-3xl">person</span>
+</a>
+</nav>
+</body></html>
