@@ -18,7 +18,8 @@ export type ResolvedQuiz = {
   slug: string;
 };
 
-let adminClient: SupabaseClient<any, any, any, any, any> | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase generic defaults to "public"; we run against the "app" schema and don't ship a generated Database type here.
+let adminClient: SupabaseClient<any, "app", any, any, any> | null = null;
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
@@ -28,7 +29,8 @@ function readString(value: unknown, fallback: string): string {
   return isNonEmptyString(value) ? value.trim() : fallback;
 }
 
-export function getSupabaseAdminClient(): SupabaseClient<any, any, any, any, any> {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- See adminClient declaration above.
+export function getSupabaseAdminClient(): SupabaseClient<any, "app", any, any, any> {
   if (adminClient) {
     return adminClient;
   }

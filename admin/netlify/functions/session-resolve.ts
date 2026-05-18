@@ -206,7 +206,7 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       ok: true,
       session,
     });
-  } catch (error) {
+  } catch {
     await applyMinimumLatency(startedAtMs);
     return jsonResponse(400, {
       ok: false,
