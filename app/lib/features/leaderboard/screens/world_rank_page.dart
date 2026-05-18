@@ -23,14 +23,16 @@ class _WorldRankPageState extends State<WorldRankPage> {
   void initState() {
     super.initState();
     _leaderboardRepository = getIt<LeaderboardRepository>();
-    _futureRows = _leaderboardRepository.fetchLeaderboard(LeaderboardPeriod.allTime);
+    _futureRows = _leaderboardRepository.fetchLeaderboard(
+      period: LeaderboardPeriod.allTime,
+    );
   }
 
   Future<void> _switchPeriod(bool allTime) async {
     setState(() {
       _allTime = allTime;
       _futureRows = _leaderboardRepository.fetchLeaderboard(
-        allTime ? LeaderboardPeriod.allTime : LeaderboardPeriod.monthly,
+        period: allTime ? LeaderboardPeriod.allTime : LeaderboardPeriod.monthly,
       );
     });
   }

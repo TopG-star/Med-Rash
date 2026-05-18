@@ -6,6 +6,7 @@ import '../infra/device_identity_service.dart';
 import '../infra/event_bus.dart';
 import '../infra/overlay_manager.dart';
 import '../../features/leaderboard/repositories/leaderboard_repository.dart';
+import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_repository.dart';
 import '../../features/profile/repositories/profile_repository.dart';
 import '../../features/quiz/repositories/netlify_supabase_quiz_repository.dart';
 import '../../features/quiz/repositories/quiz_repository.dart';
@@ -39,13 +40,19 @@ Future<void> initCore() async {
       gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
     ),
   );
-  getIt.registerLazySingleton<LeaderboardRepository>(
-    InMemoryLeaderboardRepository.new,
-  );
-
   final AuthStateManager authStateManager = AuthStateManager(
     deviceIdentityService: getIt<DeviceIdentityService>(),
   );
   await authStateManager.initialize();
   getIt.registerSingleton<AuthStateManager>(authStateManager);
+
+  getIt.registerLazySingleton<LeaderboardRepository>(
+    () => NetlifySupabaseLeaderboardRepository(
+      functionsBaseUrl: AppConfig.functionsBaseUrl,
+      authStateManager: getIt<AuthStateManager>(),
+      profileRepository: getIt<ProfileRepository>(),
+      fallback: InMemoryLeaderboardRepository(),
+      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
+    ),
+  );
 }

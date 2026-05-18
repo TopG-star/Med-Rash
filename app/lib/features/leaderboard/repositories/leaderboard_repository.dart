@@ -3,7 +3,16 @@ import '../models/leaderboard_row.dart';
 enum LeaderboardPeriod { monthly, allTime }
 
 abstract class LeaderboardRepository {
-  Future<List<LeaderboardRow>> fetchLeaderboard(LeaderboardPeriod period);
+  Future<List<LeaderboardRow>> fetchLeaderboard({
+    required LeaderboardPeriod period,
+    int limit = 50,
+    String? season,
+  });
+
+  Future<LeaderboardRow?> fetchMyRank({
+    required LeaderboardPeriod period,
+    String? season,
+  });
 }
 
 class InMemoryLeaderboardRepository implements LeaderboardRepository {
@@ -27,7 +36,31 @@ class InMemoryLeaderboardRepository implements LeaderboardRepository {
   ];
 
   @override
-  Future<List<LeaderboardRow>> fetchLeaderboard(LeaderboardPeriod period) async {
-    return period == LeaderboardPeriod.allTime ? _allTimeRows : _monthlyRows;
+  Future<List<LeaderboardRow>> fetchLeaderboard({
+    required LeaderboardPeriod period,
+    int limit = 50,
+    String? season,
+  }) async {
+    final List<LeaderboardRow> rows =
+        period == LeaderboardPeriod.allTime ? _allTimeRows : _monthlyRows;
+    if (limit <= 0) {
+      return <LeaderboardRow>[];
+    }
+    return rows.take(limit).toList();
+  }
+
+  @override
+  Future<LeaderboardRow?> fetchMyRank({
+    required LeaderboardPeriod period,
+    String? season,
+  }) async {
+    final List<LeaderboardRow> rows =
+        period == LeaderboardPeriod.allTime ? _allTimeRows : _monthlyRows;
+    for (final LeaderboardRow row in rows) {
+      if (row.isCurrentUser) {
+        return row;
+      }
+    }
+    return null;
   }
 }
