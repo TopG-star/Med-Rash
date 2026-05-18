@@ -240,47 +240,64 @@ type AdminSessionRow = {
 ## 5. Surface 3 — Reports
 
 ### 5.1 Page route
-`admin/src/app/reports/page.tsx` — currently UI stub.
+`admin/src/app/reports/page.tsx` — **implemented (Phase 4d).** Server
+component that renders three intelligence panels (Most-Missed, Facility
+Performance, Treatment Perception) plus a filter form and five CSV
+download buttons.
 
 ### 5.2 Data shapes
 
 ```ts
-type ReportRequest = {
-  dataSets: Array<'attempts'|'answers'|'demographics'>;
-  range: { from: string; to: string }; // ISO dates inclusive
-  format: 'csv' | 'xlsx';
-};
-
-type ReportArtifact = {
-  id: string;            // signed download URL bound to a short TTL
-  filename: string;
-  generatedAt: string;
-  sizeBytes: number;
+// All filters are URL search-params on /reports and pass-through to
+// /reports/export/[type]?{...filters}.
+type ReportFilters = {
+  startsAt?: string | null;   // ISO datetime, lower bound on attempts.started_at
+  endsAt?: string | null;     // ISO datetime, upper bound (inclusive)
+  quizId?: string | null;     // app.quizzes.id
+  sessionId?: string | null;  // app.sessions.id
+  facility?: string | null;   // exact-match on app.users.facility
+  specialty?: string | null;  // exact-match on app.users.specialty
 };
 ```
 
 ### 5.3 Server reads
-Bound to the analytics queries already shipped in
-`supabase/queries/analytics.sql` and the RPCs in migration 002:
-- `app.session_kpis(uuid)`
-- `app.knowledge_gaps(limit, specialty?, facility?, session?)`
-- `app.facility_performance(limit)`
-- `app.treatment_perception_trends(limit)`
+All in `admin/src/lib/reports-queries.ts` (server-only):
+- `getMostMissed(limit, {specialty, facility, sessionId})` → RPC
+  `app.knowledge_gaps(limit_count, specialty_filter, facility_filter,
+  session_filter)`.
+- `getFacilityPerformance(limit)` → RPC `app.facility_performance(limit_count)`.
+- `getTreatmentPerception(limit)` → RPC `app.treatment_perception_trends(limit_count)`.
+- `getAttemptsExport(filters, limit)` — direct join over
+  `attempts → users + quizzes + sessions` with date / quiz / session
+  filters; default cap 5 000, hard ceiling 50 000 enforced by the route
+  handler.
+- `getAnswersExport(filters, limit)` — direct join over
+  `answers → attempts!inner → users + quizzes + sessions, questions`
+  (inner join on `attempts` so date filters actually constrain); default
+  cap 10 000, hard ceiling 100 000.
 
-These power both the on-screen panels and the export pipeline.
-
-### 5.4 Server actions (future)
-- `generateReport(req)` — runs each requested dataset query in a worker,
-  serializes to CSV/XLSX, stores in Supabase Storage under `reports/`,
-  returns a signed URL valid for 24h.
-- `listPreviousExports()` — lists from `reports/` bucket, ordered by
-  `created_at desc`.
+### 5.4 CSV download contract
+- **Route:** `GET /reports/export/{type}?{filters}&limit={n}`
+- **Types:** `attempts | answers | most-missed | facility-performance | treatment-perception`
+- **Encoding:** UTF-8 with BOM (Excel-friendly), CRLF line terminator,
+  RFC 4180 quoting (`admin/src/lib/csv-export.ts`).
+- **Filename:** `medrash-{type}-{iso-timestamp}.csv` (sanitized to safe
+  ASCII via `csvFilenameSegment`).
+- **Headers:** `Content-Type: text/csv; charset=utf-8`,
+  `Content-Disposition: attachment`, `Cache-Control: no-store`.
+- **Error response:** JSON `{ ok: false, message }` with status 404
+  (unknown type) or 500 (Supabase/runtime error).
 
 ### 5.5 Risks / future hooks
-- Large exports must stream — never load full result set into memory.
-  Use Supabase Storage resumable uploads.
-- PII boundary: `users.full_name` is **excluded** from exports by default.
-  Demographics export uses `nickname`, `facility`, `specialty` only.
+- **PII:** attempts + answers exports include `users.full_name`,
+  `nickname`, `facility`, `specialty`, `profession` for stakeholder
+  reporting. Surface 3 must sit behind §6.2's auth gate before any
+  internet-exposed deploy.
+- **Memory:** current exports load the full result set into memory before
+  CSV-serializing. Cap (50 000 attempts / 100 000 answers) keeps this
+  bounded for the pilot; switch to streaming once we exceed it.
+- **PDF / XLSX:** out of scope for Phase 4d; CSV covers stakeholder needs
+  and analyst pipelines. Revisit if a stakeholder asks.
 
 ---
 
