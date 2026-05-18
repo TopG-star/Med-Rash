@@ -1,6 +1,3 @@
-# Nested repository
-/admin/
-
 # Flutter artifacts
 app/.dart_tool/
 app/build/

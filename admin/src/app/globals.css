@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+:root {
+  --arena-background: #f9f9f9;
+  --arena-surface: #ffffff;
+  --arena-surface-muted: #f3f3f3;
+  --arena-panel: #eeeeee;
+  --arena-ink: #1b1b1b;
+  --arena-ink-muted: #4c4735;
+  --arena-outline: #111111;
+  --arena-outline-muted: #d9d2bf;
+  --arena-primary: #ffde59;
+  --arena-primary-strong: #705d00;
+  --arena-secondary: #73f6fb;
+  --arena-tertiary: #ffd4e7;
+  --arena-danger: #ffd8d2;
+  --arena-success: #d8ffe4;
+  --arena-shadow: #111111;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--arena-background);
+  background-image: radial-gradient(var(--arena-outline-muted) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.arena-panel {
+  background: var(--arena-surface);
+  border: 3px solid var(--arena-outline);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 0 var(--arena-shadow);
+}
+
+.arena-button {
+  border: 3px solid var(--arena-outline);
+  border-radius: 16px;
+  box-shadow: 4px 4px 0 0 var(--arena-shadow);
+  transition: transform 120ms linear, box-shadow 120ms linear;
+}
+
+.arena-button:active {
+  transform: translate(4px, 4px);
+  box-shadow: none;
+}
