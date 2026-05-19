@@ -1,0 +1,30 @@
+# MedRash admin panel — Netlify deploy config.
+#
+# The Next.js app and its Netlify Functions both live under admin/.
+# This file is at the repo root so Netlify picks it up before auto-detection.
+# All path fields below are resolved relative to `base` (i.e. admin/).
+
+[build]
+  base    = "admin"
+  command = "npm run build"
+  publish = ".next"
+
+# Netlify Functions for the participant-facing read/write surface (health,
+# attempt-submit, ranked-eligibility, session-resolve, quiz-list, etc.).
+# Resolved to admin/netlify/functions/ once `base` is applied.
+[functions]
+  directory    = "netlify/functions"
+  node_bundler = "esbuild"
+
+[build.environment]
+  # Next 16 requires Node 20+. Lock the build runtime so deploys are
+  # reproducible regardless of Netlify's default image rotation.
+  NODE_VERSION = "20"
+  NPM_FLAGS    = "--no-audit --no-fund"
+
+# Required for Next.js App Router (SSR, Route Handlers, dynamic params).
+# Without this plugin, Netlify would deploy a static .next/ directory and
+# every server-rendered route (/quiz-bank, /sessions, /reports, etc.) would
+# 404. Plugin auto-wires the SSR adapter + image CDN.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
