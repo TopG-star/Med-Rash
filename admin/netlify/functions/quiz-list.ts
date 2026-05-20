@@ -1,5 +1,5 @@
 import { getSupabaseAdminClient } from "./_shared/supabase";
-import { HandlerEvent, HandlerResponse, jsonResponse, requirePost } from "./_shared/http";
+import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, requirePost } from "./_shared/http";
 import { requireGateAuthorization } from "./_shared/gate";
 
 type QuestionRow = {
@@ -23,6 +23,9 @@ type QuizRow = {
 };
 
 export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
+  const preflight = handlePreflight(event);
+  if (preflight) return preflight;
+
   const methodError = requirePost(event);
   if (methodError) return methodError;
 

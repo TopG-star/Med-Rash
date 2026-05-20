@@ -10,14 +10,36 @@ export type HandlerResponse = {
   body: string;
 };
 
+// Browser callers (the Flutter Web participant app on a different Netlify
+// site) require CORS headers + an OPTIONS preflight response. Auth is via
+// the x-medrash-gate-key header, never cookies, so wildcard origin is safe.
+const CORS_HEADERS: Record<string, string> = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-methods": "GET, POST, OPTIONS",
+  "access-control-allow-headers": "content-type, x-medrash-gate-key",
+  "access-control-max-age": "86400",
+};
+
 export function jsonResponse(statusCode: number, payload: unknown): HandlerResponse {
   return {
     statusCode,
     headers: {
       "content-type": "application/json",
       "cache-control": "no-store",
+      ...CORS_HEADERS,
     },
     body: JSON.stringify(payload),
+  };
+}
+
+export function handlePreflight(event: HandlerEvent): HandlerResponse | null {
+  if ((event.httpMethod ?? "").toUpperCase() !== "OPTIONS") {
+    return null;
+  }
+  return {
+    statusCode: 204,
+    headers: { ...CORS_HEADERS },
+    body: "",
   };
 }
 

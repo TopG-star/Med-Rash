@@ -1,7 +1,7 @@
 import { PostgrestError } from "@supabase/supabase-js";
 
 import { getSupabaseAdminClient, isUniqueViolation, parseIdentityInput, resolveOrCreateUserId, resolveQuiz } from "./_shared/supabase";
-import { HandlerEvent, HandlerResponse, jsonResponse, parseJsonBody, requirePost } from "./_shared/http";
+import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost } from "./_shared/http";
 import { requireGateAuthorization } from "./_shared/gate";
 
 type Mode = "learning" | "ranked";
@@ -90,6 +90,11 @@ function parseAnswers(body: Record<string, unknown>): AnswerInput[] {
 }
 
 export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
+  const preflight = handlePreflight(event);
+  if (preflight) {
+    return preflight;
+  }
+
   const methodResponse = requirePost(event);
   if (methodResponse) {
     return methodResponse;
