@@ -21,7 +21,9 @@
 [build.environment]
   # Pin Flutter to a stable channel + version. Override in Netlify UI to
   # upgrade without a code change.
-  FLUTTER_VERSION = "3.27.4"
+  # 3.32.0 is the minimum that ships the renamed
+  # DropdownButtonFormField(initialValue:) API used in the profile screens.
+  FLUTTER_VERSION = "3.32.0"
   FLUTTER_CHANNEL = "stable"
 
 # go_router uses path-based URLs (e.g. /session/KBTH-CME-2026, /home,
