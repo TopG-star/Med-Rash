@@ -1,8 +1,7 @@
-import 'dart:convert';
-
-import 'package:http/http.dart' as http;
+import 'dart:developer' as developer;
 
 import '../../../core/infra/auth_state_manager.dart';
+import '../../../core/infra/medrash_http_client.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/repositories/profile_repository.dart';
 import '../models/leaderboard_row.dart';
@@ -10,75 +9,24 @@ import 'leaderboard_repository.dart';
 
 class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
   NetlifySupabaseLeaderboardRepository({
-    required String functionsBaseUrl,
+    required MedRashHttpClient httpClient,
     required AuthStateManager authStateManager,
     required ProfileRepository profileRepository,
     LeaderboardRepository? fallback,
-    http.Client? httpClient,
-    String? gateApiKey,
     Duration cacheTtl = const Duration(seconds: 5),
   })  : _authStateManager = authStateManager,
         _profileRepository = profileRepository,
         _fallback = fallback ?? InMemoryLeaderboardRepository(),
-        _httpClient = httpClient ?? http.Client(),
-        _gateApiKey = gateApiKey,
-        _cacheTtl = cacheTtl,
-        _baseFunctionsUri = _normalizeFunctionsUri(functionsBaseUrl);
+        _httpClient = httpClient,
+        _cacheTtl = cacheTtl;
 
   final AuthStateManager _authStateManager;
   final ProfileRepository _profileRepository;
   final LeaderboardRepository _fallback;
-  final http.Client _httpClient;
-  final String? _gateApiKey;
+  final MedRashHttpClient _httpClient;
   final Duration _cacheTtl;
-  final Uri _baseFunctionsUri;
 
   final Map<String, _CachedSnapshot> _snapshotCache = <String, _CachedSnapshot>{};
-
-  static Uri _normalizeFunctionsUri(String raw) {
-    final String normalized = raw.endsWith('/') ? raw : '$raw/';
-    return Uri.parse(normalized);
-  }
-
-  Uri _functionUri(String functionName) {
-    return _baseFunctionsUri.resolve(functionName);
-  }
-
-  Map<String, String> _buildHeaders() {
-    final Map<String, String> headers = <String, String>{
-      'content-type': 'application/json',
-    };
-    final String gateKey = _gateApiKey?.trim() ?? '';
-    if (gateKey.isNotEmpty) {
-      headers['x-medrash-gate-key'] = gateKey;
-    }
-    return headers;
-  }
-
-  Future<Map<String, dynamic>> _postJson(
-    String functionName,
-    Map<String, Object?> payload,
-  ) async {
-    final http.Response response = await _httpClient.post(
-      _functionUri(functionName),
-      headers: _buildHeaders(),
-      body: jsonEncode(payload),
-    );
-
-    Map<String, dynamic> body = <String, dynamic>{};
-    if (response.body.trim().isNotEmpty) {
-      final Object? decoded = jsonDecode(response.body);
-      if (decoded is Map<String, dynamic>) {
-        body = decoded;
-      }
-    }
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw _GateHttpException(statusCode: response.statusCode, body: body);
-    }
-
-    return body;
-  }
 
   Future<Map<String, Object?>?> _buildIdentityPayloadOrNull() async {
     final String? participantId = _authStateManager.participantId;
@@ -131,7 +79,7 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
       payload.addAll(identity);
     }
 
-    final Map<String, dynamic> response = await _postJson('leaderboard', payload);
+    final Map<String, dynamic> response = await _httpClient.postJson('leaderboard', payload);
 
     final String? seasonKey = response['seasonKey'] as String?;
     final Object? rawTop = response['top'];
@@ -214,7 +162,13 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
         season: season,
       );
       return snapshot.top;
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'leaderboard fetch failed; using fallback',
+        name: 'NetlifySupabaseLeaderboardRepository',
+        error: error,
+        stackTrace: stack,
+      );
       return _fallback.fetchLeaderboard(
         period: period,
         limit: limit,
@@ -235,7 +189,13 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
         season: season,
       );
       return snapshot.me;
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'my-rank fetch failed; using fallback',
+        name: 'NetlifySupabaseLeaderboardRepository',
+        error: error,
+        stackTrace: stack,
+      );
       return _fallback.fetchMyRank(period: period, season: season);
     }
   }
@@ -258,11 +218,4 @@ class _CachedSnapshot {
 
   final DateTime fetchedAt;
   final _Snapshot snapshot;
-}
-
-class _GateHttpException implements Exception {
-  _GateHttpException({required this.statusCode, required this.body});
-
-  final int statusCode;
-  final Map<String, dynamic> body;
 }

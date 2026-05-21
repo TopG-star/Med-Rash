@@ -1,9 +1,9 @@
-import 'dart:convert';
 import 'dart:developer' as developer;
 
-import 'package:http/http.dart' as http;
-
+import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/auth_state_manager.dart';
+import '../../../core/infra/event_bus.dart';
+import '../../../core/infra/medrash_http_client.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/repositories/profile_repository.dart';
 import '../models/attempt.dart';
@@ -27,26 +27,23 @@ import 'quiz_repository.dart';
 ///     explicitly opt-in to offline practice (which never POSTs).
 class NetlifySupabaseQuizRepository implements QuizRepository {
   NetlifySupabaseQuizRepository({
-    required String functionsBaseUrl,
+    required MedRashHttpClient httpClient,
     required AuthStateManager authStateManager,
     required ProfileRepository profileRepository,
     required QuizAttemptStore store,
-    http.Client? httpClient,
-    String? gateApiKey,
+    required EventBus eventBus,
   })  : _authStateManager = authStateManager,
         _profileRepository = profileRepository,
         _store = store,
-        _httpClient = httpClient ?? http.Client(),
-        _gateApiKey = gateApiKey,
-        _baseFunctionsUri = _normalizeFunctionsUri(functionsBaseUrl);
+        _httpClient = httpClient,
+        _eventBus = eventBus;
 
   InMemoryQuizRepository _delegate = InMemoryQuizRepository();
   final AuthStateManager _authStateManager;
   final ProfileRepository _profileRepository;
   final QuizAttemptStore _store;
-  final http.Client _httpClient;
-  final String? _gateApiKey;
-  final Uri _baseFunctionsUri;
+  final MedRashHttpClient _httpClient;
+  final EventBus _eventBus;
   final Set<String> _serverBlockedRankedQuizIds = <String>{};
 
   LiveDataStatus _liveDataStatus = LiveDataStatus.idle;
@@ -57,51 +54,11 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
   PersistedCompletedAttempt? _cachedCompleted;
   List<QuestionReview> _cachedCompletedReview = <QuestionReview>[];
 
-  static Uri _normalizeFunctionsUri(String raw) {
-    final String normalized = raw.endsWith('/') ? raw : '$raw/';
-    return Uri.parse(normalized);
-  }
-
-  Uri _functionUri(String functionName) {
-    return _baseFunctionsUri.resolve(functionName);
-  }
-
-  Map<String, String> _buildHeaders() {
-    final Map<String, String> headers = <String, String>{
-      'content-type': 'application/json',
-    };
-
-    final String gateKey = _gateApiKey?.trim() ?? '';
-    if (gateKey.isNotEmpty) {
-      headers['x-medrash-gate-key'] = gateKey;
-    }
-
-    return headers;
-  }
-
   Future<Map<String, dynamic>> _postJson(
     String functionName,
     Map<String, Object?> payload,
-  ) async {
-    final http.Response response = await _httpClient.post(
-      _functionUri(functionName),
-      headers: _buildHeaders(),
-      body: jsonEncode(payload),
-    );
-
-    Map<String, dynamic> body = <String, dynamic>{};
-    if (response.body.trim().isNotEmpty) {
-      final Object? decoded = jsonDecode(response.body);
-      if (decoded is Map<String, dynamic>) {
-        body = decoded;
-      }
-    }
-
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw _GateHttpException(statusCode: response.statusCode, body: body);
-    }
-
-    return body;
+  ) {
+    return _httpClient.postJson(functionName, payload);
   }
 
   Future<Map<String, Object?>> _buildIdentityPayload() async {
@@ -509,7 +466,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
           _serverBlockedRankedQuizIds.add(quizId);
           throw StateError('Ranked attempt already used for this quiz.');
         }
-      } on _GateHttpException {
+      } on MedRashGateException {
         throw StateError('Unable to verify ranked eligibility right now.');
       }
     }
@@ -631,11 +588,12 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
       await _store.saveCompleted(synced);
       _cachedCompleted = synced;
       await _store.clearActive();
+      _emitAttemptSubmitted(synced);
       return attempt;
-    } on _GateHttpException catch (error) {
+    } on MedRashGateException catch (error) {
       if (activeAttempt.mode == QuizMode.ranked &&
           error.statusCode == 409 &&
-          error.body['code'] == 'RANKED_ATTEMPT_ALREADY_EXISTS') {
+          error.code == 'RANKED_ATTEMPT_ALREADY_EXISTS') {
         _serverBlockedRankedQuizIds.add(activeAttempt.quiz.id);
         final PersistedCompletedAttempt synced =
             baseSnapshot.copyWith(syncStatus: 'synced', syncError: null);
@@ -755,7 +713,8 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
           cached.copyWith(syncStatus: 'synced', syncError: null);
       await _store.saveCompleted(synced);
       _cachedCompleted = synced;
-    } on _GateHttpException catch (error) {
+      _emitAttemptSubmitted(synced);
+    } on MedRashGateException catch (error) {
       final PersistedCompletedAttempt failed = cached.copyWith(
         syncStatus: 'failed',
         syncError: 'HTTP ${error.statusCode}',
@@ -773,15 +732,18 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
     await _store.clearCompleted();
     await _delegate.clearCachedCompletedAttempt();
   }
-}
 
-class _GateHttpException implements Exception {
-  _GateHttpException({
-    required this.statusCode,
-    required this.body,
-  });
-
-  final int statusCode;
-  final Map<String, dynamic> body;
+  void _emitAttemptSubmitted(PersistedCompletedAttempt snapshot) {
+    _eventBus.emit(
+      AttemptSubmittedEvent(
+        quizId: snapshot.quizId,
+        mode: snapshot.modeName,
+        origin: snapshot.originName == 'qrSession' ? 'qr_session' : 'open_access',
+        score: snapshot.score,
+        totalQuestions: snapshot.totalQuestions,
+        sessionId: snapshot.sessionId,
+      ),
+    );
+  }
 }
 

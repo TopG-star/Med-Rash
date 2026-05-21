@@ -4,6 +4,7 @@ import '../config/app_config.dart';
 import '../infra/auth_state_manager.dart';
 import '../infra/device_identity_service.dart';
 import '../infra/event_bus.dart';
+import '../infra/medrash_http_client.dart';
 import '../infra/overlay_manager.dart';
 import '../../features/leaderboard/repositories/leaderboard_repository.dart';
 import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_repository.dart';
@@ -20,6 +21,12 @@ Future<void> initCore() async {
 
   getIt.registerLazySingleton<EventBus>(EventBus.new);
   getIt.registerLazySingleton<OverlayController>(OverlayController.new);
+  getIt.registerLazySingleton<MedRashHttpClient>(
+    () => MedRashHttpClient(
+      functionsBaseUrl: AppConfig.functionsBaseUrl,
+      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
+    ),
+  );
   getIt.registerLazySingleton<DeviceIdentityService>(
     () => DeviceIdentityService(preferences),
   );
@@ -31,18 +38,17 @@ Future<void> initCore() async {
   );
   getIt.registerLazySingleton<QuizRepository>(
     () => NetlifySupabaseQuizRepository(
-      functionsBaseUrl: AppConfig.functionsBaseUrl,
+      httpClient: getIt<MedRashHttpClient>(),
       authStateManager: getIt<AuthStateManager>(),
       profileRepository: getIt<ProfileRepository>(),
       store: getIt<QuizAttemptStore>(),
-      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
+      eventBus: getIt<EventBus>(),
     ),
   );
   getIt.registerLazySingleton<SessionRepository>(
     () => NetlifySupabaseSessionRepository(
-      functionsBaseUrl: AppConfig.functionsBaseUrl,
+      httpClient: getIt<MedRashHttpClient>(),
       fallback: InMemorySessionRepository(),
-      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
     ),
   );
   final AuthStateManager authStateManager = AuthStateManager(
@@ -53,11 +59,10 @@ Future<void> initCore() async {
 
   getIt.registerLazySingleton<LeaderboardRepository>(
     () => NetlifySupabaseLeaderboardRepository(
-      functionsBaseUrl: AppConfig.functionsBaseUrl,
+      httpClient: getIt<MedRashHttpClient>(),
       authStateManager: getIt<AuthStateManager>(),
       profileRepository: getIt<ProfileRepository>(),
       fallback: InMemoryLeaderboardRepository(),
-      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
     ),
   );
 
