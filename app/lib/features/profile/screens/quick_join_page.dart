@@ -75,7 +75,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
           ArenaCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: DropdownButtonFormField<String>(
-              initialValue: _specialty,
+              value: _specialty,
               decoration: const InputDecoration(border: InputBorder.none),
               items: const <String>['Doctor', 'Pharmacist', 'Nurse', 'Medical Rep']
                   .map(
