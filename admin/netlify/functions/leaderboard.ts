@@ -7,9 +7,11 @@ import {
 import {
   HandlerEvent,
   HandlerResponse,
+  handlePreflight,
   jsonResponse,
   parseJsonBody,
   requirePost,
+  toV2Handler,
 } from "./_shared/http";
 import { requireGateAuthorization } from "./_shared/gate";
 
@@ -82,6 +84,9 @@ function mapRow(row: RpcRow): LeaderboardRowResponse {
 }
 
 export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
+  const preflight = handlePreflight(event);
+  if (preflight) return preflight;
+
   const methodError = requirePost(event);
   if (methodError) return methodError;
 
@@ -206,4 +211,4 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
   }
 }
 
-export default handler;
+export default toV2Handler(handler);

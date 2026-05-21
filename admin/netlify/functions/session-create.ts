@@ -1,4 +1,4 @@
-import { jsonResponse, parseJsonBody, requirePost, HandlerEvent } from "./_shared/http";
+import { jsonResponse, parseJsonBody, requirePost, toV2Handler, HandlerEvent } from "./_shared/http";
 import { requireAdminWriteAuthorization } from "./_shared/admin-gate";
 import {
   createSessionRecord,
@@ -56,3 +56,5 @@ export async function handler(event: HandlerEvent) {
     });
   }
 }
+
+export default toV2Handler(handler);

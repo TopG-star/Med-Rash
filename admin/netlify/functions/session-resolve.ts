@@ -1,5 +1,5 @@
 import { getSupabaseAdminClient } from './_shared/supabase';
-import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost } from './_shared/http';
+import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from './_shared/http';
 import { requireGateAuthorization } from './_shared/gate';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -221,4 +221,4 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
   }
 }
 
-export default handler;
+export default toV2Handler(handler);

@@ -67,3 +67,32 @@ export function requirePost(event: HandlerEvent): HandlerResponse | null {
 
   return null;
 }
+
+// Netlify Functions v2 runtime expects handlers to return a web standard
+// Response. Our handlers are written in the classic AWS-Lambda-style shape
+// (HandlerEvent in, HandlerResponse out) because that maps cleanly to the
+// helpers above. This adapter bridges the two: each function file exports
+// `toV2Handler(handler)` as its default export, so the runtime receives a
+// real Request/Response pair while the handler logic stays untouched.
+export type LegacyHandler = (event: HandlerEvent) => Promise<HandlerResponse>;
+
+export function toV2Handler(legacy: LegacyHandler): (req: Request) => Promise<Response> {
+  return async (req: Request): Promise<Response> => {
+    const method = req.method.toUpperCase();
+    const headers: Record<string, string> = {};
+    req.headers.forEach((value, key) => {
+      headers[key.toLowerCase()] = value;
+    });
+
+    const hasBody = method !== "GET" && method !== "HEAD" && method !== "OPTIONS";
+    const body = hasBody ? await req.text() : null;
+
+    const event: HandlerEvent = { httpMethod: method, headers, body };
+    const result = await legacy(event);
+
+    return new Response(result.body, {
+      status: result.statusCode,
+      headers: result.headers ?? {},
+    });
+  };
+}

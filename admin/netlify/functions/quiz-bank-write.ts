@@ -1,4 +1,4 @@
-import { HandlerEvent, jsonResponse, parseJsonBody, requirePost } from "./_shared/http";
+import { HandlerEvent, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireAdminWriteAuthorization } from "./_shared/admin-gate";
 import {
   bulkCreateQuestions,
@@ -197,3 +197,5 @@ export async function handler(event: HandlerEvent) {
     });
   }
 }
+
+export default toV2Handler(handler);

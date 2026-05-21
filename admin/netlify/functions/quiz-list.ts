@@ -1,5 +1,5 @@
 import { getSupabaseAdminClient } from "./_shared/supabase";
-import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, requirePost } from "./_shared/http";
+import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, requirePost, toV2Handler } from "./_shared/http";
 import { requireGateAuthorization } from "./_shared/gate";
 
 type QuestionRow = {
@@ -62,3 +62,5 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     });
   }
 }
+
+export default toV2Handler(handler);
