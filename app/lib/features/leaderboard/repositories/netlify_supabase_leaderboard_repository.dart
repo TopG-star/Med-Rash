@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
+import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/auth_state_manager.dart';
+import '../../../core/infra/event_bus.dart';
 import '../../../core/infra/medrash_http_client.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/repositories/profile_repository.dart';
@@ -12,21 +15,38 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
     required MedRashHttpClient httpClient,
     required AuthStateManager authStateManager,
     required ProfileRepository profileRepository,
+    EventBus? eventBus,
     LeaderboardRepository? fallback,
     Duration cacheTtl = const Duration(seconds: 5),
   })  : _authStateManager = authStateManager,
         _profileRepository = profileRepository,
         _fallback = fallback ?? InMemoryLeaderboardRepository(),
         _httpClient = httpClient,
-        _cacheTtl = cacheTtl;
+        _cacheTtl = cacheTtl {
+    if (eventBus != null) {
+      _attemptSubscription = eventBus.on<AttemptSubmittedEvent>().listen((_) {
+        _snapshotCache.clear();
+        developer.log(
+          'snapshot cache invalidated by AttemptSubmittedEvent',
+          name: 'NetlifySupabaseLeaderboardRepository',
+        );
+      });
+    }
+  }
 
   final AuthStateManager _authStateManager;
   final ProfileRepository _profileRepository;
   final LeaderboardRepository _fallback;
   final MedRashHttpClient _httpClient;
   final Duration _cacheTtl;
+  StreamSubscription<AttemptSubmittedEvent>? _attemptSubscription;
 
   final Map<String, _CachedSnapshot> _snapshotCache = <String, _CachedSnapshot>{};
+
+  void dispose() {
+    _attemptSubscription?.cancel();
+    _attemptSubscription = null;
+  }
 
   Future<Map<String, Object?>?> _buildIdentityPayloadOrNull() async {
     final String? participantId = _authStateManager.participantId;

@@ -62,6 +62,7 @@ Future<void> initCore() async {
       httpClient: getIt<MedRashHttpClient>(),
       authStateManager: getIt<AuthStateManager>(),
       profileRepository: getIt<ProfileRepository>(),
+      eventBus: getIt<EventBus>(),
       fallback: InMemoryLeaderboardRepository(),
     ),
   );

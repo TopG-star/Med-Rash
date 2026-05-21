@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/events/medrash_events.dart';
+import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/theme/theme_extensions.dart';
@@ -17,6 +21,7 @@ class WorldRankPage extends StatefulWidget {
 class _WorldRankPageState extends State<WorldRankPage> {
   bool _allTime = true;
   late final LeaderboardRepository _leaderboardRepository;
+  StreamSubscription<AttemptSubmittedEvent>? _attemptSubscription;
   Future<List<LeaderboardRow>>? _futureRows;
 
   @override
@@ -26,6 +31,21 @@ class _WorldRankPageState extends State<WorldRankPage> {
     _futureRows = _leaderboardRepository.fetchLeaderboard(
       period: LeaderboardPeriod.allTime,
     );
+    _attemptSubscription =
+        getIt<EventBus>().on<AttemptSubmittedEvent>().listen((_) {
+      if (!mounted) return;
+      setState(() {
+        _futureRows = _leaderboardRepository.fetchLeaderboard(
+          period: _allTime ? LeaderboardPeriod.allTime : LeaderboardPeriod.monthly,
+        );
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _attemptSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _switchPeriod(bool allTime) async {
