@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../profile/models/user_profile.dart';
+import '../../profile/repositories/profile_repository.dart';
 import '../models/quiz.dart';
 import '../repositories/quiz_repository.dart';
 
@@ -23,13 +26,17 @@ class QuizDetailPage extends StatefulWidget {
 
 class _QuizDetailPageState extends State<QuizDetailPage> {
   late final QuizRepository _quizRepository;
+  late final ProfileRepository _profileRepository;
   Future<Quiz>? _futureQuiz;
+  Future<UserProfile?>? _futureProfile;
 
   @override
   void initState() {
     super.initState();
     _quizRepository = getIt<QuizRepository>();
+    _profileRepository = getIt<ProfileRepository>();
     _futureQuiz = _loadQuiz();
+    _futureProfile = _profileRepository.getProfile();
   }
 
   Future<Quiz> _loadQuiz() async {
@@ -80,6 +87,36 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
 
           return ListView(
             children: <Widget>[
+              FutureBuilder<UserProfile?>(
+                future: _futureProfile,
+                builder: (BuildContext context, AsyncSnapshot<UserProfile?> profileSnap) {
+                  final UserProfile? profile = profileSnap.data;
+                  if (profile == null) {
+                    return const SizedBox.shrink();
+                  }
+                  final tokens = context.arenaTokens;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: ArenaCard(
+                      color: tokens.warningSurface,
+                      child: Row(
+                        children: <Widget>[
+                          Icon(Icons.person_pin_outlined, color: tokens.outline),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Playing as @${profile.nickname} from ${profile.facility}.',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
               ArenaCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

@@ -12,6 +12,7 @@ class ArenaScaffold extends StatelessWidget {
     this.showBack = false,
     this.showClose = false,
     this.bottomNav = false,
+    this.actions,
   });
 
   final String title;
@@ -19,6 +20,7 @@ class ArenaScaffold extends StatelessWidget {
   final bool showBack;
   final bool showClose;
   final bool bottomNav;
+  final List<Widget>? actions;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +36,7 @@ class ArenaScaffold extends StatelessWidget {
                 icon: Icon(showClose ? Icons.close : Icons.arrow_back),
               )
             : null,
+        actions: actions,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
           child: Container(color: tokens.outline, height: 3),

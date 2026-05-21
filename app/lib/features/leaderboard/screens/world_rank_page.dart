@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/di/get_it.dart';
 import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/event_bus.dart';
+import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/theme/theme_extensions.dart';
@@ -65,6 +66,7 @@ class _WorldRankPageState extends State<WorldRankPage> {
       title: 'World Rank',
       showBack: true,
       bottomNav: true,
+      actions: const <Widget>[IdentityBadge()],
       child: FutureBuilder<List<LeaderboardRow>>(
         future: _futureRows,
         builder: (BuildContext context, AsyncSnapshot<List<LeaderboardRow>> snapshot) {

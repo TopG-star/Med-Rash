@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -31,6 +32,7 @@ class _HomePageState extends State<HomePage> {
     return ArenaScaffold(
       title: 'MedRash',
       bottomNav: true,
+      actions: const <Widget>[IdentityBadge()],
       child: FutureBuilder<List<Quiz>>(
         future: _futureQuizzes,
         builder: (BuildContext context, AsyncSnapshot<List<Quiz>> snapshot) {

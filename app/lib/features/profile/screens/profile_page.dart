@@ -78,7 +78,16 @@ class _ProfilePageState extends State<ProfilePage> {
               children: <Widget>[
                 const CircleAvatar(radius: 52, child: Icon(Icons.person, size: 44)),
                 const SizedBox(height: 16),
-                Text(profile.nickname, style: Theme.of(context).textTheme.headlineMedium),
+                Text(
+                  profile.fullName.trim().isEmpty ? profile.nickname : profile.fullName,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '@${profile.nickname}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 const SizedBox(height: 20),
                 ArenaCard(
                   color: const Color(0xFFF7F7F7),

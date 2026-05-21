@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/get_it.dart';
 import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/event_bus.dart';
+import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -165,6 +166,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
     return ArenaScaffold(
       title: 'Quiz Result',
       showClose: true,
+      actions: const <Widget>[IdentityBadge()],
       child: FutureBuilder<_ResultPayload>(
         future: _futureResult,
         builder: (BuildContext context, AsyncSnapshot<_ResultPayload> snapshot) {
