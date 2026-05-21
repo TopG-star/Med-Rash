@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/events/medrash_events.dart';
+import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -34,6 +38,7 @@ enum _ResultSource { freshFinalize, cachedSynced, cachedPending, none }
 
 class _QuizResultPageState extends State<QuizResultPage> {
   late final QuizRepository _quizRepository;
+  StreamSubscription<AttemptSubmittedEvent>? _attemptSubscription;
   Future<_ResultPayload>? _futureResult;
   bool _retryInFlight = false;
 
@@ -42,6 +47,24 @@ class _QuizResultPageState extends State<QuizResultPage> {
     super.initState();
     _quizRepository = getIt<QuizRepository>();
     _futureResult = _resolveResult();
+    _attemptSubscription =
+        getIt<EventBus>().on<AttemptSubmittedEvent>().listen((_) {
+      if (!mounted) return;
+      // A background sync succeeded — swap the pending banner for the synced
+      // state and show a positive confirmation.
+      setState(() {
+        _futureResult = _resolveResult();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Result synced to server.')),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    _attemptSubscription?.cancel();
+    super.dispose();
   }
 
   Future<_ResultPayload> _resolveResult() async {
@@ -202,6 +225,9 @@ class _QuizResultPageState extends State<QuizResultPage> {
           final Attempt attempt = payload.attempt;
           final List<QuestionReview> review = payload.review;
           final bool needsSync = payload.source == _ResultSource.cachedPending;
+          final bool freshlySynced =
+              payload.source == _ResultSource.cachedSynced ||
+                  payload.source == _ResultSource.freshFinalize;
 
           return ListView(
             children: <Widget>[
@@ -217,18 +243,42 @@ class _QuizResultPageState extends State<QuizResultPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              payload.syncError ?? 'Result not yet synced to server.',
+                              'Saved on this device. We\u2019ll keep retrying in the background \u2014 your score is not lost.',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
                         ],
                       ),
+                      if (payload.syncError != null) ...<Widget>[
+                        const SizedBox(height: 8),
+                        Text(
+                          payload.syncError!,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                       const SizedBox(height: 12),
                       ArenaButton(
-                        label: _retryInFlight ? 'Retrying…' : 'Retry sync',
+                        label: _retryInFlight ? 'Retrying…' : 'Retry now',
                         icon: Icons.refresh,
                         backgroundColor: tokens.secondary,
                         onPressed: _retryInFlight ? null : _retrySync,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ] else if (freshlySynced) ...<Widget>[
+                ArenaCard(
+                  color: const Color(0xFFE6F4EA),
+                  child: Row(
+                    children: <Widget>[
+                      Icon(Icons.cloud_done_outlined, color: tokens.success),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Saved and synced to MedRash.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                       ),
                     ],
                   ),
