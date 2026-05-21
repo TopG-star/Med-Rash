@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import '../../../core/events/medrash_events.dart';
@@ -50,6 +51,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
   Object? _lastSeedError;
   bool _initialized = false;
   Future<void>? _inflightInit;
+  Future<void>? _inflightRetry;
 
   PersistedCompletedAttempt? _cachedCompleted;
   List<QuestionReview> _cachedCompletedReview = <QuestionReview>[];
@@ -319,6 +321,28 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
     }
 
     _initialized = true;
+
+    // Best-effort auto-retry of any cached attempt left in pending/failed state.
+    if (cachedCompletedNeedsSync) {
+      unawaited(_autoRetryCachedAttempt());
+    }
+  }
+
+  Future<void> _autoRetryCachedAttempt() async {
+    try {
+      await retrySyncCachedAttempt();
+      developer.log(
+        'auto-retry of cached attempt succeeded',
+        name: 'NetlifySupabaseQuizRepository',
+      );
+    } catch (error, stack) {
+      developer.log(
+        'auto-retry of cached attempt failed; will surface manual retry on /result',
+        name: 'NetlifySupabaseQuizRepository',
+        error: error,
+        stackTrace: stack,
+      );
+    }
   }
 
   List<QuestionReview> _materializeReviewFromSnapshot(PersistedCompletedAttempt snapshot) {
@@ -670,6 +694,18 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
 
   @override
   Future<void> retrySyncCachedAttempt() async {
+    final Future<void>? inflight = _inflightRetry;
+    if (inflight != null) return inflight;
+    final Future<void> task = _doRetrySyncCachedAttempt();
+    _inflightRetry = task;
+    try {
+      await task;
+    } finally {
+      _inflightRetry = null;
+    }
+  }
+
+  Future<void> _doRetrySyncCachedAttempt() async {
     final PersistedCompletedAttempt? cached = _cachedCompleted;
     if (cached == null) {
       throw StateError('No completed attempt to sync.');
