@@ -1,4 +1,5 @@
 import { AdminShell } from "@/components/admin-shell";
+import { EmptyState } from "@/components/empty-state";
 import { MetricCard } from "@/components/metric-card";
 import { PanelCard } from "@/components/panel-card";
 import { getOverviewKpis } from "@/lib/overview-queries";
@@ -92,9 +93,11 @@ export default async function DashboardPage() {
       <section className="grid gap-5 xl:grid-cols-[2fr_1fr]">
         <PanelCard title="Most-Missed Questions">
           {mostMissed.length === 0 ? (
-            <p className="text-sm text-[var(--arena-ink-muted)]">
-              No answer data yet. Run a session to populate this panel.
-            </p>
+            <EmptyState
+              icon={<span>📊</span>}
+              title="No answer data yet"
+              helper="Once your first participant submits, this panel will populate within seconds."
+            />
           ) : (
             <div className="space-y-4">
               {mostMissed.map((row) => {
@@ -123,9 +126,11 @@ export default async function DashboardPage() {
         </PanelCard>
         <PanelCard title="Facility Signals">
           {facilityPerformance.length === 0 ? (
-            <p className="text-sm text-[var(--arena-ink-muted)]">
-              No completed attempts to rank facilities yet.
-            </p>
+            <EmptyState
+              icon={<span>🏥</span>}
+              title="No facility data yet"
+              helper="Once attempts are completed, ranked facilities will appear here."
+            />
           ) : (
             <div className="space-y-3">
               {facilityPerformance.map((row) => {

@@ -1,4 +1,7 @@
+import Link from "next/link";
+
 import { AdminShell } from "@/components/admin-shell";
+import { EmptyState } from "@/components/empty-state";
 import { PanelCard } from "@/components/panel-card";
 import {
   listActiveQuizOptions,
@@ -58,9 +61,11 @@ export default async function SessionsPage() {
 
       <PanelCard title="Recent Sessions">
         {sessions.length === 0 ? (
-          <p className="text-sm font-medium text-[var(--arena-ink-muted)]">
-            No sessions yet. Create one above to generate a QR-coded join link.
-          </p>
+          <EmptyState
+            icon={<span>📅</span>}
+            title="No sessions yet"
+            helper="Create one above to generate a QR-coded join link your participants can scan."
+          />
         ) : (
           <div className="space-y-4">
             {sessions.map((session) => (
@@ -86,6 +91,12 @@ export default async function SessionsPage() {
                   </p>
                 </div>
                 <div className="flex gap-3">
+                  <Link
+                    href={`/sessions/${session.id}/live`}
+                    className="arena-button bg-[var(--arena-tertiary)] px-4 py-2 text-sm font-semibold"
+                  >
+                    Live view
+                  </Link>
                   <button
                     type="button"
                     className="arena-button bg-[var(--arena-secondary)] px-4 py-2 text-sm font-semibold opacity-60"

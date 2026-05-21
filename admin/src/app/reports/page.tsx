@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
+import { EmptyState } from "@/components/empty-state";
 import { PanelCard } from "@/components/panel-card";
 import { listAdminQuizzes } from "@/lib/quiz-bank-queries";
 import {
@@ -257,9 +258,11 @@ function MostMissedTable({
   const rows = result.value;
   if (rows.length === 0) {
     return (
-      <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
-        No answered questions match the current filters yet.
-      </p>
+      <EmptyState
+        icon={<span>🔍</span>}
+        title="No answered questions match"
+        helper="Adjust the filters above, or wait for participants to submit attempts."
+      />
     );
   }
   return (
@@ -321,9 +324,11 @@ function FacilityTable({
   const rows = result.value;
   if (rows.length === 0) {
     return (
-      <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
-        No facility data yet.
-      </p>
+      <EmptyState
+        icon={<span>🏥</span>}
+        title="No facility data yet"
+        helper="Facilities appear once participants from them complete attempts."
+      />
     );
   }
   return (
@@ -383,10 +388,11 @@ function TreatmentTable({
   const rows = result.value;
   if (rows.length === 0) {
     return (
-      <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
-        No questions tagged <code>treatment-perception</code> have wrong
-        answers yet.
-      </p>
+      <EmptyState
+        icon={<span>💊</span>}
+        title="No treatment-perception data"
+        helper={"No questions tagged 'treatment-perception' have wrong answers in this window yet."}
+      />
     );
   }
   return (
