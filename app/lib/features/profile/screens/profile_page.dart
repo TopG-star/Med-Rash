@@ -5,6 +5,7 @@ import '../../../core/di/get_it.dart';
 import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/auth_state_manager.dart';
 import '../../../core/infra/event_bus.dart';
+import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -71,7 +72,8 @@ class _ProfilePageState extends State<ProfilePage> {
       title: 'Profile',
       showBack: true,
       bottomNav: true,
-      child: ListView(
+      child: MedRashConstrainedBody(
+        child: ListView(
         children: <Widget>[
           ArenaCard(
             child: Column(
@@ -82,11 +84,15 @@ class _ProfilePageState extends State<ProfilePage> {
                   profile.fullName.trim().isEmpty ? profile.nickname : profile.fullName,
                   style: Theme.of(context).textTheme.headlineMedium,
                   textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '@${profile.nickname}',
                   style: Theme.of(context).textTheme.bodyMedium,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 20),
                 ArenaCard(
@@ -199,6 +205,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
         ],
+        ),
       ),
     );
   }

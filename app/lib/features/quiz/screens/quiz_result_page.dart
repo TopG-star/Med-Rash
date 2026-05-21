@@ -7,6 +7,7 @@ import '../../../core/di/get_it.dart';
 import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/identity_badge.dart';
+import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -231,7 +232,8 @@ class _QuizResultPageState extends State<QuizResultPage> {
               payload.source == _ResultSource.cachedSynced ||
                   payload.source == _ResultSource.freshFinalize;
 
-          return ListView(
+          return MedRashConstrainedBody(
+            child: ListView(
             children: <Widget>[
               if (needsSync) ...<Widget>[
                 ArenaCard(
@@ -291,10 +293,17 @@ class _QuizResultPageState extends State<QuizResultPage> {
                 color: tokens.primary,
                 child: Column(
                   children: <Widget>[
-                    Text('GREAT EFFORT!', style: Theme.of(context).textTheme.headlineMedium),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('GREAT EFFORT!',
+                          style: Theme.of(context).textTheme.headlineMedium),
+                    ),
                     const SizedBox(height: 20),
-                    Text('${attempt.score}/${attempt.totalQuestions}',
-                        style: Theme.of(context).textTheme.displayLarge),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text('${attempt.score}/${attempt.totalQuestions}',
+                          style: Theme.of(context).textTheme.displayLarge),
+                    ),
                     const SizedBox(height: 20),
                     ArenaCard(
                       color: Colors.white,
@@ -382,6 +391,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                 onPressed: () => context.go('/leaderboard'),
               ),
             ],
+            ),
           );
         },
       ),

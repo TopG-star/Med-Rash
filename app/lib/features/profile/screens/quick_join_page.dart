@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/get_it.dart';
 import '../../../core/infra/auth_state_manager.dart';
 import '../../../core/ui/operation_runner_state.dart';
+import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -46,7 +47,8 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     return ArenaScaffold(
       title: 'Join The Academy',
       showBack: false,
-      child: ListView(
+      child: MedRashConstrainedBody(
+        child: ListView(
         children: <Widget>[
           Text('FULL NAME', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
@@ -115,7 +117,12 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(_nickname, style: Theme.of(context).textTheme.titleLarge),
+                      Text(
+                        _nickname,
+                        style: Theme.of(context).textTheme.titleLarge,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       const SizedBox(height: 4),
                       Text(
                         'Ready for the leaderboard',
@@ -158,6 +165,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                 : null,
           ),
         ],
+        ),
       ),
     );
   }

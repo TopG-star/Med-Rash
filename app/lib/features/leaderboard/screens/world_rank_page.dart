@@ -6,6 +6,7 @@ import '../../../core/di/get_it.dart';
 import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/identity_badge.dart';
+import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/theme/theme_extensions.dart';
@@ -78,7 +79,8 @@ class _WorldRankPageState extends State<WorldRankPage> {
           final List<LeaderboardRow> podium = rows.take(3).toList();
           final List<LeaderboardRow> rest = rows.skip(3).toList();
 
-          return ListView(
+          return MedRashConstrainedBody(
+            child: ListView(
             children: <Widget>[
               ArenaCard(
                 child: Row(
@@ -129,6 +131,8 @@ class _WorldRankPageState extends State<WorldRankPage> {
                           child: Text(
                             row.isCurrentUser ? '${row.name} (YOU)' : row.name,
                             style: Theme.of(context).textTheme.titleLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         Text('${row.score}', style: Theme.of(context).textTheme.headlineMedium),
@@ -138,6 +142,7 @@ class _WorldRankPageState extends State<WorldRankPage> {
                 ),
               ),
             ],
+            ),
           );
         },
       ),
@@ -217,7 +222,12 @@ class _PodiumCard extends StatelessWidget {
                 const SizedBox(height: 16),
                 const CircleAvatar(radius: 32, child: Icon(Icons.person)),
                 const SizedBox(height: 16),
-                Text(row.name, textAlign: TextAlign.center),
+                Text(
+                  row.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 const SizedBox(height: 8),
                 Text('${row.score}', style: Theme.of(context).textTheme.headlineMedium),
               ],
