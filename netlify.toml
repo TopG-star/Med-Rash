@@ -17,9 +17,9 @@
   node_bundler = "esbuild"
 
 [build.environment]
-  # Next 16 requires Node 20+. Lock the build runtime so deploys are
-  # reproducible regardless of Netlify's default image rotation.
-  NODE_VERSION = "20"
+  # Node 22 required: @supabase/supabase-js Realtime client needs native
+  # WebSocket (absent in Node 20). Next 16 supports Node 22.
+  NODE_VERSION = "22"
   NPM_FLAGS    = "--no-audit --no-fund"
 
 # Required for Next.js App Router (SSR, Route Handlers, dynamic params).
