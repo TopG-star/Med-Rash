@@ -121,11 +121,88 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     const totalQuestions = parsePositiveInt(body.totalQuestions, 5);
     const timeTakenMs = parsePositiveInt(body.timeTakenMs, 0);
 
+    // Clamp time to a sane upper bound (2 hours) to defend against clock skew
+    // or a stuck attempt sending an obscene duration.
+    const MAX_TIME_TAKEN_MS = 2 * 60 * 60 * 1000;
+    const clampedTimeTakenMs = Math.min(timeTakenMs, MAX_TIME_TAKEN_MS);
+
     const now = new Date();
 
     const supabase = getSupabaseAdminClient();
     const userId = await resolveOrCreateUserId(supabase, identity);
     const quiz = await resolveQuiz(supabase, quizRef);
+
+    // Server-side score recomputation. We never trust client-supplied score
+    // or is_correct flags — fetch the truth table for this quiz and rebuild
+    // the verdict locally.
+    const { data: questionsRows, error: questionsError } = await supabase
+      .from("questions")
+      .select("id, correct_index")
+      .eq("quiz_id", quiz.id);
+
+    if (questionsError) {
+      return jsonResponse(500, {
+        ok: false,
+        code: "QUIZ_QUESTIONS_FETCH_FAILED",
+        message: questionsError.message,
+      });
+    }
+
+    const correctIndexByQuestionId = new Map<string, number>();
+    for (const row of (questionsRows ?? []) as Array<Record<string, unknown>>) {
+      const id = typeof row.id === "string" ? row.id : null;
+      const correctIndex =
+        typeof row.correct_index === "number" ? Math.floor(row.correct_index) : null;
+      if (id && correctIndex !== null) {
+        correctIndexByQuestionId.set(id, correctIndex);
+      }
+    }
+
+    const submittedAnswers = parseAnswers(body);
+
+    // Filter answers down to ones whose questionId belongs to this quiz, then
+    // recompute is_correct from the server's correct_index. Anything else is
+    // dropped (and logged) so analytics stays trustworthy.
+    type RecomputedAnswer = AnswerInput & { recomputedIsCorrect: boolean };
+    const recomputedAnswers: RecomputedAnswer[] = [];
+    let droppedAnswerCount = 0;
+    for (const a of submittedAnswers) {
+      const correctIndex = correctIndexByQuestionId.get(a.questionId);
+      if (correctIndex === undefined) {
+        droppedAnswerCount += 1;
+        continue;
+      }
+      recomputedAnswers.push({
+        ...a,
+        recomputedIsCorrect: a.selectedIndex === correctIndex,
+      });
+    }
+
+    if (droppedAnswerCount > 0) {
+      console.warn(
+        `[attempt-submit] dropped ${droppedAnswerCount} answer(s) whose questionId did not belong to quiz ${quiz.id}.`,
+      );
+    }
+
+    // Server-of-record values. We ignore the client-supplied score and
+    // totalQuestions entirely; totalQuestions is the size of the quiz's
+    // question bank (or the client-provided value, whichever is smaller and
+    // positive — to defend against partial seeds during local dev).
+    const recomputedScore = recomputedAnswers.reduce(
+      (sum, a) => sum + (a.recomputedIsCorrect ? 1 : 0),
+      0,
+    );
+    const serverTotalQuestions =
+      correctIndexByQuestionId.size > 0 ? correctIndexByQuestionId.size : totalQuestions;
+
+    // Detect score tampering so we can alarm on it later without rejecting
+    // the attempt — the server value is what gets persisted regardless.
+    if (score !== recomputedScore || totalQuestions !== serverTotalQuestions) {
+      console.warn(
+        `[attempt-submit] client/server score mismatch for quiz ${quiz.id}: ` +
+          `client=${score}/${totalQuestions} server=${recomputedScore}/${serverTotalQuestions}`,
+      );
+    }
 
     if (mode === "ranked") {
       const { data: existingRanked, error: rankedCheckError } = await supabase
@@ -153,7 +230,7 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       }
     }
 
-    const startedAt = new Date(Math.max(now.getTime() - timeTakenMs, 0)).toISOString();
+    const startedAt = new Date(Math.max(now.getTime() - clampedTimeTakenMs, 0)).toISOString();
     const completedAt = now.toISOString();
 
     const { data: insertedAttempt, error: insertError } = await supabase
@@ -164,15 +241,18 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
         session_id: sessionId,
         mode,
         origin,
-        score,
-        total_questions: totalQuestions,
-        time_taken_ms: timeTakenMs,
+        score: recomputedScore,
+        total_questions: serverTotalQuestions,
+        time_taken_ms: clampedTimeTakenMs,
         started_at: startedAt,
         completed_at: completedAt,
         metadata: {
           source: "netlify-gate",
           identity_spine_id: identity.participantId,
           quiz_slug: quiz.slug,
+          client_reported_score: score,
+          client_reported_total_questions: totalQuestions,
+          dropped_answer_count: droppedAnswerCount,
         },
       })
       .select("id")
@@ -196,16 +276,16 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
     const attemptId = String((insertedAttempt as Record<string, unknown>).id);
 
-    // Insert per-question answer records for analytics.
+    // Insert per-question answer records for analytics, using the server-
+    // recomputed is_correct (not the client-supplied flag).
     // This is non-blocking: a failure here does not fail the attempt submission.
-    const answers = parseAnswers(body);
-    if (answers.length > 0) {
-      const answerRows = answers.map((a) => ({
+    if (recomputedAnswers.length > 0) {
+      const answerRows = recomputedAnswers.map((a) => ({
         attempt_id: attemptId,
         question_id: a.questionId,
         selected_index: a.selectedIndex,
         selected_option_text: a.selectedOptionText,
-        is_correct: a.isCorrect,
+        is_correct: a.recomputedIsCorrect,
         response_time_ms: a.responseTimeMs,
       }));
 
@@ -219,7 +299,9 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       ok: true,
       attemptId,
       quizSlug: quiz.slug,
-      answersRecorded: answers.length > 0,
+      score: recomputedScore,
+      totalQuestions: serverTotalQuestions,
+      answersRecorded: recomputedAnswers.length > 0,
     });
   } catch (error) {
     return jsonResponse(400, {
