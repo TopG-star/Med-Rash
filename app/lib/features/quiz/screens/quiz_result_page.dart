@@ -233,7 +233,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
             children: <Widget>[
               if (needsSync) ...<Widget>[
                 ArenaCard(
-                  color: const Color(0xFFFFF4E0),
+                  color: tokens.warningSurface,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
@@ -269,7 +269,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                 const SizedBox(height: 16),
               ] else if (freshlySynced) ...<Widget>[
                 ArenaCard(
-                  color: const Color(0xFFE6F4EA),
+                  color: tokens.successSurface,
                   child: Row(
                     children: <Widget>[
                       Icon(Icons.cloud_done_outlined, color: tokens.success),

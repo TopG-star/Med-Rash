@@ -102,7 +102,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ArenaCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: DropdownButtonFormField<String>(
-              value: _specialty,
+              initialValue: _specialty,
               decoration: const InputDecoration(border: InputBorder.none),
               items: const <String>['Emergency Medicine', 'Pharmacy', 'General Practice']
                   .map(
