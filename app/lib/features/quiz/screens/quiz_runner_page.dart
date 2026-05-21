@@ -324,53 +324,104 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
               const SizedBox(height: 24),
               Center(child: ArenaChip(label: attempt.quiz.category)),
               const SizedBox(height: 20),
-              ArenaCard(
-                color: const Color(0xFFF8F8F8),
-                child: Column(
-                  children: <Widget>[
-                    Text(
-                      question.prompt,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ...List<Widget>.generate(question.options.length, (int index) {
+              LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  final MediaQueryData mq = MediaQuery.of(context);
+                  final bool landscape = mq.orientation == Orientation.landscape &&
+                      constraints.maxWidth >= 600;
+
+                  final Widget promptBlock = Text(
+                    question.prompt,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                    textAlign: landscape ? TextAlign.start : TextAlign.center,
+                  );
+
+                  final List<Widget> optionTiles = List<Widget>.generate(
+                    question.options.length,
+                    (int index) {
                       final bool selected = _selectedIndex == index;
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: InkWell(
-                          onTap: () => setState(() => _selectedIndex = index),
-                          child: ArenaCard(
-                            color: selected ? tokens.primary : tokens.surface,
-                            child: Row(
-                              children: <Widget>[
-                                CircleAvatar(
-                                  backgroundColor:
-                                      selected ? tokens.textPrimary : tokens.surfaceMuted,
-                                  child: Text(
-                                    String.fromCharCode(65 + index),
-                                    style: TextStyle(
-                                      color: selected ? tokens.primary : tokens.textPrimary,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Text(
-                                    question.options[index],
-                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => setState(() => _selectedIndex = index),
+                            borderRadius: BorderRadius.circular(tokens.radiusLarge),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 48),
+                              child: ArenaCard(
+                                color: selected ? tokens.primary : tokens.surface,
+                                child: Row(
+                                  children: <Widget>[
+                                    CircleAvatar(
+                                      backgroundColor: selected
+                                          ? tokens.textPrimary
+                                          : tokens.surfaceMuted,
+                                      child: Text(
+                                        String.fromCharCode(65 + index),
+                                        style: TextStyle(
+                                          color: selected
+                                              ? tokens.primary
+                                              : tokens.textPrimary,
                                         ),
-                                  ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Text(
+                                        question.options[index],
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyLarge
+                                            ?.copyWith(
+                                              fontWeight: selected
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
                           ),
                         ),
                       );
-                    }),
-                  ],
-                ),
+                    },
+                  );
+
+                  if (landscape) {
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Expanded(
+                          child: ArenaCard(
+                            color: const Color(0xFFF8F8F8),
+                            child: promptBlock,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: optionTiles,
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+
+                  return ArenaCard(
+                    color: const Color(0xFFF8F8F8),
+                    child: Column(
+                      children: <Widget>[
+                        promptBlock,
+                        const SizedBox(height: 24),
+                        ...optionTiles,
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 20),
               ArenaButton(
