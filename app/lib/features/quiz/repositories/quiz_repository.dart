@@ -12,6 +12,12 @@ enum AttemptOrigin {
   qrSession,
 }
 
+/// State of the live-data seed (quiz-list fetch).
+/// `ready` means the question bank in this repository carries real Supabase
+/// UUIDs and submissions will be recorded. Anything else means submissions are
+/// either blocked (qrSession) or relegated to opt-in offline practice.
+enum LiveDataStatus { idle, loading, ready, failed }
+
 class QuestionReview {
   const QuestionReview({
     required this.question,
@@ -31,6 +37,9 @@ class ActiveAttempt {
     required this.origin,
     required this.currentQuestionIndex,
     required this.totalQuestions,
+    required this.startedAt,
+    required this.isOfflinePractice,
+    required this.isResumed,
     this.sessionId,
   });
 
@@ -39,22 +48,46 @@ class ActiveAttempt {
   final AttemptOrigin origin;
   final int currentQuestionIndex;
   final int totalQuestions;
+  final DateTime startedAt;
+  final bool isOfflinePractice;
+  final bool isResumed;
   final String? sessionId;
 }
 
 abstract class QuizRepository {
+  /// Hydrate any persisted state from disk and prime live data. Idempotent.
+  Future<void> initialize();
+
+  /// Synchronous status of the live-data seed (quiz-list).
+  LiveDataStatus get liveDataStatus;
+
+  /// Last error from a failed seed, if any.
+  Object? get lastSeedError;
+
+  /// Force-refresh live data. Throws on failure.
+  Future<void> ensureLiveDataReady({bool force = false});
+
   Future<List<Quiz>> fetchActiveQuizzes();
 
   Future<Quiz> getQuizById(String quizId);
 
   bool canStartRankedAttempt(String quizId);
 
+  /// Start a recordable attempt. Throws StateError if live data isn't ready
+  /// and `allowOfflinePractice` is false.
   Future<void> startAttempt({
     required String quizId,
     required QuizMode mode,
     AttemptOrigin origin = AttemptOrigin.openAccess,
     String? sessionId,
+    bool allowOfflinePractice = false,
   });
+
+  /// Discard any in-flight attempt and start fresh with the same parameters.
+  Future<void> restartActiveAttempt();
+
+  /// Clear any in-flight attempt without starting a new one.
+  Future<void> clearActiveAttempt();
 
   ActiveAttempt? getActiveAttempt();
 
@@ -66,9 +99,27 @@ abstract class QuizRepository {
 
   Future<bool> submitCurrentAnswer();
 
+  /// Finalize the active attempt: compute score, persist a completed snapshot,
+  /// clear active state, then attempt to sync to the backend (no-op for
+  /// offline practice). Throws on sync failure but the snapshot is preserved.
   Future<Attempt> finishAttempt();
 
   List<QuestionReview> getLatestReview();
+
+  /// Cached result from the last finalize, if any (survives page refresh).
+  Attempt? getCachedCompletedAttempt();
+
+  /// Review for the cached completed attempt.
+  List<QuestionReview> getCachedCompletedReview();
+
+  /// True if the cached completed attempt was never successfully synced.
+  bool get cachedCompletedNeedsSync;
+
+  /// Re-attempt to sync the cached completed attempt to the backend.
+  Future<void> retrySyncCachedAttempt();
+
+  /// Drop the cached completed snapshot (e.g. after user dismisses /result).
+  Future<void> clearCachedCompletedAttempt();
 }
 
 class InMemoryQuizRepository implements QuizRepository {
@@ -299,6 +350,8 @@ class InMemoryQuizRepository implements QuizRepository {
   QuizMode _activeMode = QuizMode.learning;
   AttemptOrigin _activeOrigin = AttemptOrigin.openAccess;
   String? _activeSessionId;
+  bool _activeIsOfflinePractice = false;
+  bool _activeIsResumed = false;
   List<Question> _activeQuestions = <Question>[];
   int _currentQuestionIndex = 0;
   int _selectedAnswerIndex = -1;
@@ -306,6 +359,20 @@ class InMemoryQuizRepository implements QuizRepository {
   final List<int> _submittedAnswers = <int>[];
   List<QuestionReview> _latestReview = <QuestionReview>[];
   final Set<String> _completedRankedQuizIds = <String>{};
+  Attempt? _cachedCompletedAttempt;
+  List<QuestionReview> _cachedCompletedReview = <QuestionReview>[];
+
+  @override
+  Future<void> initialize() async {}
+
+  @override
+  LiveDataStatus get liveDataStatus => LiveDataStatus.ready;
+
+  @override
+  Object? get lastSeedError => null;
+
+  @override
+  Future<void> ensureLiveDataReady({bool force = false}) async {}
 
   @override
   Future<List<Quiz>> fetchActiveQuizzes() async {
@@ -331,6 +398,7 @@ class InMemoryQuizRepository implements QuizRepository {
     required QuizMode mode,
     AttemptOrigin origin = AttemptOrigin.openAccess,
     String? sessionId,
+    bool allowOfflinePractice = false,
   }) async {
     if (mode == QuizMode.ranked && !canStartRankedAttempt(quizId)) {
       throw StateError('Ranked attempt already used for this quiz.');
@@ -339,7 +407,9 @@ class InMemoryQuizRepository implements QuizRepository {
     _activeQuiz = await getQuizById(quizId);
     _activeMode = mode;
     _activeOrigin = origin;
-    _activeSessionId = sessionId?.trim().isEmpty ?? true ? null : sessionId?.trim();
+    _activeSessionId = (sessionId == null || sessionId.trim().isEmpty) ? null : sessionId.trim();
+    _activeIsOfflinePractice = allowOfflinePractice;
+    _activeIsResumed = false;
     _activeQuestions = _questionBank[_activeQuiz!.id] ?? <Question>[];
     _currentQuestionIndex = 0;
     _selectedAnswerIndex = -1;
@@ -347,6 +417,87 @@ class InMemoryQuizRepository implements QuizRepository {
     _submittedAnswers
       ..clear()
       ..addAll(List<int>.filled(_activeQuestions.length, -1));
+  }
+
+  /// Re-hydrate an in-progress attempt from a persisted snapshot. Used by the
+  /// Netlify wrapper after a page refresh.
+  void restoreActiveAttempt({
+    required Quiz quiz,
+    required QuizMode mode,
+    required AttemptOrigin origin,
+    String? sessionId,
+    required List<Question> questions,
+    required DateTime startedAt,
+    required List<int> submittedAnswers,
+    required int currentQuestionIndex,
+    required bool isOfflinePractice,
+  }) {
+    _activeQuiz = quiz;
+    _activeMode = mode;
+    _activeOrigin = origin;
+    _activeSessionId = sessionId;
+    _activeIsOfflinePractice = isOfflinePractice;
+    _activeIsResumed = true;
+    _activeQuestions = questions;
+    _startedAt = startedAt;
+    _selectedAnswerIndex = -1;
+    _submittedAnswers
+      ..clear()
+      ..addAll(submittedAnswers);
+    // Defensive padding if persisted list is shorter than the current bank.
+    while (_submittedAnswers.length < questions.length) {
+      _submittedAnswers.add(-1);
+    }
+    _currentQuestionIndex = currentQuestionIndex.clamp(0, questions.isEmpty ? 0 : questions.length - 1);
+  }
+
+  @override
+  Future<void> restartActiveAttempt() async {
+    final Quiz? quiz = _activeQuiz;
+    if (quiz == null) {
+      return;
+    }
+    final QuizMode mode = _activeMode;
+    final AttemptOrigin origin = _activeOrigin;
+    final String? sessionId = _activeSessionId;
+    final bool offline = _activeIsOfflinePractice;
+    await clearActiveAttempt();
+    await startAttempt(
+      quizId: quiz.id,
+      mode: mode,
+      origin: origin,
+      sessionId: sessionId,
+      allowOfflinePractice: offline,
+    );
+  }
+
+  @override
+  Future<void> clearActiveAttempt() async {
+    _activeQuiz = null;
+    _activeQuestions = <Question>[];
+    _submittedAnswers.clear();
+    _currentQuestionIndex = 0;
+    _selectedAnswerIndex = -1;
+    _startedAt = null;
+    _activeSessionId = null;
+    _activeIsOfflinePractice = false;
+    _activeIsResumed = false;
+  }
+
+  /// Internal accessor for the wrapper repository — returns a defensive copy
+  /// of the current active questions list.
+  List<Question> debugReadActiveQuestions() {
+    return List<Question>.unmodifiable(_activeQuestions);
+  }
+
+  /// Internal accessor for the wrapper repository — returns a defensive copy
+  /// of submitted-answer indices, padded with -1 to [totalQuestions].
+  List<int> debugReadSubmittedAnswers(int totalQuestions) {
+    final List<int> copy = List<int>.from(_submittedAnswers);
+    while (copy.length < totalQuestions) {
+      copy.add(-1);
+    }
+    return List<int>.unmodifiable(copy);
   }
 
   @override
@@ -362,6 +513,9 @@ class InMemoryQuizRepository implements QuizRepository {
       origin: _activeOrigin,
       currentQuestionIndex: _currentQuestionIndex,
       totalQuestions: _activeQuestions.length,
+      startedAt: _startedAt ?? DateTime.now(),
+      isOfflinePractice: _activeIsOfflinePractice,
+      isResumed: _activeIsResumed,
       sessionId: _activeSessionId,
     );
   }
@@ -409,6 +563,7 @@ class InMemoryQuizRepository implements QuizRepository {
         totalQuestions: 0,
         timeLabel: '00:00',
         modeLabel: 'Learning',
+        timeTakenMs: 0,
       );
     }
 
@@ -437,21 +592,46 @@ class InMemoryQuizRepository implements QuizRepository {
 
     final DateTime startedAt = _startedAt ?? DateTime.now();
     final Duration elapsed = DateTime.now().difference(startedAt);
-    final int minutes = elapsed.inMinutes;
-    final int seconds = elapsed.inSeconds % 60;
+    final int totalSeconds = elapsed.inSeconds < 0 ? 0 : elapsed.inSeconds;
+    final int minutes = totalSeconds ~/ 60;
+    final int seconds = totalSeconds % 60;
     final String timeLabel =
         '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
 
-    return Attempt(
+    final Attempt attempt = Attempt(
       score: score,
       totalQuestions: _activeQuestions.length,
       timeLabel: timeLabel,
       modeLabel: _activeMode == QuizMode.ranked ? 'Ranked' : 'Learning',
+      timeTakenMs: elapsed.inMilliseconds < 0 ? 0 : elapsed.inMilliseconds,
     );
+
+    _cachedCompletedAttempt = attempt;
+    _cachedCompletedReview = List<QuestionReview>.unmodifiable(review);
+
+    return attempt;
   }
 
   @override
   List<QuestionReview> getLatestReview() {
     return _latestReview;
+  }
+
+  @override
+  Attempt? getCachedCompletedAttempt() => _cachedCompletedAttempt;
+
+  @override
+  List<QuestionReview> getCachedCompletedReview() => _cachedCompletedReview;
+
+  @override
+  bool get cachedCompletedNeedsSync => false;
+
+  @override
+  Future<void> retrySyncCachedAttempt() async {}
+
+  @override
+  Future<void> clearCachedCompletedAttempt() async {
+    _cachedCompletedAttempt = null;
+    _cachedCompletedReview = <QuestionReview>[];
   }
 }

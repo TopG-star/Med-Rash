@@ -10,6 +10,7 @@ import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_rep
 import '../../features/profile/repositories/profile_repository.dart';
 import '../../features/quiz/repositories/netlify_supabase_quiz_repository.dart';
 import '../../features/quiz/repositories/quiz_repository.dart';
+import '../../features/quiz/storage/quiz_attempt_store.dart';
 import '../../features/session/repositories/netlify_supabase_session_repository.dart';
 import '../../features/session/repositories/session_repository.dart';
 import 'get_it.dart';
@@ -25,11 +26,15 @@ Future<void> initCore() async {
   getIt.registerLazySingleton<ProfileRepository>(
     () => LocalProfileRepository(preferences),
   );
+  getIt.registerLazySingleton<QuizAttemptStore>(
+    () => QuizAttemptStore(preferences),
+  );
   getIt.registerLazySingleton<QuizRepository>(
     () => NetlifySupabaseQuizRepository(
       functionsBaseUrl: AppConfig.functionsBaseUrl,
       authStateManager: getIt<AuthStateManager>(),
       profileRepository: getIt<ProfileRepository>(),
+      store: getIt<QuizAttemptStore>(),
       gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
     ),
   );
@@ -55,4 +60,8 @@ Future<void> initCore() async {
       gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
     ),
   );
+
+  // Hydrate persisted quiz state (active attempt + cached completed snapshot)
+  // and best-effort seed live quiz data before any screen tries to use it.
+  await getIt<QuizRepository>().initialize();
 }

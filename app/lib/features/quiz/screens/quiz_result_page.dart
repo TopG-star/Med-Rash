@@ -16,15 +16,123 @@ class QuizResultPage extends StatefulWidget {
   State<QuizResultPage> createState() => _QuizResultPageState();
 }
 
+class _ResultPayload {
+  const _ResultPayload({
+    required this.attempt,
+    required this.review,
+    required this.source,
+    this.syncError,
+  });
+
+  final Attempt attempt;
+  final List<QuestionReview> review;
+  final _ResultSource source;
+  final String? syncError;
+}
+
+enum _ResultSource { freshFinalize, cachedSynced, cachedPending, none }
+
 class _QuizResultPageState extends State<QuizResultPage> {
   late final QuizRepository _quizRepository;
-  Future<Attempt>? _futureAttempt;
+  Future<_ResultPayload>? _futureResult;
+  bool _retryInFlight = false;
 
   @override
   void initState() {
     super.initState();
     _quizRepository = getIt<QuizRepository>();
-    _futureAttempt = _quizRepository.finishAttempt();
+    _futureResult = _resolveResult();
+  }
+
+  Future<_ResultPayload> _resolveResult() async {
+    final ActiveAttempt? active = _quizRepository.getActiveAttempt();
+
+    if (active != null) {
+      // We arrived via end-of-quiz navigation — finalize once.
+      try {
+        final Attempt attempt = await _quizRepository.finishAttempt();
+        return _ResultPayload(
+          attempt: attempt,
+          review: _quizRepository.getLatestReview(),
+          source: _ResultSource.freshFinalize,
+          syncError: _quizRepository.cachedCompletedNeedsSync
+              ? 'Result saved locally; sync to the server failed.'
+              : null,
+        );
+      } on StateError catch (error) {
+        // finalize threw (e.g. ranked already exists OR network failed). We
+        // can still surface the locally-cached snapshot if it was persisted
+        // before the throw — which is the case in our wrapper.
+        final Attempt? cached = _quizRepository.getCachedCompletedAttempt();
+        if (cached != null) {
+          return _ResultPayload(
+            attempt: cached,
+            review: _quizRepository.getCachedCompletedReview(),
+            source: _ResultSource.cachedPending,
+            syncError: error.message,
+          );
+        }
+        rethrow;
+      }
+    }
+
+    // No active attempt → either page refresh or direct navigation.
+    final Attempt? cached = _quizRepository.getCachedCompletedAttempt();
+    if (cached != null) {
+      return _ResultPayload(
+        attempt: cached,
+        review: _quizRepository.getCachedCompletedReview(),
+        source: _quizRepository.cachedCompletedNeedsSync
+            ? _ResultSource.cachedPending
+            : _ResultSource.cachedSynced,
+        syncError: _quizRepository.cachedCompletedNeedsSync
+            ? 'Result saved locally; sync to the server failed.'
+            : null,
+      );
+    }
+
+    return const _ResultPayload(
+      attempt: Attempt(
+        score: 0,
+        totalQuestions: 0,
+        timeLabel: '00:00',
+        modeLabel: 'Learning',
+        timeTakenMs: 0,
+      ),
+      review: <QuestionReview>[],
+      source: _ResultSource.none,
+    );
+  }
+
+  Future<void> _retrySync() async {
+    if (_retryInFlight) return;
+    setState(() => _retryInFlight = true);
+    try {
+      await _quizRepository.retrySyncCachedAttempt();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Result synced to server.')),
+      );
+      setState(() {
+        _futureResult = _resolveResult();
+      });
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sync failed: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _retryInFlight = false);
+      }
+    }
+  }
+
+  Future<void> _goHome() async {
+    // Clear the cached completed snapshot so the next attempt starts fresh.
+    await _quizRepository.clearCachedCompletedAttempt();
+    if (!mounted) return;
+    context.go('/home');
   }
 
   @override
@@ -34,9 +142,9 @@ class _QuizResultPageState extends State<QuizResultPage> {
     return ArenaScaffold(
       title: 'Quiz Result',
       showClose: true,
-      child: FutureBuilder<Attempt>(
-        future: _futureAttempt,
-        builder: (BuildContext context, AsyncSnapshot<Attempt> snapshot) {
+      child: FutureBuilder<_ResultPayload>(
+        future: _futureResult,
+        builder: (BuildContext context, AsyncSnapshot<_ResultPayload> snapshot) {
           if (snapshot.hasError) {
             return Center(
               child: ArenaCard(
@@ -53,7 +161,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                     ArenaButton(
                       label: 'Back To Home',
                       icon: Icons.home_outlined,
-                      onPressed: () => context.go('/home'),
+                      onPressed: _goHome,
                     ),
                   ],
                 ),
@@ -65,18 +173,76 @@ class _QuizResultPageState extends State<QuizResultPage> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final Attempt attempt = snapshot.data!;
-          final List<QuestionReview> review = _quizRepository.getLatestReview();
+          final _ResultPayload payload = snapshot.data!;
+
+          if (payload.source == _ResultSource.none) {
+            return Center(
+              child: ArenaCard(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    const Icon(Icons.info_outline),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'No completed attempt to display.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    ArenaButton(
+                      label: 'Back To Home',
+                      icon: Icons.home_outlined,
+                      onPressed: _goHome,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          final Attempt attempt = payload.attempt;
+          final List<QuestionReview> review = payload.review;
+          final bool needsSync = payload.source == _ResultSource.cachedPending;
 
           return ListView(
             children: <Widget>[
+              if (needsSync) ...<Widget>[
+                ArenaCard(
+                  color: const Color(0xFFFFF4E0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          const Icon(Icons.cloud_off_outlined),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              payload.syncError ?? 'Result not yet synced to server.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ArenaButton(
+                        label: _retryInFlight ? 'Retrying…' : 'Retry sync',
+                        icon: Icons.refresh,
+                        backgroundColor: tokens.secondary,
+                        onPressed: _retryInFlight ? null : _retrySync,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               ArenaCard(
                 color: tokens.primary,
                 child: Column(
                   children: <Widget>[
                     Text('GREAT EFFORT!', style: Theme.of(context).textTheme.headlineMedium),
                     const SizedBox(height: 20),
-                    Text('${attempt.score}/${attempt.totalQuestions}', style: Theme.of(context).textTheme.displayLarge),
+                    Text('${attempt.score}/${attempt.totalQuestions}',
+                        style: Theme.of(context).textTheme.displayLarge),
                     const SizedBox(height: 20),
                     ArenaCard(
                       color: Colors.white,
@@ -103,7 +269,8 @@ class _QuizResultPageState extends State<QuizResultPage> {
                   final String selectedOption = item.selectedIndex >= 0
                       ? String.fromCharCode(65 + item.selectedIndex)
                       : 'No response';
-                  final String correctOption = String.fromCharCode(65 + item.question.correctIndex);
+                  final String correctOption =
+                      String.fromCharCode(65 + item.question.correctIndex);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: ArenaCard(
@@ -113,7 +280,9 @@ class _QuizResultPageState extends State<QuizResultPage> {
                           Row(
                             children: <Widget>[
                               Icon(
-                                item.isCorrect ? Icons.check_circle_outline : Icons.cancel_outlined,
+                                item.isCorrect
+                                    ? Icons.check_circle_outline
+                                    : Icons.cancel_outlined,
                                 color: item.isCorrect ? tokens.success : tokens.error,
                               ),
                               const SizedBox(width: 12),
@@ -126,7 +295,8 @@ class _QuizResultPageState extends State<QuizResultPage> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(item.question.prompt, style: Theme.of(context).textTheme.bodyLarge),
+                          Text(item.question.prompt,
+                              style: Theme.of(context).textTheme.bodyLarge),
                           const SizedBox(height: 12),
                           Text(
                             'You selected $selectedOption, correct answer is $correctOption.',
@@ -150,7 +320,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                 label: 'Retry Learning',
                 icon: Icons.replay,
                 backgroundColor: Colors.white,
-                onPressed: () => context.go('/home'),
+                onPressed: _goHome,
               ),
               const SizedBox(height: 16),
               ArenaButton(
