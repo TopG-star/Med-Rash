@@ -67,12 +67,14 @@ export function parseIdentityInput(raw: Record<string, unknown>): IdentityInput 
       ? (rawProfile as Record<string, unknown>)
       : {};
 
+  const guestFallback = `Guest-${deviceInstallId.slice(0, 4).toUpperCase()}`;
+
   return {
     participantId,
     deviceInstallId,
     profile: {
       fullName: readString(profile.fullName, "Pilot Participant"),
-      nickname: readString(profile.nickname, "PilotUser"),
+      nickname: readString(profile.nickname, guestFallback),
       facility: readString(profile.facility, "Unknown Facility"),
       specialty: readString(profile.specialty, "General"),
     },

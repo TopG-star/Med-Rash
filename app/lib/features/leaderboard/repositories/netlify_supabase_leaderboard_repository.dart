@@ -84,11 +84,20 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
       'deviceInstallId': deviceInstallId,
       'profile': <String, Object?>{
         'fullName': profile?.fullName ?? 'Pilot Participant',
-        'nickname': profile?.nickname ?? 'PilotUser',
+        'nickname': profile?.nickname ?? _guestNicknameFor(deviceInstallId),
         'facility': profile?.facility ?? 'Unknown Facility',
         'specialty': profile?.specialty ?? 'General',
       },
     };
+  }
+
+  /// Mirrors the friendly fallback used in `NetlifySupabaseQuizRepository` so
+  /// nickname-less participants surface consistently across surfaces.
+  String _guestNicknameFor(String deviceInstallId) {
+    final String stem = deviceInstallId.length >= 4
+        ? deviceInstallId.substring(0, 4)
+        : deviceInstallId;
+    return 'Guest-${stem.toUpperCase()}';
   }
 
   String _cacheKey(LeaderboardPeriod period, int limit, String? season) {

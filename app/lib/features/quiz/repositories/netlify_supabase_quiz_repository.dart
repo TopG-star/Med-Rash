@@ -77,11 +77,21 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
       'deviceInstallId': deviceInstallId,
       'profile': <String, Object?>{
         'fullName': profile?.fullName ?? 'Pilot Participant',
-        'nickname': profile?.nickname ?? 'PilotUser',
+        'nickname': profile?.nickname ?? _guestNicknameFor(deviceInstallId),
         'facility': profile?.facility ?? 'Unknown Facility',
         'specialty': profile?.specialty ?? 'General',
       },
     };
+  }
+
+  /// Deterministic friendly fallback so a participant who hasn't set a
+  /// nickname yet still appears as `Guest-AB12` instead of the raw
+  /// `PilotUser` debug placeholder.
+  String _guestNicknameFor(String deviceInstallId) {
+    final String stem = deviceInstallId.length >= 4
+        ? deviceInstallId.substring(0, 4)
+        : deviceInstallId;
+    return 'Guest-${stem.toUpperCase()}';
   }
 
   Future<bool> _fetchRankedEligibility(String quizId) async {
