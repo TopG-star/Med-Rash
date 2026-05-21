@@ -37,3 +37,24 @@ class AttemptSubmittedEvent extends MedRashEvent {
   final int totalQuestions;
   final String? sessionId;
 }
+
+/// Emitted by the profile repository immediately after a profile is created
+/// (quick join) or edited (settings save).
+///
+/// Listeners use this to invalidate leaderboard caches so a renamed
+/// participant doesn't keep showing their old nickname in the standings, and
+/// to trigger a best-effort server-side `profile-sync` so `app.users` matches
+/// what the device just persisted.
+class ProfileUpdatedEvent extends MedRashEvent {
+  const ProfileUpdatedEvent({
+    required this.fullName,
+    required this.nickname,
+    required this.facility,
+    required this.specialty,
+  });
+
+  final String fullName;
+  final String nickname;
+  final String facility;
+  final String specialty;
+}

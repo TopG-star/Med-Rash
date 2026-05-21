@@ -147,6 +147,26 @@ export async function resolveOrCreateUserId(
 
   if (existingUser && typeof existingUser === "object" && "id" in existingUser) {
     const userId = String((existingUser as Record<string, unknown>).id);
+
+    // Overwrite name/facility/specialty on every resolve so profile edits
+    // made on-device are reflected on the server (and therefore in the
+    // leaderboard) even when the user already exists. Without this update,
+    // app.users.nickname would only ever take the value supplied at the
+    // first attempt-submit and stay stale forever.
+    const { error: updateError } = await supabase
+      .from("users")
+      .update({
+        full_name: identity.profile.fullName,
+        nickname: identity.profile.nickname,
+        facility: identity.profile.facility,
+        specialty: identity.profile.specialty,
+      })
+      .eq("id", userId);
+
+    if (updateError) {
+      throw new Error(`Failed to refresh user profile: ${updateError.message}`);
+    }
+
     await upsertUserDevice(supabase, userId, identity.deviceInstallId);
     return userId;
   }

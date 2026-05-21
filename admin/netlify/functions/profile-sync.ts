@@ -1,0 +1,47 @@
+import { getSupabaseAdminClient, parseIdentityInput, resolveOrCreateUserId } from "./_shared/supabase";
+import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
+import { requireGateAuthorization } from "./_shared/gate";
+
+// Sync the device-bound profile (full name, nickname, facility, specialty) to
+// the server-side `app.users` row without recording an attempt. Called by the
+// Flutter app every time the user edits their profile so the leaderboard
+// stops showing stale nicknames. Reuses `resolveOrCreateUserId`, which now
+// always overwrites name fields on the existing-user branch.
+export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
+  const preflight = handlePreflight(event);
+  if (preflight) {
+    return preflight;
+  }
+
+  const methodResponse = requirePost(event);
+  if (methodResponse) {
+    return methodResponse;
+  }
+
+  const gateResponse = requireGateAuthorization(event);
+  if (gateResponse) {
+    return gateResponse;
+  }
+
+  try {
+    const body = parseJsonBody(event);
+    const identity = parseIdentityInput(body);
+
+    const supabase = getSupabaseAdminClient();
+    const userId = await resolveOrCreateUserId(supabase, identity);
+
+    return jsonResponse(200, {
+      ok: true,
+      userId,
+      profile: identity.profile,
+    });
+  } catch (error) {
+    return jsonResponse(400, {
+      ok: false,
+      code: "BAD_REQUEST",
+      message: error instanceof Error ? error.message : "Invalid request.",
+    });
+  }
+}
+
+export default toV2Handler(handler);

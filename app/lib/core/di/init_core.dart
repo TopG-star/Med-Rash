@@ -31,7 +31,12 @@ Future<void> initCore() async {
     () => DeviceIdentityService(preferences),
   );
   getIt.registerLazySingleton<ProfileRepository>(
-    () => LocalProfileRepository(preferences),
+    () => LocalProfileRepository(
+      preferences,
+      eventBus: getIt<EventBus>(),
+      httpClient: getIt<MedRashHttpClient>(),
+      authStateManager: getIt<AuthStateManager>(),
+    ),
   );
   getIt.registerLazySingleton<QuizAttemptStore>(
     () => QuizAttemptStore(preferences),

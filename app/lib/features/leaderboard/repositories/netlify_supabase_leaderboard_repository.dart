@@ -31,6 +31,13 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
           name: 'NetlifySupabaseLeaderboardRepository',
         );
       });
+      _profileSubscription = eventBus.on<ProfileUpdatedEvent>().listen((_) {
+        _snapshotCache.clear();
+        developer.log(
+          'snapshot cache invalidated by ProfileUpdatedEvent',
+          name: 'NetlifySupabaseLeaderboardRepository',
+        );
+      });
     }
   }
 
@@ -40,12 +47,15 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
   final MedRashHttpClient _httpClient;
   final Duration _cacheTtl;
   StreamSubscription<AttemptSubmittedEvent>? _attemptSubscription;
+  StreamSubscription<ProfileUpdatedEvent>? _profileSubscription;
 
   final Map<String, _CachedSnapshot> _snapshotCache = <String, _CachedSnapshot>{};
 
   void dispose() {
     _attemptSubscription?.cancel();
     _attemptSubscription = null;
+    _profileSubscription?.cancel();
+    _profileSubscription = null;
   }
 
   Future<Map<String, Object?>?> _buildIdentityPayloadOrNull() async {
