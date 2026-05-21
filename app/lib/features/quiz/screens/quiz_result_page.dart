@@ -8,6 +8,7 @@ import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/responsive.dart';
+import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -196,7 +197,10 @@ class _QuizResultPageState extends State<QuizResultPage> {
           }
 
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: MedRashSkeletonCard(),
+            );
           }
 
           final _ResultPayload payload = snapshot.data!;

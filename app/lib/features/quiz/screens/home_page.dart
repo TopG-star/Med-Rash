@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
 import '../../../core/ui/identity_badge.dart';
+import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -37,7 +38,7 @@ class _HomePageState extends State<HomePage> {
         future: _futureQuizzes,
         builder: (BuildContext context, AsyncSnapshot<List<Quiz>> snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const MedRashSkeletonList(rowCount: 4);
           }
 
           final List<Quiz> quizzes = snapshot.data!;

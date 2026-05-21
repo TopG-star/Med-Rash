@@ -7,6 +7,7 @@ import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/responsive.dart';
+import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/theme/theme_extensions.dart';
@@ -72,7 +73,9 @@ class _WorldRankPageState extends State<WorldRankPage> {
         future: _futureRows,
         builder: (BuildContext context, AsyncSnapshot<List<LeaderboardRow>> snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const MedRashConstrainedBody(
+              child: MedRashSkeletonList(),
+            );
           }
 
           final List<LeaderboardRow> rows = snapshot.data!;
