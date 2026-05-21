@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/get_it.dart';
 import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/skeleton.dart';
+import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -31,7 +32,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return ArenaScaffold(
-      title: 'MedRash',
+      title: MedRashStrings.appTitle,
       bottomNav: true,
       actions: const <Widget>[IdentityBadge()],
       child: FutureBuilder<List<Quiz>>(
@@ -46,7 +47,7 @@ class _HomePageState extends State<HomePage> {
           return ListView(
             children: <Widget>[
               Text(
-                'Pick a topic and keep it under three minutes.',
+                MedRashStrings.homeIntro,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),

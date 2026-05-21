@@ -163,12 +163,21 @@ export default async function ReportsPage({
             />
           </label>
           <label className="space-y-2">
-            <span className="text-sm font-semibold">Session ID (UUID)</span>
+            <span className="flex items-center gap-2 text-sm font-semibold">
+              Session ID (UUID)
+              <span
+                aria-label="Find the UUID at the end of the Live view URL: /sessions/<id>/live"
+                title="Find the UUID at the end of the Live view URL: /sessions/<id>/live"
+                className="grid h-5 w-5 cursor-help place-items-center rounded-full border-2 border-[var(--arena-outline)] text-[10px] font-bold"
+              >
+                i
+              </span>
+            </span>
             <input
               type="text"
               name="sessionId"
               defaultValue={filters.sessionId ?? ""}
-              placeholder="aaaaaaaa-aaaa-aaaa-aaaa-…"
+              placeholder="Paste session UUID"
               className="arena-panel w-full px-4 py-3"
             />
           </label>

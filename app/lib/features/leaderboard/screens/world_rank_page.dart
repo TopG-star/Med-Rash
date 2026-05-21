@@ -8,6 +8,7 @@ import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/skeleton.dart';
+import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/theme/theme_extensions.dart';
@@ -65,7 +66,7 @@ class _WorldRankPageState extends State<WorldRankPage> {
     final tokens = context.arenaTokens;
 
     return ArenaScaffold(
-      title: 'World Rank',
+      title: MedRashStrings.leaderboardTitle,
       showBack: true,
       bottomNav: true,
       actions: const <Widget>[IdentityBadge()],
@@ -90,7 +91,7 @@ class _WorldRankPageState extends State<WorldRankPage> {
                   children: <Widget>[
                     Expanded(
                       child: _SegmentButton(
-                        label: 'Monthly',
+                        label: MedRashStrings.leaderboardMonthly,
                         selected: !_allTime,
                         onTap: () => _switchPeriod(false),
                       ),
@@ -98,7 +99,7 @@ class _WorldRankPageState extends State<WorldRankPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: _SegmentButton(
-                        label: 'All-Time',
+                        label: MedRashStrings.leaderboardAllTime,
                         selected: _allTime,
                         onTap: () => _switchPeriod(true),
                       ),
@@ -122,24 +123,31 @@ class _WorldRankPageState extends State<WorldRankPage> {
               ...rest.map(
                 (LeaderboardRow row) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: ArenaCard(
-                    color: row.isCurrentUser ? tokens.primary : tokens.surface,
-                    child: Row(
-                      children: <Widget>[
-                        Text('#${row.rank}', style: Theme.of(context).textTheme.headlineMedium),
-                        const SizedBox(width: 16),
-                        const CircleAvatar(child: Icon(Icons.person)),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            row.isCurrentUser ? '${row.name} (YOU)' : row.name,
-                            style: Theme.of(context).textTheme.titleLarge,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                  child: Semantics(
+                    container: true,
+                    label: row.isCurrentUser
+                        ? 'Rank ${row.rank}, you, ${row.name}'
+                        : 'Rank ${row.rank}, ${row.name}',
+                    value: '${row.score} points',
+                    child: ArenaCard(
+                      color: row.isCurrentUser ? tokens.primary : tokens.surface,
+                      child: Row(
+                        children: <Widget>[
+                          Text('#${row.rank}', style: Theme.of(context).textTheme.headlineMedium),
+                          const SizedBox(width: 16),
+                          const CircleAvatar(child: Icon(Icons.person)),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              row.isCurrentUser ? '${row.name} (YOU)' : row.name,
+                              style: Theme.of(context).textTheme.titleLarge,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
-                        ),
-                        Text('${row.score}', style: Theme.of(context).textTheme.headlineMedium),
-                      ],
+                          Text('${row.score}', style: Theme.of(context).textTheme.headlineMedium),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -203,8 +211,8 @@ class _PodiumCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: height),
       child: ArenaCard(
         color: color,
         child: Stack(

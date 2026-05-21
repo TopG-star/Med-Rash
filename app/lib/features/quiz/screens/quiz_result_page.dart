@@ -9,6 +9,7 @@ import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/skeleton.dart';
+import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
@@ -244,14 +245,28 @@ class _QuizResultPageState extends State<QuizResultPage> {
                   color: tokens.warningSurface,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
+                    children: <Widget>[                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: tokens.textPrimary,
+                          borderRadius: BorderRadius.circular(tokens.radiusSmall),
+                        ),
+                        child: Text(
+                          MedRashStrings.resultPendingTag,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: tokens.warningSurface,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),                      Row(
                         children: <Widget>[
                           const Icon(Icons.cloud_off_outlined),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Saved on this device. We\u2019ll keep retrying in the background \u2014 your score is not lost.',
+                              MedRashStrings.resultPendingMessage,
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),
@@ -266,7 +281,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                       ],
                       const SizedBox(height: 12),
                       ArenaButton(
-                        label: _retryInFlight ? 'Retrying…' : 'Retry now',
+                        label: _retryInFlight ? MedRashStrings.resultRetryingLabel : MedRashStrings.resultRetryLabel,
                         icon: Icons.refresh,
                         backgroundColor: tokens.secondary,
                         onPressed: _retryInFlight ? null : _retrySync,
@@ -278,15 +293,36 @@ class _QuizResultPageState extends State<QuizResultPage> {
               ] else if (freshlySynced) ...<Widget>[
                 ArenaCard(
                   color: tokens.successSurface,
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Icon(Icons.cloud_done_outlined, color: tokens.success),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Saved and synced to MedRash.',
-                          style: Theme.of(context).textTheme.bodyMedium,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: tokens.success,
+                          borderRadius: BorderRadius.circular(tokens.radiusSmall),
                         ),
+                        child: Text(
+                          MedRashStrings.resultSavedTag,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                color: tokens.successSurface,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: <Widget>[
+                          Icon(Icons.cloud_done_outlined, color: tokens.success),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              MedRashStrings.resultSyncedMessage,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -295,37 +331,43 @@ class _QuizResultPageState extends State<QuizResultPage> {
               ],
               ArenaCard(
                 color: tokens.primary,
-                child: Column(
-                  children: <Widget>[
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text('GREAT EFFORT!',
-                          style: Theme.of(context).textTheme.headlineMedium),
-                    ),
-                    const SizedBox(height: 20),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text('${attempt.score}/${attempt.totalQuestions}',
-                          style: Theme.of(context).textTheme.displayLarge),
-                    ),
-                    const SizedBox(height: 20),
-                    ArenaCard(
-                      color: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const Icon(Icons.timer_outlined),
-                          const SizedBox(width: 8),
-                          Text('Time: ${attempt.timeLabel} | ${attempt.modeLabel}'),
-                        ],
+                child: Semantics(
+                  container: true,
+                  label: 'Your score',
+                  value:
+                      '${attempt.score} out of ${attempt.totalQuestions}, time ${attempt.timeLabel}, mode ${attempt.modeLabel}',
+                  child: Column(
+                    children: <Widget>[
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(MedRashStrings.resultHeadline,
+                            style: Theme.of(context).textTheme.headlineMedium),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 20),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text('${attempt.score}/${attempt.totalQuestions}',
+                            style: Theme.of(context).textTheme.displayLarge),
+                      ),
+                      const SizedBox(height: 20),
+                      ArenaCard(
+                        color: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const Icon(Icons.timer_outlined),
+                            const SizedBox(width: 8),
+                            Text('Time: ${attempt.timeLabel} | ${attempt.modeLabel}'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
-              Text('KNOWLEDGE CHECK', style: Theme.of(context).textTheme.headlineMedium),
+              Text(MedRashStrings.resultKnowledgeCheck, style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 16),
               ...review.asMap().entries.map(
                 (MapEntry<int, QuestionReview> entry) {
