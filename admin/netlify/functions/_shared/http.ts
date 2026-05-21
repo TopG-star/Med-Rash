@@ -90,7 +90,16 @@ export function toV2Handler(legacy: LegacyHandler): (req: Request) => Promise<Re
     const event: HandlerEvent = { httpMethod: method, headers, body };
     const result = await legacy(event);
 
-    return new Response(result.body, {
+    // The web Response constructor forbids a body on 1xx/204/304 responses
+    // and throws "Response constructor: Body must be null." Coerce empty
+    // bodies to null for those status codes.
+    const noBody =
+      result.statusCode === 204 ||
+      result.statusCode === 304 ||
+      (result.statusCode >= 100 && result.statusCode < 200);
+    const responseBody = noBody || result.body === "" ? null : result.body;
+
+    return new Response(noBody ? null : responseBody, {
       status: result.statusCode,
       headers: result.headers ?? {},
     });
