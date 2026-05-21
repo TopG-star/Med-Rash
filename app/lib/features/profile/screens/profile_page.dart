@@ -122,7 +122,9 @@ class _ProfilePageState extends State<ProfilePage> {
           ArenaCard(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             child: DropdownButtonFormField<String>(
-              initialValue: _specialty,
+              // Netlify build pins Flutter 3.27.4 where `initialValue` doesn't exist yet.
+              // ignore: deprecated_member_use
+              value: _specialty,
               decoration: const InputDecoration(border: InputBorder.none),
               items: const <String>['Emergency Medicine', 'Pharmacy', 'General Practice']
                   .map(
