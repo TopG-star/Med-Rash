@@ -416,7 +416,13 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
     if (_liveDataStatus != LiveDataStatus.ready) {
       try {
         await ensureLiveDataReady();
-      } catch (_) {
+      } catch (error, stack) {
+        developer.log(
+          'live-data seed unavailable; falling back to stub list',
+          name: 'NetlifySupabaseQuizRepository',
+          error: error,
+          stackTrace: stack,
+        );
         // Quiz discovery still works on the stub list. Recordable submissions
         // are gated separately in startAttempt.
       }

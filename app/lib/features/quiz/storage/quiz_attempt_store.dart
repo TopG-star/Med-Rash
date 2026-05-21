@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,7 +38,13 @@ class PersistedQuestionSnapshot {
         correctIndex: (j['correctIndex'] as num).toInt(),
         explanation: j['explanation'] as String?,
       );
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'PersistedQuestionSnapshot.fromJson failed; dropping entry',
+        name: 'QuizAttemptStore',
+        error: error,
+        stackTrace: stack,
+      );
       return null;
     }
   }
@@ -88,7 +95,13 @@ class PersistedQuizSnapshot {
         durationLabel: (j['durationLabel'] as String?) ?? '',
         difficulty: (j['difficulty'] as String?) ?? 'Core',
       );
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'PersistedQuizSnapshot.fromJson failed; dropping entry',
+        name: 'QuizAttemptStore',
+        error: error,
+        stackTrace: stack,
+      );
       return null;
     }
   }
@@ -165,7 +178,13 @@ class PersistedActiveAttempt {
             rawAnswers.map((dynamic e) => (e as num).toInt()).toList(growable: false),
         isOfflinePractice: (j['isOfflinePractice'] as bool?) ?? false,
       );
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'PersistedActiveAttempt.fromJson failed; dropping entry',
+        name: 'QuizAttemptStore',
+        error: error,
+        stackTrace: stack,
+      );
       return null;
     }
   }
@@ -209,7 +228,13 @@ class PersistedQuestionReview {
         explanation: j['explanation'] as String?,
         selectedIndex: (j['selectedIndex'] as num).toInt(),
       );
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'PersistedQuestionReview.fromJson failed; dropping entry',
+        name: 'QuizAttemptStore',
+        error: error,
+        stackTrace: stack,
+      );
       return null;
     }
   }
@@ -305,7 +330,13 @@ class PersistedCompletedAttempt {
         syncStatus: (j['syncStatus'] as String?) ?? 'synced',
         syncError: j['syncError'] as String?,
       );
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'PersistedCompletedAttempt.fromJson failed; dropping entry',
+        name: 'QuizAttemptStore',
+        error: error,
+        stackTrace: stack,
+      );
       return null;
     }
   }
@@ -334,8 +365,13 @@ class QuizAttemptStore {
       if (decoded is Map) {
         return PersistedActiveAttempt.fromJson(decoded.cast<String, Object?>());
       }
-    } catch (_) {
-      // Corrupt entry — drop it so it never blocks future attempts.
+    } catch (error, stack) {
+      developer.log(
+        'corrupt active-attempt blob; clearing',
+        name: 'QuizAttemptStore',
+        error: error,
+        stackTrace: stack,
+      );
       _prefs.remove(_activeKey);
     }
     return null;
@@ -360,7 +396,13 @@ class QuizAttemptStore {
       if (decoded is Map) {
         return PersistedCompletedAttempt.fromJson(decoded.cast<String, Object?>());
       }
-    } catch (_) {
+    } catch (error, stack) {
+      developer.log(
+        'corrupt completed-attempt blob; clearing',
+        name: 'QuizAttemptStore',
+        error: error,
+        stackTrace: stack,
+      );
       _prefs.remove(_completedKey);
     }
     return null;
