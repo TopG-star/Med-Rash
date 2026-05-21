@@ -60,4 +60,22 @@ class DeviceIdentityService {
   Future<void> setBoundProfile(bool value) async {
     await _preferences.setBool(_boundProfileKey, value);
   }
+
+  /// Wipes the participant binding so the next [getIdentitySpine] mints a
+  /// fresh participant id (and, when [keepDeviceId] is false, a fresh device
+  /// install id too).
+  ///
+  /// Two intended call sites:
+  /// - "Sign out on this device" → keepDeviceId=true. Same device, new
+  ///   participant. Used when the same human wants a clean slate.
+  /// - "Hand to someone else" → keepDeviceId=false. New device, new
+  ///   participant. Used when a phone is passed to a different participant
+  ///   so the leaderboard treats them as a separate row.
+  Future<void> clearIdentity({required bool keepDeviceId}) async {
+    await _preferences.remove(_participantKey);
+    await _preferences.remove(_boundProfileKey);
+    if (!keepDeviceId) {
+      await _preferences.remove(_deviceKey);
+    }
+  }
 }

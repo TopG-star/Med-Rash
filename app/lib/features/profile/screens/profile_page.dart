@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/events/medrash_events.dart';
+import '../../../core/infra/auth_state_manager.dart';
+import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../quiz/storage/quiz_attempt_store.dart';
 import '../models/user_profile.dart';
 import '../repositories/profile_repository.dart';
 
@@ -163,11 +168,109 @@ class _ProfilePageState extends State<ProfilePage> {
               );
             },
           ),
+          const SizedBox(height: 24),
+          ArenaCard(
+            color: const Color(0xFFFCE4E4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('Sign Out', style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: 12),
+                Text(
+                  'Clear your profile from this device. Your leaderboard rank stays attached to whatever identity you sign in as next.',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 20),
+                ArenaButton(
+                  label: 'Sign Out',
+                  icon: Icons.logout,
+                  onPressed: _showSignOutSheet,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
+
+  Future<void> _showSignOutSheet() async {
+    final _SignOutChoice? choice = await showModalBottomSheet<_SignOutChoice>(
+      context: context,
+      showDragHandle: true,
+      builder: (BuildContext sheetContext) {
+        final TextStyle? bodyStyle = Theme.of(sheetContext).textTheme.bodyMedium;
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  'Sign out of MedRash?',
+                  style: Theme.of(sheetContext).textTheme.headlineSmall,
+                ),
+                const SizedBox(height: 16),
+                ArenaButton(
+                  label: 'Just sign me out on this device',
+                  onPressed: () => Navigator.of(sheetContext).pop(_SignOutChoice.keepDevice),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You stay anonymous; signing back in with the same name puts you on the same leaderboard row.',
+                  style: bodyStyle,
+                ),
+                const SizedBox(height: 20),
+                ArenaButton(
+                  label: 'Hand to someone else',
+                  onPressed: () => Navigator.of(sheetContext).pop(_SignOutChoice.rotateDevice),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Treats this device as new. The next person joins as a separate leaderboard row.',
+                  style: bodyStyle,
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.of(sheetContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    if (choice == null || !mounted) {
+      return;
+    }
+
+    final ScaffoldMessengerState messenger = ScaffoldMessenger.of(context);
+    final GoRouter router = GoRouter.of(context);
+    final ProfileRepository profileRepo = _profileRepository;
+    final QuizAttemptStore attemptStore = getIt<QuizAttemptStore>();
+    final AuthStateManager auth = getIt<AuthStateManager>();
+    final EventBus eventBus = getIt<EventBus>();
+
+    final bool keepDeviceId = choice == _SignOutChoice.keepDevice;
+
+    await profileRepo.clearAll();
+    await attemptStore.clearActive();
+    await attemptStore.clearCompleted();
+    await auth.signOut(keepDeviceId: keepDeviceId);
+    eventBus.emit(IdentityResetEvent(keptDeviceId: keepDeviceId));
+
+    if (!mounted) {
+      return;
+    }
+    messenger.showSnackBar(const SnackBar(content: Text('Signed out.')));
+    router.go('/join');
+  }
 }
+
+enum _SignOutChoice { keepDevice, rotateDevice }
 
 class _ProfileField extends StatelessWidget {
   const _ProfileField({required this.controller});

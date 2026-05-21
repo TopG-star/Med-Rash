@@ -38,6 +38,13 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
           name: 'NetlifySupabaseLeaderboardRepository',
         );
       });
+      _identityResetSubscription = eventBus.on<IdentityResetEvent>().listen((_) {
+        _snapshotCache.clear();
+        developer.log(
+          'snapshot cache invalidated by IdentityResetEvent',
+          name: 'NetlifySupabaseLeaderboardRepository',
+        );
+      });
     }
   }
 
@@ -48,6 +55,7 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
   final Duration _cacheTtl;
   StreamSubscription<AttemptSubmittedEvent>? _attemptSubscription;
   StreamSubscription<ProfileUpdatedEvent>? _profileSubscription;
+  StreamSubscription<IdentityResetEvent>? _identityResetSubscription;
 
   final Map<String, _CachedSnapshot> _snapshotCache = <String, _CachedSnapshot>{};
 
@@ -56,6 +64,8 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
     _attemptSubscription = null;
     _profileSubscription?.cancel();
     _profileSubscription = null;
+    _identityResetSubscription?.cancel();
+    _identityResetSubscription = null;
   }
 
   Future<Map<String, Object?>?> _buildIdentityPayloadOrNull() async {

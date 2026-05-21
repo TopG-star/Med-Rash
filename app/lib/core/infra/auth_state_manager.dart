@@ -45,4 +45,17 @@ class AuthStateManager extends ChangeNotifier {
     await _deviceIdentityService.setBoundProfile(true);
     notifyListeners();
   }
+
+  /// Clears the participant binding (and optionally the device install id),
+  /// then re-initialises so a fresh identity spine is minted in place. After
+  /// this returns, [hasProfile] is false and the router's redirect listener
+  /// will push the user back to `/join`.
+  Future<void> signOut({required bool keepDeviceId}) async {
+    await _deviceIdentityService.clearIdentity(keepDeviceId: keepDeviceId);
+    final IdentitySpine fresh = await _deviceIdentityService.getIdentitySpine();
+    _deviceId = fresh.deviceInstallId;
+    _participantId = fresh.participantId;
+    _hasProfile = false;
+    notifyListeners();
+  }
 }

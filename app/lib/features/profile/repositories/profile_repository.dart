@@ -26,6 +26,10 @@ abstract class ProfileRepository {
     required String specialty,
   });
 
+  /// Wipe every `medrash.profile.*` key. Used by sign-out so the next user of
+  /// this device starts at the quick-join screen with a blank slate.
+  Future<void> clearAll();
+
   String generateNickname({String? fullName});
 }
 
@@ -128,6 +132,16 @@ class LocalProfileRepository implements ProfileRepository {
 
     _broadcastProfileUpdate(profile);
     return profile;
+  }
+
+  @override
+  Future<void> clearAll() async {
+    await _preferences.remove(_keyFullName);
+    await _preferences.remove(_keyNickname);
+    await _preferences.remove(_keyFacility);
+    await _preferences.remove(_keySpecialty);
+    await _preferences.remove(_keyTotalPoints);
+    await _preferences.remove(_keyRank);
   }
 
   @override

@@ -58,3 +58,15 @@ class ProfileUpdatedEvent extends MedRashEvent {
   final String facility;
   final String specialty;
 }
+
+/// Emitted when the user signs out / hands the device to someone else. The
+/// participant id (and optionally the device install id) has just been
+/// rotated, so any cache keyed on identity — leaderboard snapshots, persisted
+/// quiz attempts — must be discarded before the next read.
+class IdentityResetEvent extends MedRashEvent {
+  const IdentityResetEvent({required this.keptDeviceId});
+
+  /// True when the device install id was preserved ("sign out on this
+  /// device"). False when both ids were rotated ("hand to someone else").
+  final bool keptDeviceId;
+}
