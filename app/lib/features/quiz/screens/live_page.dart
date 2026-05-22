@@ -6,12 +6,11 @@ import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
-import 'qr_scanner_page.dart';
 
-/// Live tab. Offers both the manual "Enter code" path that drives the
-/// existing `/session/:joinCode` deep link and a camera-backed QR scan
-/// (Slice 2b) that pops a join code back into this page and forwards to
-/// the same route.
+/// Live tab introduced in Slice 2a. Today it offers the manual "Enter code"
+/// path that drives the existing `/session/:joinCode` deep link. Slice 2b
+/// adds a real camera-backed QR scanner; until then the Scan QR button is
+/// disabled with a hint explaining that.
 class LivePage extends StatefulWidget {
   const LivePage({super.key});
 
@@ -33,19 +32,6 @@ class _LivePageState extends State<LivePage> {
   void _submit() {
     final String code = _codeController.text.trim();
     if (code.isEmpty) {
-      return;
-    }
-    context.go('/session/${Uri.encodeComponent(code)}');
-  }
-
-  Future<void> _openScanner() async {
-    final String? code = await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(
-        builder: (_) => const QrScannerPage(),
-        fullscreenDialog: true,
-      ),
-    );
-    if (!mounted || code == null || code.isEmpty) {
       return;
     }
     context.go('/session/${Uri.encodeComponent(code)}');
@@ -123,11 +109,11 @@ class _LivePageState extends State<LivePage> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
-                ArenaButton(
+                const ArenaButton(
                   label: MedRashStrings.liveScanQrCta,
                   icon: Icons.qr_code_scanner_outlined,
                   backgroundColor: Colors.white,
-                  onPressed: _openScanner,
+                  onPressed: null,
                 ),
               ],
             ),

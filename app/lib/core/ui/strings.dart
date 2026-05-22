@@ -42,24 +42,16 @@ class MedRashStrings {
   static const String liveJoinCta = 'Join session';
   static const String liveScanQrTitle = 'Scan QR';
   static const String liveScanQrHelper =
-      'Open the camera and point it at the QR your host displayed.';
-  static const String liveScanQrCta = 'Open camera';
-  static const String liveScanQrInstruction =
-      'Centre the QR inside the frame. We\'ll take it from there.';
-  static const String liveScanQrCancel = 'Type the code instead';
-  static const String liveScanQrUnrecognised =
-      'That QR doesn\'t look like a MedRash session. Try again.';
-  static const String liveScanQrPermissionDenied =
-      'Camera access was denied. Allow it in your browser or device settings, then retry.';
-  static const String liveScanQrUnsupported =
-      'This device can\'t open the camera. Use the code field instead.';
-  static const String liveScanQrGenericError =
-      'We couldn\'t start the camera. Use the code field instead.';
+      'Camera scan is coming next. Until then, use the code field above.';
+  static const String liveScanQrCta = 'Scan QR (coming soon)';
 
   // Ranked tab
   static const String rankedTitle = 'Ranked';
   static const String rankedIntro =
       'Each quiz gives you one ranked attempt. Score counts toward your career points.';
+  static const String rankedTierGold = 'Gold';
+  static const String rankedTierSilver = 'Silver';
+  static const String rankedTierBronze = 'Bronze';
 
   // Learn tab
   static const String learnTitle = 'Learn';

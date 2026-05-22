@@ -12,6 +12,7 @@ import '../../features/profile/repositories/profile_repository.dart';
 import '../../features/quiz/repositories/netlify_supabase_quiz_repository.dart';
 import '../../features/quiz/repositories/quiz_repository.dart';
 import '../../features/quiz/storage/quiz_attempt_store.dart';
+import '../../features/quiz/storage/ranked_best_score_store.dart';
 import '../../features/session/repositories/netlify_supabase_session_repository.dart';
 import '../../features/session/repositories/session_repository.dart';
 import '../../features/session/storage/last_session_store.dart';
@@ -59,6 +60,9 @@ Future<void> initCore() async {
   );
   getIt.registerLazySingleton<LastSessionStore>(
     () => LastSessionStore(preferences),
+  );
+  getIt.registerLazySingleton<RankedBestScoreStore>(
+    () => RankedBestScoreStore(preferences, eventBus: getIt<EventBus>()),
   );
   final AuthStateManager authStateManager = AuthStateManager(
     deviceIdentityService: getIt<DeviceIdentityService>(),
