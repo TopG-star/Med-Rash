@@ -70,3 +70,16 @@ class IdentityResetEvent extends MedRashEvent {
   /// device"). False when both ids were rotated ("hand to someone else").
   final bool keptDeviceId;
 }
+
+/// Emitted by the profile repository immediately after the persisted career
+/// points counter has been incremented (i.e. after a ranked attempt was
+/// successfully submitted and the new running total has been written to
+/// shared_preferences).
+///
+/// Listeners use this to refresh on-screen "TOTAL POINTS" displays without
+/// racing the repository's own write against [AttemptSubmittedEvent] readers.
+class ProfilePointsUpdatedEvent extends MedRashEvent {
+  const ProfilePointsUpdatedEvent({required this.totalPoints});
+
+  final int totalPoints;
+}

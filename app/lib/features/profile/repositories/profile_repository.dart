@@ -30,6 +30,11 @@ abstract class ProfileRepository {
   /// this device starts at the quick-join screen with a blank slate.
   Future<void> clearAll();
 
+  /// Increment the persisted career-points counter by [delta]. Called when a
+  /// ranked attempt is successfully submitted so the Profile screen reflects
+  /// the cumulative score across every quiz the participant has played.
+  Future<UserProfile?> addRankedPoints(int delta);
+
   String generateNickname({String? fullName});
 }
 
@@ -41,7 +46,11 @@ class LocalProfileRepository implements ProfileRepository {
     AuthStateManager? authStateManager,
   })  : _eventBus = eventBus,
         _httpClient = httpClient,
-        _authStateManager = authStateManager;
+        _authStateManager = authStateManager {
+    // Singleton-scoped subscription: the repo lives for the whole app
+    // lifetime so no explicit cancellation is needed.
+    eventBus?.on<AttemptSubmittedEvent>().listen(_onAttemptSubmitted);
+  }
 
   final SharedPreferences _preferences;
   final EventBus? _eventBus;
@@ -142,6 +151,41 @@ class LocalProfileRepository implements ProfileRepository {
     await _preferences.remove(_keySpecialty);
     await _preferences.remove(_keyTotalPoints);
     await _preferences.remove(_keyRank);
+  }
+
+  @override
+  Future<UserProfile?> addRankedPoints(int delta) async {
+    if (delta <= 0) {
+      return getProfile();
+    }
+    final UserProfile? existing = await getProfile();
+    if (existing == null) {
+      return null;
+    }
+    final int next = existing.totalPoints + delta;
+    await _preferences.setInt(_keyTotalPoints, next);
+    return UserProfile(
+      fullName: existing.fullName,
+      nickname: existing.nickname,
+      facility: existing.facility,
+      specialty: existing.specialty,
+      totalPoints: next,
+      rank: existing.rank,
+    );
+  }
+
+  void _onAttemptSubmitted(AttemptSubmittedEvent event) {
+    // Career points only count ranked attempts. Learning/offline runs are
+    // free practice and must never inflate the total.
+    if (event.mode != 'ranked') return;
+    if (event.score <= 0) return;
+    unawaited(_applyRankedPoints(event.score));
+  }
+
+  Future<void> _applyRankedPoints(int delta) async {
+    final UserProfile? updated = await addRankedPoints(delta);
+    if (updated == null) return;
+    _eventBus?.emit(ProfilePointsUpdatedEvent(totalPoints: updated.totalPoints));
   }
 
   @override

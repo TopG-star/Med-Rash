@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -26,16 +28,21 @@ class _ProfilePageState extends State<ProfilePage> {
   late final TextEditingController _nicknameController = TextEditingController();
   late final TextEditingController _facilityController = TextEditingController();
   String _specialty = 'Emergency Medicine';
+  StreamSubscription<ProfilePointsUpdatedEvent>? _pointsSubscription;
 
   @override
   void initState() {
     super.initState();
     _profileRepository = getIt<ProfileRepository>();
     _loadProfile();
+    _pointsSubscription = getIt<EventBus>()
+        .on<ProfilePointsUpdatedEvent>()
+        .listen((_) => _loadProfile());
   }
 
   @override
   void dispose() {
+    _pointsSubscription?.cancel();
     _nicknameController.dispose();
     _facilityController.dispose();
     super.dispose();
