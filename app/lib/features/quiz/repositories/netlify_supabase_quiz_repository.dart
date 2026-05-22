@@ -624,7 +624,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
         review: review,
       );
       final PersistedCompletedAttempt synced =
-          baseSnapshot.copyWith(syncStatus: 'synced', syncError: null);
+          baseSnapshot.copyWith(syncStatus: 'synced', clearSyncError: true);
       await _store.saveCompleted(synced);
       _cachedCompleted = synced;
       await _store.clearActive();
@@ -636,7 +636,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
           error.code == 'RANKED_ATTEMPT_ALREADY_EXISTS') {
         _serverBlockedRankedQuizIds.add(activeAttempt.quiz.id);
         final PersistedCompletedAttempt synced =
-            baseSnapshot.copyWith(syncStatus: 'synced', syncError: null);
+            baseSnapshot.copyWith(syncStatus: 'synced', clearSyncError: true);
         await _store.saveCompleted(synced);
         _cachedCompleted = synced;
         await _store.clearActive();
@@ -762,11 +762,27 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
         },
       );
       final PersistedCompletedAttempt synced =
-          cached.copyWith(syncStatus: 'synced', syncError: null);
+          cached.copyWith(syncStatus: 'synced', clearSyncError: true);
       await _store.saveCompleted(synced);
       _cachedCompleted = synced;
       _emitAttemptSubmitted(synced);
     } on MedRashGateException catch (error) {
+      // A 409 RANKED_ATTEMPT_ALREADY_EXISTS on retry means the server already
+      // has the row (the first POST landed even though the response didn't
+      // reach the device). Treat as success so the Pending Sync banner clears
+      // — otherwise the snapshot is stuck in 'failed' forever.
+      if (cached.modeName == 'ranked' &&
+          error.statusCode == 409 &&
+          error.code == 'RANKED_ATTEMPT_ALREADY_EXISTS') {
+        _serverBlockedRankedQuizIds.add(cached.quizId);
+        final PersistedCompletedAttempt synced =
+            cached.copyWith(syncStatus: 'synced', clearSyncError: true);
+        await _store.saveCompleted(synced);
+        _cachedCompleted = synced;
+        _emitAttemptSubmitted(synced);
+        return;
+      }
+
       final PersistedCompletedAttempt failed = cached.copyWith(
         syncStatus: 'failed',
         syncError: 'HTTP ${error.statusCode}',

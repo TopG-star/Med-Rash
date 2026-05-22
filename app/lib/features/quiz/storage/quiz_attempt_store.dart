@@ -270,7 +270,11 @@ class PersistedCompletedAttempt {
   final String syncStatus; // 'synced' | 'pending' | 'failed' | 'skipped_offline'
   final String? syncError;
 
-  PersistedCompletedAttempt copyWith({String? syncStatus, String? syncError}) {
+  PersistedCompletedAttempt copyWith({
+    String? syncStatus,
+    String? syncError,
+    bool clearSyncError = false,
+  }) {
     return PersistedCompletedAttempt(
       quizId: quizId,
       modeName: modeName,
@@ -283,7 +287,7 @@ class PersistedCompletedAttempt {
       review: review,
       isOfflinePractice: isOfflinePractice,
       syncStatus: syncStatus ?? this.syncStatus,
-      syncError: syncError ?? this.syncError,
+      syncError: clearSyncError ? null : (syncError ?? this.syncError),
     );
   }
 
