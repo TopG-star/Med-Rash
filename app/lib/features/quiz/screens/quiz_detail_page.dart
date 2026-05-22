@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
@@ -16,9 +17,15 @@ class QuizDetailPage extends StatefulWidget {
   const QuizDetailPage({
     super.key,
     this.quizId,
+    this.preselectedMode,
   });
 
   final String? quizId;
+
+  /// When non-null, the detail page hides the other-mode CTA and shows a
+  /// mode-specific banner. Set by the Learn tab (Slice 2d) to commit the
+  /// user to learning mode without showing the ranked button.
+  final QuizMode? preselectedMode;
 
   @override
   State<QuizDetailPage> createState() => _QuizDetailPageState();
@@ -78,6 +85,8 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
 
           final Quiz quiz = snapshot.data!;
           final bool canStartRanked = _quizRepository.canStartRankedAttempt(quiz.id);
+          final bool learnOnly = widget.preselectedMode == QuizMode.learning;
+          final bool rankedOnly = widget.preselectedMode == QuizMode.ranked;
 
           final List<String> objectives = <String>[
             'Understand core ${quiz.category.toLowerCase()} decision points for ${quiz.product}.',
@@ -87,6 +96,28 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
 
           return ListView(
             children: <Widget>[
+              if (learnOnly)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: ArenaCard(
+                    color: context.arenaTokens.warningSurface,
+                    child: Row(
+                      children: <Widget>[
+                        Icon(
+                          Icons.menu_book_outlined,
+                          color: context.arenaTokens.outline,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            MedRashStrings.learnPreselectBanner,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               FutureBuilder<UserProfile?>(
                 future: _futureProfile,
                 builder: (BuildContext context, AsyncSnapshot<UserProfile?> profileSnap) {
@@ -168,18 +199,24 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              ArenaButton(
-                label: 'Start Learning',
-                icon: Icons.menu_book_outlined,
-                backgroundColor: Colors.white,
-                onPressed: () => _startMode(quiz, QuizMode.learning),
-              ),
-              const SizedBox(height: 16),
-              ArenaButton(
-                label: canStartRanked ? 'Go Ranked' : 'Ranked Attempt Used',
-                icon: Icons.workspace_premium_outlined,
-                onPressed: canStartRanked ? () => _startMode(quiz, QuizMode.ranked) : null,
-              ),
+              if (!rankedOnly)
+                ArenaButton(
+                  label: learnOnly
+                      ? MedRashStrings.learnStartCta
+                      : 'Start Learning',
+                  icon: Icons.menu_book_outlined,
+                  backgroundColor: learnOnly ? null : Colors.white,
+                  onPressed: () => _startMode(quiz, QuizMode.learning),
+                ),
+              if (!learnOnly) ...<Widget>[
+                const SizedBox(height: 16),
+                ArenaButton(
+                  label: canStartRanked ? 'Go Ranked' : 'Ranked Attempt Used',
+                  icon: Icons.workspace_premium_outlined,
+                  onPressed:
+                      canStartRanked ? () => _startMode(quiz, QuizMode.ranked) : null,
+                ),
+              ],
             ],
           );
         },

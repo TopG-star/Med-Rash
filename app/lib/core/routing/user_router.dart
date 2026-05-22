@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/leaderboard/screens/world_rank_page.dart';
 import '../../features/profile/screens/profile_page.dart';
+import '../../features/quiz/models/quiz_detail_launch.dart';
 import '../../features/quiz/screens/explore_page.dart';
 import '../../features/quiz/screens/learn_page.dart';
 import '../../features/quiz/screens/live_page.dart';
@@ -36,9 +37,14 @@ List<RouteBase> buildUserRoutes() {
     ),
     GoRoute(
       path: '/quiz-detail',
-      builder: (_, GoRouterState state) => QuizDetailPage(
-        quizId: state.extra is String ? state.extra as String : null,
-      ),
+      builder: (_, GoRouterState state) {
+        final QuizDetailLaunch launch =
+            QuizDetailLaunch.fromExtra(state.extra);
+        return QuizDetailPage(
+          quizId: launch.quizId,
+          preselectedMode: launch.preselectedMode,
+        );
+      },
     ),
     // Backcompat alias for any in-flight `/academy` links. The bottom nav
     // and all internal callers were migrated to `/quiz-detail` in Slice 2a.

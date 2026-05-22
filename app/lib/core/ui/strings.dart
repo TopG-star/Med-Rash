@@ -68,6 +68,9 @@ class MedRashStrings {
   static const String learnTitle = 'Learn';
   static const String learnIntro =
       'Practice anything as many times as you like. No points awarded.';
+  static const String learnPreselectBanner =
+      'Learn mode • unlimited practice, no points, no leaderboard.';
+  static const String learnStartCta = 'Start practising';
 
   // Quiz runner
   static const String quizTitle = 'Quiz';

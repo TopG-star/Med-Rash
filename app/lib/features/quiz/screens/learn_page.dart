@@ -8,11 +8,12 @@ import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../models/quiz.dart';
+import '../models/quiz_detail_launch.dart';
 import '../repositories/quiz_repository.dart';
 
-/// Learn tab introduced in Slice 2a. Today it lists all active quizzes;
-/// Slice 2d will preselect learning mode on tap and surface unlimited
-/// practice messaging.
+/// Learn tab. Lists active quizzes and routes taps into `/quiz-detail` with
+/// `QuizMode.learning` preselected so the user lands on a learn-only CTA
+/// instead of the dual ranked/learn choice (Slice 2d).
 class LearnPage extends StatefulWidget {
   const LearnPage({super.key});
 
@@ -55,7 +56,13 @@ class _LearnPageState extends State<LearnPage> {
                 (Quiz quiz) => Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: InkWell(
-                    onTap: () => context.go('/quiz-detail', extra: quiz.id),
+                    onTap: () => context.go(
+                      '/quiz-detail',
+                      extra: QuizDetailLaunch(
+                        quizId: quiz.id,
+                        preselectedMode: QuizMode.learning,
+                      ),
+                    ),
                     child: ArenaCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
