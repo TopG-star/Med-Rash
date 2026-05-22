@@ -12,7 +12,9 @@ class ArenaBottomNav extends StatelessWidget {
     if (location.startsWith('/leaderboard')) {
       return 1;
     }
-    if (location.startsWith('/academy')) {
+    if (location.startsWith('/explore') ||
+        location.startsWith('/quiz-detail') ||
+        location.startsWith('/academy')) {
       return 2;
     }
     if (location.startsWith('/profile')) {
@@ -33,7 +35,7 @@ class ArenaBottomNav extends StatelessWidget {
           case 1:
             context.go('/leaderboard');
           case 2:
-            context.go('/academy');
+            context.go('/explore');
           case 3:
             context.go('/profile');
         }
@@ -44,7 +46,7 @@ class ArenaBottomNav extends StatelessWidget {
       destinations: const <NavigationDestination>[
         NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
         NavigationDestination(icon: Icon(Icons.bar_chart_outlined), label: 'Rank'),
-        NavigationDestination(icon: Icon(Icons.school_outlined), label: 'Academy'),
+        NavigationDestination(icon: Icon(Icons.travel_explore_outlined), label: 'Explore'),
         NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
       ],
     );

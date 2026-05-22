@@ -14,6 +14,7 @@ import '../../features/quiz/repositories/quiz_repository.dart';
 import '../../features/quiz/storage/quiz_attempt_store.dart';
 import '../../features/session/repositories/netlify_supabase_session_repository.dart';
 import '../../features/session/repositories/session_repository.dart';
+import '../../features/session/storage/last_session_store.dart';
 import 'get_it.dart';
 
 Future<void> initCore() async {
@@ -55,6 +56,9 @@ Future<void> initCore() async {
       httpClient: getIt<MedRashHttpClient>(),
       fallback: InMemorySessionRepository(),
     ),
+  );
+  getIt.registerLazySingleton<LastSessionStore>(
+    () => LastSessionStore(preferences),
   );
   final AuthStateManager authStateManager = AuthStateManager(
     deviceIdentityService: getIt<DeviceIdentityService>(),

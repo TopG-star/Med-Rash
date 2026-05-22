@@ -11,14 +11,17 @@ import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../models/quiz.dart';
 import '../repositories/quiz_repository.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+/// Browse-all quiz feed. Used both as the standalone Explore destination and
+/// as the read-model for the Ranked/Learn tabs until those grow their own
+/// filtering and badge UI.
+class ExplorePage extends StatefulWidget {
+  const ExplorePage({super.key});
 
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<ExplorePage> createState() => _ExplorePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _ExplorePageState extends State<ExplorePage> {
   late final QuizRepository _quizRepository;
   Future<List<Quiz>>? _futureQuizzes;
 
@@ -32,8 +35,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return ArenaScaffold(
-      title: MedRashStrings.appTitle,
+      title: MedRashStrings.exploreTitle,
       bottomNav: true,
+      showBack: true,
       actions: const <Widget>[IdentityBadge()],
       child: FutureBuilder<List<Quiz>>(
         future: _futureQuizzes,
@@ -47,7 +51,7 @@ class _HomePageState extends State<HomePage> {
           return ListView(
             children: <Widget>[
               Text(
-                MedRashStrings.homeIntro,
+                MedRashStrings.exploreIntro,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),
@@ -55,7 +59,7 @@ class _HomePageState extends State<HomePage> {
                 (Quiz quiz) => Padding(
                   padding: const EdgeInsets.only(bottom: 20),
                   child: InkWell(
-                    onTap: () => context.go('/academy', extra: quiz.id),
+                    onTap: () => context.go('/quiz-detail', extra: quiz.id),
                     child: ArenaCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

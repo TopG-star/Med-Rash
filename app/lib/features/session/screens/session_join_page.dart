@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/infra/event_bus.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../quiz/repositories/quiz_repository.dart';
+import '../events/last_session_recorded_event.dart';
 import '../models/session_info.dart';
 import '../repositories/session_repository.dart';
+import '../storage/last_session_store.dart';
 
 class SessionJoinPage extends StatefulWidget {
   const SessionJoinPage({super.key, this.joinCode});
@@ -22,6 +25,8 @@ class SessionJoinPage extends StatefulWidget {
 class _SessionJoinPageState extends State<SessionJoinPage> {
   late final SessionRepository _sessionRepository;
   late final QuizRepository _quizRepository;
+  late final LastSessionStore _lastSessionStore;
+  late final EventBus _eventBus;
   Future<SessionInfo>? _futureSession;
 
   @override
@@ -29,15 +34,28 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
     super.initState();
     _sessionRepository = getIt<SessionRepository>();
     _quizRepository = getIt<QuizRepository>();
+    _lastSessionStore = getIt<LastSessionStore>();
+    _eventBus = getIt<EventBus>();
     _futureSession = _loadSession();
   }
 
-  Future<SessionInfo> _loadSession() {
+  Future<SessionInfo> _loadSession() async {
     final String joinCode = widget.joinCode?.trim() ?? '';
-    if (joinCode.isNotEmpty) {
-      return _sessionRepository.resolveSessionByJoinCode(joinCode);
+    final SessionInfo session = joinCode.isNotEmpty
+        ? await _sessionRepository.resolveSessionByJoinCode(joinCode)
+        : await _sessionRepository.getFeaturedSession();
+    // Persist whatever join code the resolved session reports (preferred) so
+    // the home screen can offer a Continue card. Fall back to the inbound
+    // path param if the repository didn't surface one (e.g. featured-session
+    // fallback).
+    final String? recordedCode = session.joinCode?.trim().isNotEmpty == true
+        ? session.joinCode!.trim()
+        : (joinCode.isNotEmpty ? joinCode : null);
+    if (recordedCode != null) {
+      await _lastSessionStore.record(recordedCode);
+      _eventBus.emit(LastSessionRecordedEvent(joinCode: recordedCode));
     }
-    return _sessionRepository.getFeaturedSession();
+    return session;
   }
 
   Future<void> _startMode(SessionInfo session, QuizMode mode) async {

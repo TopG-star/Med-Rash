@@ -10,9 +10,50 @@ class MedRashStrings {
   // App chrome
   static const String appTitle = 'MedRash';
 
-  // Home
-  static const String homeIntro =
+  // Mode-selection home (Slice 2a front door)
+  static const String modeSelectionIntro =
+      'Pick how you want to play. Live for hosted sessions, Ranked for the leaderboard, Learn for unlimited practice.';
+  static const String modeLiveLabel = 'Live';
+  static const String modeLiveDescription =
+      'Join a session in progress with a code or a QR scan.';
+  static const String modeRankedLabel = 'Ranked';
+  static const String modeRankedDescription =
+      'One-shot attempts that count toward your career points and the world rank.';
+  static const String modeLearnLabel = 'Learn';
+  static const String modeLearnDescription =
+      'Repeat any quiz as many times as you like — no points, no pressure.';
+  static const String continueLastSessionTitle = 'Continue last session';
+  static const String continueLastSessionCta = 'Resume';
+  static const String exploreCta = 'Browse all content';
+
+  // Explore (formerly Home feed)
+  static const String exploreTitle = 'Explore';
+  static const String exploreIntro =
       'Pick a topic and keep it under three minutes.';
+
+  // Live tab
+  static const String liveTitle = 'Live';
+  static const String liveIntro =
+      'Enter the session code your host announced, or scan the QR they shared.';
+  static const String liveEnterCodeTitle = 'Enter session code';
+  static const String liveEnterCodeHelper =
+      'Four letters or digits, case-insensitive.';
+  static const String liveEnterCodeLabel = 'Session code';
+  static const String liveJoinCta = 'Join session';
+  static const String liveScanQrTitle = 'Scan QR';
+  static const String liveScanQrHelper =
+      'Camera scan is coming next. Until then, use the code field above.';
+  static const String liveScanQrCta = 'Scan QR (coming soon)';
+
+  // Ranked tab
+  static const String rankedTitle = 'Ranked';
+  static const String rankedIntro =
+      'Each quiz gives you one ranked attempt. Score counts toward your career points.';
+
+  // Learn tab
+  static const String learnTitle = 'Learn';
+  static const String learnIntro =
+      'Practice anything as many times as you like. No points awarded.';
 
   // Quiz runner
   static const String quizTitle = 'Quiz';
