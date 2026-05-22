@@ -12,7 +12,11 @@ import '../../../core/theme/theme_extensions.dart';
 import '../repositories/profile_repository.dart';
 
 class QuickJoinPage extends StatefulWidget {
-  const QuickJoinPage({super.key});
+  const QuickJoinPage({super.key, this.nextPath});
+
+  /// Optional post-onboarding destination (e.g. `/session/ABCD`). Honored only
+  /// when it is a safe in-app path; falls back to `/home` otherwise.
+  final String? nextPath;
 
   @override
   State<QuickJoinPage> createState() => _QuickJoinPageState();
@@ -161,7 +165,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                       await getIt<AuthStateManager>().markJoined();
                     });
                     if (context.mounted) {
-                      context.go('/home');
+                      context.go(widget.nextPath ?? '/home');
                     }
                   }
                 : null,
