@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/di/get_it.dart';
 import '../../../core/infra/auth_state_manager.dart';
 import '../../../core/infra/identity_snapshot.dart';
+import '../../../core/routing/app_router.dart';
 import '../../../core/ui/operation_runner_state.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/arena_button.dart';
@@ -73,6 +74,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
     final IdentitySnapshot? snapshot = _authStateManager.lastSignedOutSnapshot;
+    final String? joiningCode = joinCodeFromNextPath(widget.nextPath);
 
     return ArenaScaffold(
       title: 'Join The Academy',
@@ -80,9 +82,14 @@ class _QuickJoinPageState extends State<QuickJoinPage>
       child: MedRashConstrainedBody(
         child: ListView(
         children: <Widget>[
+          if (joiningCode != null) ...<Widget>[
+            _SessionContextCard(joinCode: joiningCode),
+            const SizedBox(height: 20),
+          ],
           if (snapshot != null) ...<Widget>[
             _ResumeCard(
               snapshot: snapshot,
+              joiningCode: joiningCode,
               onResume: () => _resumeSnapshot(snapshot),
               onStartFresh: _startFresh,
             ),
@@ -186,7 +193,9 @@ class _QuickJoinPageState extends State<QuickJoinPage>
           ),
           const SizedBox(height: 40),
           ArenaButton(
-            label: 'Start Playing',
+            label: joiningCode != null
+                ? 'Continue to session $joiningCode'
+                : 'Start Playing',
             onPressed: _canStart
                 ? () async {
                     await runOperation(() async {
@@ -251,11 +260,13 @@ class _ResumeCard extends StatelessWidget {
     required this.snapshot,
     required this.onResume,
     required this.onStartFresh,
+    this.joiningCode,
   });
 
   final IdentitySnapshot snapshot;
   final VoidCallback onResume;
   final VoidCallback onStartFresh;
+  final String? joiningCode;
 
   @override
   Widget build(BuildContext context) {
@@ -304,13 +315,61 @@ class _ResumeCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           ArenaButton(
-            label: 'Continue as ${snapshot.nickname.isNotEmpty ? snapshot.nickname : "previous player"}',
+            label: _resumeLabel(),
             onPressed: onResume,
           ),
           const SizedBox(height: 8),
           TextButton(
             onPressed: onStartFresh,
             child: const Text('Not you? Start fresh'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _resumeLabel() {
+    final String who = snapshot.nickname.isNotEmpty
+        ? snapshot.nickname
+        : 'previous player';
+    if (joiningCode != null) {
+      return 'Continue as $who → session $joiningCode';
+    }
+    return 'Continue as $who';
+  }
+}
+
+class _SessionContextCard extends StatelessWidget {
+  const _SessionContextCard({required this.joinCode});
+
+  final String joinCode;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    return ArenaCard(
+      color: tokens.primary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const Icon(Icons.qr_code_2, color: Colors.black),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  "You're joining session $joinCode",
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Choose a nickname and you'll join the session right after.",
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
         ],
       ),

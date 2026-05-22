@@ -20,6 +20,22 @@ String? safeNextPath(String? next) {
   return next;
 }
 
+/// Extracts the session join code from a `next`-style path of the form
+/// `/session/<code>` (with optional trailing slash or query). Returns null
+/// when [nextPath] is not a session route, so callers can branch on it to
+/// surface "you're joining session X" context without false positives on
+/// `/home`, `/leaderboard`, etc.
+String? joinCodeFromNextPath(String? nextPath) {
+  if (nextPath == null || nextPath.isEmpty) return null;
+  if (!nextPath.startsWith('/session/')) return null;
+  final String tail = nextPath.substring('/session/'.length);
+  if (tail.isEmpty) return null;
+  final int cut = tail.indexOf(RegExp(r'[/?#]'));
+  final String raw = cut == -1 ? tail : tail.substring(0, cut);
+  final String decoded = Uri.decodeComponent(raw).trim();
+  return decoded.isEmpty ? null : decoded;
+}
+
 GoRouter buildRouter() {
   final AuthStateManager authStateManager = getIt<AuthStateManager>();
 

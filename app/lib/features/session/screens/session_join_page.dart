@@ -175,7 +175,22 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
           }
 
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            final String? code = widget.joinCode?.trim();
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const CircularProgressIndicator(),
+                  const SizedBox(height: 12),
+                  Text(
+                    code != null && code.isNotEmpty
+                        ? 'Joining session $code…'
+                        : 'Loading session…',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            );
           }
           final SessionInfo session = snapshot.data!;
           final bool canStartRanked = _quizRepository.canStartRankedAttempt(session.quizId);
