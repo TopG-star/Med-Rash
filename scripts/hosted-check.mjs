@@ -7,6 +7,7 @@ const requiredTables = [
   'answers',
   'sessions',
   'users',
+  'session_join_events',
 ];
 
 function readEnv(name) {

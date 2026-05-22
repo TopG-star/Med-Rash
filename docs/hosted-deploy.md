@@ -20,6 +20,7 @@ Site under management: <https://thriving-gingersnap-2f2932.netlify.app/>
    - [supabase/migrations/002_leaderboard_and_analytics.sql](../supabase/migrations/002_leaderboard_and_analytics.sql)
    - [supabase/migrations/003_quiz_product_and_position.sql](../supabase/migrations/003_quiz_product_and_position.sql)
    - [supabase/migrations/004_attempts_season_key_guardrails.sql](../supabase/migrations/004_attempts_season_key_guardrails.sql)
+   - [supabase/migrations/005_session_join_events.sql](../supabase/migrations/005_session_join_events.sql)
 3. Confirm the `app` schema is exposed in **Settings → API → Schema** so PostgREST + the
    admin client (which runs `db: { schema: "app" }`) can reach it.
 
@@ -64,7 +65,7 @@ Recommended secret hygiene:
 
 From the workspace root, run hosted-check against the live Supabase
 project. This validates that the `app` schema is reachable with the
-service-role key and all 6 required tables respond.
+service-role key and all 7 required tables respond.
 
 ```pwsh
 $env:SUPABASE_URL = "https://<ref>.supabase.co"
@@ -73,8 +74,8 @@ node ./scripts/hosted-check.mjs
 ```
 
 Expected output: `Connectivity check passed` followed by `Table 'X'
-reachable` for users, quizzes, questions, sessions, attempts, answers.
-Any failure aborts the deploy plan.
+reachable` for users, quizzes, questions, sessions, attempts, answers,
+session_join_events. Any failure aborts the deploy plan.
 
 After the run:
 ```pwsh
