@@ -96,6 +96,10 @@ export function parseCreateSessionInput(
 }
 
 function buildJoinUrl(joinCode: string): string {
+  return buildSessionJoinUrl(joinCode);
+}
+
+export function buildSessionJoinUrl(joinCode: string): string {
   const base =
     process.env.MEDRASH_APP_PUBLIC_BASE_URL?.trim().replace(/\/+$/, "") ?? "";
   if (!base) {

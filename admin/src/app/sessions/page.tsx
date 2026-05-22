@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { EmptyState } from "@/components/empty-state";
 import { PanelCard } from "@/components/panel-card";
+import { buildSessionJoinUrl } from "@/lib/session-create";
 import {
   listActiveQuizOptions,
   listAdminSessions,
@@ -11,6 +12,7 @@ import {
 } from "@/lib/session-queries";
 
 import { SessionCreateForm } from "./session-create-form";
+import { SessionRowActions } from "./session-row-actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -68,7 +70,14 @@ export default async function SessionsPage() {
           />
         ) : (
           <div className="space-y-4">
-            {sessions.map((session) => (
+            {sessions.map((session) => {
+              let joinUrl: string | null = null;
+              try {
+                joinUrl = buildSessionJoinUrl(session.joinCode);
+              } catch {
+                joinUrl = null;
+              }
+              return (
               <div
                 key={session.id}
                 className="arena-panel flex flex-col gap-4 bg-[var(--arena-surface)] p-4 md:flex-row md:items-center md:justify-between"
@@ -90,21 +99,24 @@ export default async function SessionsPage() {
                     {session.hostName ? ` · host ${session.hostName}` : ""}
                   </p>
                 </div>
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3">
                   <Link
                     href={`/sessions/${session.id}/live`}
                     className="arena-button bg-[var(--arena-tertiary)] px-4 py-2 text-sm font-semibold"
                   >
                     Live view
                   </Link>
-                  <button
-                    type="button"
-                    className="arena-button bg-[var(--arena-secondary)] px-4 py-2 text-sm font-semibold opacity-60"
-                    disabled
-                    title="Share/QR re-render ships in the next slice."
-                  >
-                    Share
-                  </button>
+                  {joinUrl ? (
+                    <SessionRowActions
+                      sessionName={session.name}
+                      joinCode={session.joinCode}
+                      joinUrl={joinUrl}
+                    />
+                  ) : (
+                    <span className="text-xs font-semibold text-[var(--arena-ink-muted)]">
+                      Set MEDRASH_APP_PUBLIC_BASE_URL to enable Copy link / Show QR.
+                    </span>
+                  )}
                   <button
                     type="button"
                     className="arena-button bg-[var(--arena-primary)] px-4 py-2 text-sm font-semibold opacity-60"
@@ -115,7 +127,8 @@ export default async function SessionsPage() {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </PanelCard>
