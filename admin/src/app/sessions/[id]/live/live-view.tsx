@@ -80,6 +80,11 @@ export function LiveView({ sessionId, initial }: LiveViewProps) {
           label="Joined"
           value={snapshot.joined.toLocaleString()}
           delta={snapshot.isActiveNow ? "Session live" : "Session not active"}
+          subtitle={
+            snapshot.scanned > 0
+              ? `${snapshot.scanned.toLocaleString()} ${snapshot.scanned === 1 ? "device" : "devices"} resolved this code`
+              : undefined
+          }
           tone="primary"
         />
         <MetricCard

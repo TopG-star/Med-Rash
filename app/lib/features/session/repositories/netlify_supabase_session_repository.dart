@@ -1,3 +1,4 @@
+import '../../../core/infra/auth_state_manager.dart';
 import '../../../core/infra/medrash_http_client.dart';
 import '../models/session_info.dart';
 import 'session_repository.dart';
@@ -5,12 +6,15 @@ import 'session_repository.dart';
 class NetlifySupabaseSessionRepository implements SessionRepository {
   NetlifySupabaseSessionRepository({
     required MedRashHttpClient httpClient,
+    AuthStateManager? authStateManager,
     SessionRepository? fallback,
   })  : _fallback = fallback ?? InMemorySessionRepository(),
-        _httpClient = httpClient;
+        _httpClient = httpClient,
+        _authStateManager = authStateManager;
 
   final SessionRepository _fallback;
   final MedRashHttpClient _httpClient;
+  final AuthStateManager? _authStateManager;
 
   SessionInfo _parseSessionFromResponse(Map<String, dynamic> response) {
     final Object? rawSession = response['session'];
@@ -47,9 +51,22 @@ class NetlifySupabaseSessionRepository implements SessionRepository {
     }
 
     try {
+      final Map<String, Object?> payload = <String, Object?>{'joinCode': normalized};
+      // Best-effort: attach identity so the admin Live view can count this
+      // scan even if the participant never starts/submits an attempt. Identity
+      // is optional on the server; missing values must NOT break the scan.
+      final String? participantId = _authStateManager?.participantId;
+      final String? deviceInstallId = _authStateManager?.deviceId;
+      if (participantId != null && participantId.isNotEmpty) {
+        payload['participantId'] = participantId;
+        if (deviceInstallId != null && deviceInstallId.isNotEmpty) {
+          payload['deviceInstallId'] = deviceInstallId;
+        }
+      }
+
       final Map<String, dynamic> response = await _httpClient.postJson(
         'session-resolve',
-        <String, Object?>{'joinCode': normalized},
+        payload,
       );
       return _parseSessionFromResponse(response);
     } on MedRashGateException catch (error) {

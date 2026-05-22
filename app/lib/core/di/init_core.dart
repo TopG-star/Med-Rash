@@ -55,6 +55,7 @@ Future<void> initCore() async {
   getIt.registerLazySingleton<SessionRepository>(
     () => NetlifySupabaseSessionRepository(
       httpClient: getIt<MedRashHttpClient>(),
+      authStateManager: getIt<AuthStateManager>(),
       fallback: InMemorySessionRepository(),
     ),
   );

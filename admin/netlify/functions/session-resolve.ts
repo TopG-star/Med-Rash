@@ -33,6 +33,24 @@ function parseJoinCode(body: Record<string, unknown>): string {
   return value.trim().toUpperCase();
 }
 
+type OptionalIdentity = {
+  participantId: string;
+  deviceInstallId: string | null;
+} | null;
+
+function parseOptionalIdentity(body: Record<string, unknown>): OptionalIdentity {
+  const participantRaw = body.participantId;
+  if (typeof participantRaw !== 'string') return null;
+  const participantId = participantRaw.trim();
+  if (participantId.length === 0) return null;
+
+  const deviceRaw = body.deviceInstallId;
+  const deviceInstallId =
+    typeof deviceRaw === 'string' && deviceRaw.trim().length > 0 ? deviceRaw.trim() : null;
+
+  return { participantId, deviceInstallId };
+}
+
 function readHeader(event: HandlerEvent, headerName: string): string {
   const headers = event.headers ?? {};
   const target = headerName.toLowerCase();
@@ -205,6 +223,33 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     }
 
     const session = buildSessionPayload(data as Record<string, unknown>);
+
+    // Best-effort dedupe-on-participant join-event log so the admin Live view
+    // can show "X devices resolved this code" even when no attempts land.
+    // Failure here must NOT break the resolve — log and move on.
+    const identity = parseOptionalIdentity(body);
+    if (identity) {
+      try {
+        const { error: joinEventError } = await supabase
+          .from('session_join_events')
+          .upsert(
+            {
+              session_id: session.sessionId,
+              participant_id: identity.participantId,
+              device_install_id: identity.deviceInstallId,
+            },
+            {
+              onConflict: 'session_id,participant_id',
+              ignoreDuplicates: false,
+            },
+          );
+        if (joinEventError) {
+          console.error('[session-resolve] join-event upsert failed:', joinEventError.message);
+        }
+      } catch (joinEventErr) {
+        console.error('[session-resolve] join-event upsert threw:', joinEventErr);
+      }
+    }
 
     await applyMinimumLatency(startedAtMs);
     return jsonResponse(200, {

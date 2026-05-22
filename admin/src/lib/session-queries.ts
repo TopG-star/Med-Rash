@@ -129,6 +129,12 @@ export type SessionLiveSnapshot = {
   quizTitle: string;
   isActiveNow: boolean;
   joined: number;
+  /**
+   * Distinct participants who successfully resolved the join code (i.e. landed
+   * on /session/<code>). May exceed `joined` when participants scanned but
+   * never started/submitted an attempt — surfaces blocked/abandoned scans.
+   */
+  scanned: number;
   submitted: number;
   lastActivityAt: string | null;
   top5: SessionLiveTopRow[];
@@ -194,6 +200,16 @@ export async function getSessionLiveSnapshot(
     throw new Error(`Failed to load attempts: ${attemptsError.message}`);
   }
 
+  const { count: scannedCountRaw, error: scannedError } = await supabase
+    .from("session_join_events")
+    .select("id", { count: "exact", head: true })
+    .eq("session_id", sessionId);
+
+  if (scannedError) {
+    throw new Error(`Failed to load join events: ${scannedError.message}`);
+  }
+  const scanned = scannedCountRaw ?? 0;
+
   const attempts = (attemptsData as LiveAttemptRow[] | null) ?? [];
   const uniqueUsers = new Set<string>();
   let submitted = 0;
@@ -249,6 +265,7 @@ export async function getSessionLiveSnapshot(
     quizTitle: quizRel?.title ?? "(unknown quiz)",
     isActiveNow: isActiveNow(header.starts_at, header.ends_at, nowMs),
     joined: uniqueUsers.size,
+    scanned,
     submitted,
     lastActivityAt: lastActivityMs > 0 ? new Date(lastActivityMs).toISOString() : null,
     top5,
