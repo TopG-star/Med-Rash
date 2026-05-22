@@ -152,4 +152,9 @@ class _NullProfileRepository implements ProfileRepository {
   }) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UserProfile> mintGuestProfile({int? seedSuffix}) {
+    throw UnimplementedError();
+  }
 }

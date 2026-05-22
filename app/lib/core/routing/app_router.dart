@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+import '../config/app_config.dart';
 import '../di/get_it.dart';
 import '../infra/auth_state_manager.dart';
+import '../../features/profile/repositories/profile_repository.dart';
+import 'auth_redirect.dart';
 import 'guest_router.dart';
 import 'user_router.dart';
 
@@ -27,21 +30,21 @@ GoRouter buildRouter() {
       ...buildGuestRoutes(),
       ...buildUserRoutes(),
     ],
-    redirect: (_, GoRouterState state) {
-      final bool joining = state.matchedLocation == '/join';
-      if (!authStateManager.hasProfile && !joining) {
-        // Preserve the original deep-link target (e.g. `/session/ABCD`) so
-        // QuickJoinPage can return the user there after onboarding instead
-        // of dumping them on /home.
-        final String current = state.uri.toString();
-        final String encoded = Uri.encodeComponent(current);
-        return '/join?next=$encoded';
+    redirect: (_, GoRouterState state) async {
+      final AuthRedirectDecision decision = computeAuthRedirect(
+        hasProfile: authStateManager.hasProfile,
+        matchedLocation: state.matchedLocation,
+        currentUri: state.uri.toString(),
+        nextParam: state.uri.queryParameters['next'],
+        fastJoinEnabled: AppConfig.qrFastJoin,
+        safeNext: safeNextPath,
+      );
+      if (decision.fastJoin) {
+        await getIt<ProfileRepository>().mintGuestProfile();
+        await authStateManager.markJoined();
+        return null;
       }
-      if (authStateManager.hasProfile && joining) {
-        final String? next = safeNextPath(state.uri.queryParameters['next']);
-        return next ?? '/home';
-      }
-      return null;
+      return decision.path;
     },
     debugLogDiagnostics: kDebugMode,
   );

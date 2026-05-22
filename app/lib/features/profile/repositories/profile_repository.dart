@@ -20,6 +20,19 @@ abstract class ProfileRepository {
     String? nickname,
   });
 
+  /// Silently mint a guest profile so a QR-deep-link visitor can land on a
+  /// session screen without filling the quick-join form (Slice 3 / Option B
+  /// fast-join). The minted nickname matches [isGuestNickname], which the UI
+  /// uses to surface an inline "Pick a nickname" prompt before ranked play.
+  Future<UserProfile> mintGuestProfile({int? seedSuffix});
+
+  /// True for nicknames produced by [mintGuestProfile] (`Guest-1234`). The
+  /// UI uses this to decide whether to show the rename prompt and to gate
+  /// the ranked CTA.
+  static bool isGuestNickname(String nickname) {
+    return RegExp(r'^Guest-\d{3,4}$').hasMatch(nickname.trim());
+  }
+
   Future<UserProfile> updateProfile({
     required String nickname,
     required String facility,
@@ -113,6 +126,18 @@ class LocalProfileRepository implements ProfileRepository {
 
     _broadcastProfileUpdate(profile);
     return profile;
+  }
+
+  @override
+  Future<UserProfile> mintGuestProfile({int? seedSuffix}) async {
+    final int suffix = seedSuffix ?? (Random().nextInt(9000) + 1000);
+    final String nickname = 'Guest-$suffix';
+    return quickJoin(
+      fullName: nickname,
+      facility: '',
+      specialty: 'Doctor',
+      nickname: nickname,
+    );
   }
 
   @override

@@ -7,6 +7,8 @@ import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../profile/models/user_profile.dart';
+import '../../profile/repositories/profile_repository.dart';
 import '../../quiz/repositories/quiz_repository.dart';
 import '../events/last_session_recorded_event.dart';
 import '../models/session_info.dart';
@@ -27,7 +29,10 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
   late final QuizRepository _quizRepository;
   late final LastSessionStore _lastSessionStore;
   late final EventBus _eventBus;
+  late final ProfileRepository _profileRepository;
   Future<SessionInfo>? _futureSession;
+  UserProfile? _profile;
+  final GlobalKey _guestPromptKey = GlobalKey();
 
   @override
   void initState() {
@@ -36,7 +41,15 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
     _quizRepository = getIt<QuizRepository>();
     _lastSessionStore = getIt<LastSessionStore>();
     _eventBus = getIt<EventBus>();
+    _profileRepository = getIt<ProfileRepository>();
     _futureSession = _loadSession();
+    _refreshProfile();
+  }
+
+  Future<void> _refreshProfile() async {
+    final UserProfile? profile = await _profileRepository.getProfile();
+    if (!mounted) return;
+    setState(() => _profile = profile);
   }
 
   Future<SessionInfo> _loadSession() async {
@@ -59,6 +72,10 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
   }
 
   Future<void> _startMode(SessionInfo session, QuizMode mode) async {
+    if (mode == QuizMode.ranked && _isGuestProfile) {
+      _promptForNickname();
+      return;
+    }
     try {
       await _quizRepository.startAttempt(
         quizId: session.quizId,
@@ -79,6 +96,49 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
         SnackBar(content: Text(message.isEmpty ? 'Unable to start attempt.' : message)),
       );
     }
+  }
+
+  bool get _isGuestProfile {
+    final UserProfile? profile = _profile;
+    if (profile == null) return false;
+    return ProfileRepository.isGuestNickname(profile.nickname);
+  }
+
+  void _promptForNickname() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Pick a nickname to start ranked.')),
+    );
+    final BuildContext? promptContext = _guestPromptKey.currentContext;
+    if (promptContext != null) {
+      Scrollable.ensureVisible(
+        promptContext,
+        duration: const Duration(milliseconds: 250),
+        alignment: 0.1,
+      );
+    }
+  }
+
+  Future<void> _saveNickname(String nickname) async {
+    final UserProfile? existing = _profile;
+    if (existing == null) return;
+    final String trimmed = nickname.trim();
+    if (trimmed.isEmpty || ProfileRepository.isGuestNickname(trimmed)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a nickname other than the guest default.')),
+      );
+      return;
+    }
+    await _profileRepository.updateProfile(
+      nickname: trimmed,
+      facility: existing.facility,
+      specialty: existing.specialty,
+    );
+    if (!mounted) return;
+    await _refreshProfile();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Nickname set to @$trimmed.')),
+    );
   }
 
   @override
@@ -122,6 +182,15 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
 
           return ListView(
             children: <Widget>[
+              if (_isGuestProfile)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _GuestNicknamePrompt(
+                    key: _guestPromptKey,
+                    currentNickname: _profile!.nickname,
+                    onSave: _saveNickname,
+                  ),
+                ),
               ArenaCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,6 +273,82 @@ class _Metric extends StatelessWidget {
         Text(value, style: Theme.of(context).textTheme.headlineMedium),
         Text(label.toUpperCase(), style: Theme.of(context).textTheme.labelMedium),
       ],
+    );
+  }
+}
+
+class _GuestNicknamePrompt extends StatefulWidget {
+  const _GuestNicknamePrompt({
+    super.key,
+    required this.currentNickname,
+    required this.onSave,
+  });
+
+  final String currentNickname;
+  final Future<void> Function(String nickname) onSave;
+
+  @override
+  State<_GuestNicknamePrompt> createState() => _GuestNicknamePromptState();
+}
+
+class _GuestNicknamePromptState extends State<_GuestNicknamePrompt> {
+  late final TextEditingController _controller;
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _saving = true);
+    try {
+      await widget.onSave(_controller.text);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ArenaCard(
+      color: const Color(0xFFFFF7E6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Pick a nickname for the leaderboard',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            'Optional for Learning. Required before Ranked. Joined as @${widget.currentNickname}.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            enabled: !_saving,
+            decoration: const InputDecoration(
+              labelText: 'Nickname',
+              border: OutlineInputBorder(),
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+          ),
+          const SizedBox(height: 12),
+          ArenaButton(
+            label: _saving ? 'Saving…' : 'Save nickname',
+            icon: Icons.check,
+            onPressed: _saving ? null : _submit,
+          ),
+        ],
+      ),
     );
   }
 }
