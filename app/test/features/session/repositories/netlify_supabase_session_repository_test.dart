@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:medrash_app/core/infra/auth_state_manager.dart';
 import 'package:medrash_app/core/infra/device_identity_service.dart';
+import 'package:medrash_app/core/infra/identity_snapshot.dart';
 import 'package:medrash_app/core/infra/identity_spine.dart';
 import 'package:medrash_app/core/infra/medrash_http_client.dart';
 import 'package:medrash_app/features/session/repositories/netlify_supabase_session_repository.dart';
@@ -149,6 +150,18 @@ class _FixedDeviceIdentityService implements DeviceIdentityService {
   Future<void> clearIdentity({required bool keepDeviceId}) async {
     _hasProfile = false;
   }
+
+  @override
+  Future<void> restoreIdentity(IdentitySnapshot snapshot) async {}
+
+  @override
+  Future<IdentitySnapshot?> readSnapshot() async => null;
+
+  @override
+  Future<void> writeSnapshot(IdentitySnapshot snapshot) async {}
+
+  @override
+  Future<void> clearSnapshot() async {}
 
   @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

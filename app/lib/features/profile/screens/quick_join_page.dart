@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
 import '../../../core/infra/auth_state_manager.dart';
+import '../../../core/infra/identity_snapshot.dart';
 import '../../../core/ui/operation_runner_state.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/widgets/arena_button.dart';
@@ -27,6 +28,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _facilityController = TextEditingController();
   late final ProfileRepository _profileRepository;
+  late final AuthStateManager _authStateManager;
   String _specialty = 'Doctor';
   String _nickname = '';
 
@@ -34,19 +36,43 @@ class _QuickJoinPageState extends State<QuickJoinPage>
   void initState() {
     super.initState();
     _profileRepository = getIt<ProfileRepository>();
+    _authStateManager = getIt<AuthStateManager>();
     _nickname = _profileRepository.generateNickname();
+    _authStateManager.addListener(_onAuthChanged);
   }
 
   @override
   void dispose() {
+    _authStateManager.removeListener(_onAuthChanged);
     _nameController.dispose();
     _facilityController.dispose();
     super.dispose();
   }
 
+  void _onAuthChanged() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _resumeSnapshot(IdentitySnapshot snapshot) async {
+    await runOperation(() async {
+      await _profileRepository.restoreFromSnapshot(snapshot);
+      await _authStateManager.restoreFromSnapshot(snapshot);
+    });
+    if (mounted) {
+      context.go(widget.nextPath ?? '/home');
+    }
+  }
+
+  Future<void> _startFresh() async {
+    await _authStateManager.dismissLastSnapshot();
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
+    final IdentitySnapshot? snapshot = _authStateManager.lastSignedOutSnapshot;
 
     return ArenaScaffold(
       title: 'Join The Academy',
@@ -54,6 +80,14 @@ class _QuickJoinPageState extends State<QuickJoinPage>
       child: MedRashConstrainedBody(
         child: ListView(
         children: <Widget>[
+          if (snapshot != null) ...<Widget>[
+            _ResumeCard(
+              snapshot: snapshot,
+              onResume: () => _resumeSnapshot(snapshot),
+              onStartFresh: _startFresh,
+            ),
+            const SizedBox(height: 28),
+          ],
           Text('FULL NAME', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
           _ArenaTextField(
@@ -207,6 +241,78 @@ class _ArenaTextField extends StatelessWidget {
           hintStyle: TextStyle(color: tokens.textSecondary),
         ),
         onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _ResumeCard extends StatelessWidget {
+  const _ResumeCard({
+    required this.snapshot,
+    required this.onResume,
+    required this.onStartFresh,
+  });
+
+  final IdentitySnapshot snapshot;
+  final VoidCallback onResume;
+  final VoidCallback onStartFresh;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    return ArenaCard(
+      color: tokens.secondary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: tokens.primary,
+                child: const Icon(Icons.person, color: Colors.black),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      'WELCOME BACK',
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      snapshot.nickname.isNotEmpty
+                          ? snapshot.nickname
+                          : 'Returning player',
+                      style: Theme.of(context).textTheme.titleLarge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (snapshot.facility.isNotEmpty)
+                      Text(
+                        snapshot.facility,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ArenaButton(
+            label: 'Continue as ${snapshot.nickname.isNotEmpty ? snapshot.nickname : "previous player"}',
+            onPressed: onResume,
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: onStartFresh,
+            child: const Text('Not you? Start fresh'),
+          ),
+        ],
       ),
     );
   }

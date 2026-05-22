@@ -281,10 +281,27 @@ class _ProfilePageState extends State<ProfilePage> {
 
     final bool keepDeviceId = choice == _SignOutChoice.keepDevice;
 
+    // Capture profile BEFORE clearAll so the soft-sign-out branch can write
+    // a resume snapshot. The hard-sign-out branch ignores it.
+    final UserProfile? snapshotProfile =
+        keepDeviceId ? await profileRepo.getProfile() : null;
+
     await profileRepo.clearAll();
     await attemptStore.clearActive();
     await attemptStore.clearCompleted();
-    await auth.signOut(keepDeviceId: keepDeviceId);
+    await auth.signOut(
+      keepDeviceId: keepDeviceId,
+      profile: snapshotProfile == null
+          ? null
+          : ProfileSnapshotInput(
+              fullName: snapshotProfile.fullName,
+              nickname: snapshotProfile.nickname,
+              facility: snapshotProfile.facility,
+              specialty: snapshotProfile.specialty,
+              totalPoints: snapshotProfile.totalPoints,
+              rank: snapshotProfile.rank,
+            ),
+    );
     eventBus.emit(IdentityResetEvent(keptDeviceId: keepDeviceId));
 
     if (!mounted) {

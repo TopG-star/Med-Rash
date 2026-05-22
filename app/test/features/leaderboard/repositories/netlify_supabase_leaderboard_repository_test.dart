@@ -7,6 +7,7 @@ import 'package:medrash_app/core/events/medrash_events.dart';
 import 'package:medrash_app/core/infra/auth_state_manager.dart';
 import 'package:medrash_app/core/infra/device_identity_service.dart';
 import 'package:medrash_app/core/infra/event_bus.dart';
+import 'package:medrash_app/core/infra/identity_snapshot.dart';
 import 'package:medrash_app/core/infra/identity_spine.dart';
 import 'package:medrash_app/core/infra/medrash_http_client.dart';
 import 'package:medrash_app/features/leaderboard/repositories/leaderboard_repository.dart';
@@ -155,6 +156,11 @@ class _NullProfileRepository implements ProfileRepository {
 
   @override
   Future<UserProfile> mintGuestProfile({int? seedSuffix}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserProfile> restoreFromSnapshot(IdentitySnapshot snapshot) {
     throw UnimplementedError();
   }
 }

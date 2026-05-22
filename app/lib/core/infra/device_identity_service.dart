@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'identity_snapshot.dart';
 import 'identity_spine.dart';
 
 class DeviceIdentityService {
@@ -10,6 +11,7 @@ class DeviceIdentityService {
   static const String _deviceKey = 'medrash.device.install_id';
   static const String _participantKey = 'medrash.participant.id';
   static const String _boundProfileKey = 'medrash.device.bound_profile';
+  static const String _snapshotKey = 'medrash.identity.last_signed_out';
 
   final SharedPreferences _preferences;
 
@@ -77,5 +79,38 @@ class DeviceIdentityService {
     if (!keepDeviceId) {
       await _preferences.remove(_deviceKey);
     }
+  }
+
+  /// Restores the participant + device install ids to the values captured at
+  /// soft sign-out so the server's `identity_spine_id` lookup resolves back
+  /// to the original user row.
+  Future<void> restoreIdentity(IdentitySnapshot snapshot) async {
+    await _preferences.setString(_deviceKey, snapshot.deviceInstallId);
+    await _preferences.setString(_participantKey, snapshot.participantId);
+    await _preferences.setBool(_boundProfileKey, true);
+  }
+
+  /// Returns the last soft-sign-out snapshot, or null if absent or expired.
+  /// Expired snapshots are eagerly deleted so a stale device never resurrects
+  /// a stranger's identity.
+  Future<IdentitySnapshot?> readSnapshot() async {
+    final IdentitySnapshot? snapshot =
+        IdentitySnapshot.tryDecode(_preferences.getString(_snapshotKey));
+    if (snapshot == null) {
+      return null;
+    }
+    if (snapshot.isExpired) {
+      await _preferences.remove(_snapshotKey);
+      return null;
+    }
+    return snapshot;
+  }
+
+  Future<void> writeSnapshot(IdentitySnapshot snapshot) async {
+    await _preferences.setString(_snapshotKey, snapshot.encode());
+  }
+
+  Future<void> clearSnapshot() async {
+    await _preferences.remove(_snapshotKey);
   }
 }

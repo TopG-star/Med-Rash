@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/auth_state_manager.dart';
 import '../../../core/infra/event_bus.dart';
+import '../../../core/infra/identity_snapshot.dart';
 import '../../../core/infra/medrash_http_client.dart';
 import '../models/user_profile.dart';
 
@@ -42,6 +43,13 @@ abstract class ProfileRepository {
   /// Wipe every `medrash.profile.*` key. Used by sign-out so the next user of
   /// this device starts at the quick-join screen with a blank slate.
   Future<void> clearAll();
+
+  /// Re-populate every `medrash.profile.*` key from a sign-out snapshot so a
+  /// returning user lands on `/home` with their nickname, facility, specialty
+  /// and cached points intact. The server-side row is re-attached via the
+  /// restored `participant_id`; the next leaderboard/attempt response will
+  /// reconcile any drift in points/rank.
+  Future<UserProfile> restoreFromSnapshot(IdentitySnapshot snapshot);
 
   /// Increment the persisted career-points counter by [delta]. Called when a
   /// ranked attempt is successfully submitted so the Profile screen reflects
@@ -176,6 +184,27 @@ class LocalProfileRepository implements ProfileRepository {
     await _preferences.remove(_keySpecialty);
     await _preferences.remove(_keyTotalPoints);
     await _preferences.remove(_keyRank);
+  }
+
+  @override
+  Future<UserProfile> restoreFromSnapshot(IdentitySnapshot snapshot) async {
+    await _preferences.setString(_keyFullName, snapshot.fullName);
+    await _preferences.setString(_keyNickname, snapshot.nickname);
+    await _preferences.setString(_keyFacility, snapshot.facility);
+    await _preferences.setString(_keySpecialty, snapshot.specialty);
+    await _preferences.setInt(_keyTotalPoints, snapshot.totalPoints);
+    await _preferences.setInt(_keyRank, snapshot.rank);
+
+    final UserProfile profile = UserProfile(
+      fullName: snapshot.fullName,
+      nickname: snapshot.nickname,
+      facility: snapshot.facility,
+      specialty: snapshot.specialty,
+      totalPoints: snapshot.totalPoints,
+      rank: snapshot.rank,
+    );
+    _broadcastProfileUpdate(profile);
+    return profile;
   }
 
   @override

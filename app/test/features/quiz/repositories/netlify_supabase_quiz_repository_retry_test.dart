@@ -6,6 +6,7 @@ import 'package:http/testing.dart';
 import 'package:medrash_app/core/infra/auth_state_manager.dart';
 import 'package:medrash_app/core/infra/device_identity_service.dart';
 import 'package:medrash_app/core/infra/event_bus.dart';
+import 'package:medrash_app/core/infra/identity_snapshot.dart';
 import 'package:medrash_app/core/infra/identity_spine.dart';
 import 'package:medrash_app/core/infra/medrash_http_client.dart';
 import 'package:medrash_app/features/profile/models/user_profile.dart';
@@ -165,6 +166,18 @@ class _FixedDeviceIdentityService implements DeviceIdentityService {
   }
 
   @override
+  Future<void> restoreIdentity(IdentitySnapshot snapshot) async {}
+
+  @override
+  Future<IdentitySnapshot?> readSnapshot() async => null;
+
+  @override
+  Future<void> writeSnapshot(IdentitySnapshot snapshot) async {}
+
+  @override
+  Future<void> clearSnapshot() async {}
+
+  @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -209,6 +222,11 @@ class _StubProfileRepository implements ProfileRepository {
 
   @override
   Future<UserProfile> mintGuestProfile({int? seedSuffix}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<UserProfile> restoreFromSnapshot(IdentitySnapshot snapshot) {
     throw UnimplementedError();
   }
 }
