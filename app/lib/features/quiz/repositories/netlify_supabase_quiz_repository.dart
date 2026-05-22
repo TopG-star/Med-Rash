@@ -511,6 +511,16 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
       }
     }
 
+    // Drop any cached completed snapshot that belongs to a different
+    // (quizId, sessionId) context so /result never surfaces a stale
+    // "Pending Sync" banner from a prior attempt. Same-context snapshots
+    // stay so re-entering /result after a failed sync still shows the
+    // user's actual unsynced result.
+    final PersistedCompletedAttempt? prior = _cachedCompleted;
+    if (prior != null && (prior.quizId != quizId || prior.sessionId != sessionId)) {
+      await clearCachedCompletedAttempt();
+    }
+
     await _delegate.startAttempt(
       quizId: quizId,
       mode: mode,
