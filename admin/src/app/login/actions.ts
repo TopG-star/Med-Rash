@@ -35,10 +35,12 @@ export async function sendMagicLinkAction(
   }
 
   const supabase = await getServerSupabaseClient();
-  const emailRedirectTo = new URL(
-    `/auth/callback?next=${encodeURIComponent(next)}`,
-    portalBaseUrl,
-  ).toString();
+  // NOTE: Supabase's /auth/v1/verify corrupts redirect_to when it contains
+  // query params (encoded slashes get re-parsed and drop the path). So we
+  // send a clean URL with no query; the callback always lands on /dashboard.
+  // The `next` form value is currently unused but kept for forward-compat.
+  void next;
+  const emailRedirectTo = new URL("/auth/callback", portalBaseUrl).toString();
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
