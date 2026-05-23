@@ -24,6 +24,18 @@ async function requireOwner() {
   return session;
 }
 
+async function isLastActiveOwner(userId: string): Promise<boolean> {
+  const supabase = getAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("user_id")
+    .eq("role", "owner")
+    .eq("is_active", true);
+  if (error) throw new Error(error.message);
+  const owners = (data ?? []).map((r) => r.user_id);
+  return owners.length <= 1 && owners.includes(userId);
+}
+
 /**
  * Build a Supabase client capable of calling auth.admin.* (service-role).
  * Reuses the shared service-role url + key but constructs a fresh client
@@ -140,8 +152,9 @@ async function setActive(
   userId: string,
   active: boolean,
 ): Promise<AdminUsersActionResult> {
+  let session;
   try {
-    await requireOwner();
+    session = await requireOwner();
   } catch (err) {
     return fail(
       err instanceof Error && err.message === "FORBIDDEN_OWNER_ONLY"
@@ -152,6 +165,12 @@ async function setActive(
     );
   }
   if (!userId) return fail("userId is required.");
+  if (userId === session.userId) {
+    return fail("You can't change your own status. Ask another Owner.");
+  }
+  if (!active && (await isLastActiveOwner(userId))) {
+    return fail("Can't deactivate the last active Owner. Promote someone first.");
+  }
 
   const supabase = getAdminSupabaseClient();
   const { error } = await supabase
@@ -183,8 +202,9 @@ export async function setRoleAction(
   userId: string,
   role: "host" | "owner",
 ): Promise<AdminUsersActionResult> {
+  let session;
   try {
-    await requireOwner();
+    session = await requireOwner();
   } catch (err) {
     return fail(
       err instanceof Error && err.message === "FORBIDDEN_OWNER_ONLY"
@@ -197,6 +217,12 @@ export async function setRoleAction(
   if (!userId) return fail("userId is required.");
   if (role !== "host" && role !== "owner")
     return fail("role must be host or owner.");
+  if (userId === session.userId) {
+    return fail("You can't change your own role. Ask another Owner.");
+  }
+  if (role === "host" && (await isLastActiveOwner(userId))) {
+    return fail("Can't demote the last active Owner. Promote someone first.");
+  }
 
   const supabase = getAdminSupabaseClient();
   const { error } = await supabase

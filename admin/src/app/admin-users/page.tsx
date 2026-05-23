@@ -97,7 +97,6 @@ export default async function AdminUsersPage() {
                       <td className="py-3 pr-4">
                         <AdminRowActions
                           userId={r.userId}
-                          email={r.email}
                           role={r.role}
                           isActive={r.isActive}
                           isSelf={isSelf}

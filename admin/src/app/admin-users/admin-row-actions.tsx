@@ -10,7 +10,6 @@ import {
 
 type Props = {
   userId: string;
-  email: string;
   role: "host" | "owner";
   isActive: boolean;
   isSelf: boolean;
@@ -18,7 +17,6 @@ type Props = {
 
 export function AdminRowActions({
   userId,
-  email,
   role,
   isActive,
   isSelf,
@@ -42,17 +40,18 @@ export function AdminRowActions({
       setRoleAction(userId, role === "host" ? "owner" : "host"),
     );
 
-  const toggleActive = () => {
-    if (isSelf && isActive) {
-      const confirmed = window.confirm(
-        `Deactivate YOUR OWN account (${email})? You will lose access immediately.`,
-      );
-      if (!confirmed) return;
-    }
+  const toggleActive = () =>
     run(() =>
       isActive ? deactivateAdminAction(userId) : reactivateAdminAction(userId),
     );
-  };
+
+  if (isSelf) {
+    return (
+      <span className="text-xs italic text-[var(--arena-ink-muted)]">
+        You can&rsquo;t modify your own access. Ask another Owner.
+      </span>
+    );
+  }
 
   return (
     <div className="flex flex-wrap items-center gap-2">
