@@ -5,9 +5,9 @@ import { cookies } from "next/headers";
 import type { NextRequest, NextResponse } from "next/server";
 
 function readEnv(name: string): string {
-  const value = process.env[name];
+  const value = process.env[name] ?? process.env[`NEXT_PUBLIC_${name}`];
   if (!value || value.trim().length === 0) {
-    throw new Error(`${name} is required`);
+    throw new Error(`${name} (or NEXT_PUBLIC_${name}) is required`);
   }
   return value;
 }
