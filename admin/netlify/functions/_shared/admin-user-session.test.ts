@@ -116,7 +116,7 @@ describe("requireAdminUserSession", () => {
         adminClient: makeAdminClient({
           user_id: "user-1",
           email: "x@y.com",
-          role: "admin",
+          role: "host",
           is_active: false,
         }),
       },
@@ -125,7 +125,7 @@ describe("requireAdminUserSession", () => {
     if (!result.ok) expect(result.response.statusCode).toBe(403);
   });
 
-  it("accepts an active allowlisted admin", async () => {
+  it("accepts an active allowlisted host", async () => {
     const result = await requireAdminUserSession(
       eventWith({ authorization: "Bearer good" }),
       {
@@ -133,7 +133,7 @@ describe("requireAdminUserSession", () => {
         adminClient: makeAdminClient({
           user_id: "user-1",
           email: "x@y.com",
-          role: "admin",
+          role: "host",
           is_active: true,
         }),
       },
@@ -141,12 +141,12 @@ describe("requireAdminUserSession", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.auth.userId).toBe("user-1");
-      expect(result.auth.role).toBe("admin");
+      expect(result.auth.role).toBe("host");
       expect(result.auth.via).toBe("bearer");
     }
   });
 
-  it("promotes a superadmin role correctly", async () => {
+  it("promotes an owner role correctly", async () => {
     const result = await requireAdminUserSession(
       eventWith({ authorization: "Bearer good" }),
       {
@@ -154,13 +154,13 @@ describe("requireAdminUserSession", () => {
         adminClient: makeAdminClient({
           user_id: "user-2",
           email: "boss@y.com",
-          role: "superadmin",
+          role: "owner",
           is_active: true,
         }),
       },
     );
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.auth.role).toBe("superadmin");
+    if (result.ok) expect(result.auth.role).toBe("owner");
   });
 
   it("accepts the internal-bypass header when the env secret matches", async () => {
@@ -175,7 +175,7 @@ describe("requireAdminUserSession", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.auth.via).toBe("internal-bypass");
-      expect(result.auth.role).toBe("superadmin");
+      expect(result.auth.role).toBe("owner");
     }
   });
 

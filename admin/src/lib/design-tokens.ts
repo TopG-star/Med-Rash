@@ -29,7 +29,7 @@ export const designTokens = {
 export type AdminNavItem = {
   href: string;
   label: string;
-  requiresRole?: "superadmin";
+  requiresRole?: "owner";
 };
 
 export const adminNavigation: readonly AdminNavItem[] = [
@@ -38,5 +38,5 @@ export const adminNavigation: readonly AdminNavItem[] = [
   { href: "/sessions", label: "Sessions" },
   { href: "/reports", label: "Reports" },
   { href: "/intelligence", label: "Intelligence" },
-  { href: "/admin-users", label: "Admin Users", requiresRole: "superadmin" },
+  { href: "/admin-users", label: "Team", requiresRole: "owner" },
 ] as const;

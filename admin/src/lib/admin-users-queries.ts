@@ -5,7 +5,7 @@ import { getAdminSupabaseClient } from "./supabase-server";
 export type AdminUserRow = {
   userId: string;
   email: string;
-  role: "admin" | "superadmin";
+  role: "host" | "owner";
   isActive: boolean;
   invitedBy: string | null;
   invitedAt: string | null;
@@ -16,7 +16,7 @@ const COLUMNS =
   "user_id, email, role, is_active, invited_by, invited_at, created_at";
 
 function mapRow(row: Record<string, unknown>): AdminUserRow {
-  const role = row.role === "superadmin" ? "superadmin" : "admin";
+  const role = row.role === "owner" ? "owner" : "host";
   return {
     userId: String(row.user_id),
     email: String(row.email),

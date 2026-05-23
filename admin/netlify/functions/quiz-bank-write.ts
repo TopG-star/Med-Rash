@@ -51,6 +51,13 @@ export async function handler(event: HandlerEvent) {
 
   const authResult = await requireAdminUserSession(event);
   if (!authResult.ok) return authResult.response;
+  if (authResult.auth.role !== "owner") {
+    return jsonResponse(403, {
+      ok: false,
+      code: "FORBIDDEN_OWNER_ONLY",
+      message: "Only Owners can edit the quiz bank.",
+    });
+  }
   const createdBy = authResult.auth.userId;
 
   let body: Record<string, unknown>;

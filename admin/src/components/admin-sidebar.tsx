@@ -7,7 +7,7 @@ import { adminNavigation } from "@/lib/design-tokens";
 
 export type AdminSidebarUser = {
   email: string;
-  role: "admin" | "superadmin";
+  role: "host" | "owner";
 };
 
 type AdminSidebarProps = {
@@ -26,7 +26,7 @@ export function AdminSidebar({ user, onClose }: AdminSidebarProps) {
     (item) => !item.requiresRole || item.requiresRole === user.role,
   );
   const initial = (user.email[0] ?? "?").toUpperCase();
-  const displayRole = user.role === "superadmin" ? "Superadmin" : "Administrator";
+  const displayRole = user.role === "owner" ? "Owner" : "Host";
 
   return (
     <aside className="arena-panel flex h-fit flex-col gap-6 bg-[var(--arena-surface)] p-5 lg:sticky lg:top-5">

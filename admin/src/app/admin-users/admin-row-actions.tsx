@@ -11,7 +11,7 @@ import {
 type Props = {
   userId: string;
   email: string;
-  role: "admin" | "superadmin";
+  role: "host" | "owner";
   isActive: boolean;
   isSelf: boolean;
 };
@@ -39,7 +39,7 @@ export function AdminRowActions({
 
   const toggleRole = () =>
     run(() =>
-      setRoleAction(userId, role === "admin" ? "superadmin" : "admin"),
+      setRoleAction(userId, role === "host" ? "owner" : "host"),
     );
 
   const toggleActive = () => {
@@ -62,7 +62,7 @@ export function AdminRowActions({
         onClick={toggleRole}
         className="arena-button bg-[var(--arena-surface)] px-3 py-1 text-xs font-bold uppercase tracking-[0.05em] disabled:opacity-60"
       >
-        {role === "admin" ? "Promote to superadmin" : "Demote to admin"}
+        {role === "host" ? "Promote to Owner" : "Demote to Host"}
       </button>
       <button
         type="button"

@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { getAdminSupabaseClient } from "./supabase-server";
 import { getServerSupabaseClient } from "./supabase-ssr";
 
-export type AdminRole = "admin" | "superadmin";
+export type AdminRole = "host" | "owner";
 
 export type AdminSession = {
   userId: string;
@@ -45,7 +45,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   }
   if (!row || row.is_active !== true) return null;
 
-  const role: AdminRole = row.role === "superadmin" ? "superadmin" : "admin";
+  const role: AdminRole = row.role === "owner" ? "owner" : "host";
   return { userId, email, role };
 }
 

@@ -7,7 +7,7 @@ type SearchParams = { reason?: string };
 const REASON_COPY: Record<string, string> = {
   config: "The server is missing Supabase credentials. Ask the platform owner to set SUPABASE_URL and SUPABASE_ANON_KEY.",
   exchange: "We could not complete sign-in. Request a new magic link.",
-  role: "That page requires superadmin access. Ask a superadmin to promote your role.",
+  role: "That page requires Owner access. Ask an Owner to promote your role.",
 };
 
 export default async function DeniedPage({
@@ -17,7 +17,7 @@ export default async function DeniedPage({
 }) {
   const params = await searchParams;
   const reason = typeof params.reason === "string" ? params.reason : "";
-  const detail = REASON_COPY[reason] ?? "Your account is not on the MedRash admin allowlist. Ask a superadmin to invite you.";
+  const detail = REASON_COPY[reason] ?? "Your account is not on the MedRash admin allowlist. Ask an Owner to invite you.";
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-5 px-6 py-12">

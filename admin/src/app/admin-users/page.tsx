@@ -20,7 +20,7 @@ function formatDate(value: string | null): string {
 
 export default async function AdminUsersPage() {
   const session = await requireAdminSession({ currentPath: "/admin-users" });
-  if (session.role !== "superadmin") {
+  if (session.role !== "owner") {
     redirect("/denied?reason=role");
   }
 
@@ -34,22 +34,22 @@ export default async function AdminUsersPage() {
 
   return (
     <AdminShell
-      title="Admin Users"
-      subtitle="Invite teammates, manage roles, and revoke access. Only superadmins can see this page."
+      title="Team"
+      subtitle="Invite teammates, manage roles, and revoke access. Only Owners can see this page."
       user={{ email: session.email, role: session.role }}
     >
-      <PanelCard title="Invite Admin">
+      <PanelCard title="Invite Teammate">
         <InviteForm />
       </PanelCard>
 
-      <PanelCard title="Current Admins">
+      <PanelCard title="Current Team">
         {loadError ? (
           <p className="text-sm font-semibold text-[var(--arena-danger)]">
             {loadError}
           </p>
         ) : rows.length === 0 ? (
           <p className="text-sm text-[var(--arena-ink-muted)]">
-            No admin rows yet. Run the seed script or invite someone above.
+            No team members yet. Run the seed script or invite someone above.
           </p>
         ) : (
           <div className="overflow-x-auto">

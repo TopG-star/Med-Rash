@@ -37,9 +37,9 @@ export function InviteForm() {
         <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--arena-ink-muted)]">
           Role
         </span>
-        <select name="role" defaultValue="admin" className="arena-panel px-4 py-3">
-          <option value="admin">admin</option>
-          <option value="superadmin">superadmin</option>
+        <select name="role" defaultValue="host" className="arena-panel px-4 py-3">
+          <option value="host">Host</option>
+          <option value="owner">Owner</option>
         </select>
       </label>
       <button

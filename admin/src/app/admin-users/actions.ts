@@ -16,10 +16,10 @@ function fail(message: string): { ok: false; message: string } {
   return { ok: false, message };
 }
 
-async function requireSuperadmin() {
+async function requireOwner() {
   const session = await requireAdminSession({ currentPath: "/admin-users" });
-  if (session.role !== "superadmin") {
-    throw new Error("FORBIDDEN_SUPERADMIN_ONLY");
+  if (session.role !== "owner") {
+    throw new Error("FORBIDDEN_OWNER_ONLY");
   }
   return session;
 }
@@ -57,11 +57,11 @@ export async function inviteAdminAction(
 ): Promise<AdminUsersActionResult> {
   let session;
   try {
-    session = await requireSuperadmin();
+    session = await requireOwner();
   } catch (err) {
     return fail(
-      err instanceof Error && err.message === "FORBIDDEN_SUPERADMIN_ONLY"
-        ? "Only superadmins can invite admins."
+      err instanceof Error && err.message === "FORBIDDEN_OWNER_ONLY"
+        ? "Only Owners can invite teammates."
         : err instanceof Error
           ? err.message
           : "Authorization failed.",
@@ -71,8 +71,8 @@ export async function inviteAdminAction(
   const emailRaw = raw.email;
   const roleRaw = raw.role;
   const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : "";
-  const role: "admin" | "superadmin" =
-    roleRaw === "superadmin" ? "superadmin" : "admin";
+  const role: "host" | "owner" =
+    roleRaw === "owner" ? "owner" : "host";
 
   if (!EMAIL_RE.test(email)) return fail("Enter a valid email address.");
 
@@ -141,11 +141,11 @@ async function setActive(
   active: boolean,
 ): Promise<AdminUsersActionResult> {
   try {
-    await requireSuperadmin();
+    await requireOwner();
   } catch (err) {
     return fail(
-      err instanceof Error && err.message === "FORBIDDEN_SUPERADMIN_ONLY"
-        ? "Only superadmins can change admin status."
+      err instanceof Error && err.message === "FORBIDDEN_OWNER_ONLY"
+        ? "Only Owners can change teammate status."
         : err instanceof Error
           ? err.message
           : "Authorization failed.",
@@ -163,7 +163,7 @@ async function setActive(
   revalidatePath("/admin-users");
   return {
     ok: true,
-    message: active ? "Admin reactivated." : "Admin deactivated.",
+    message: active ? "Teammate reactivated." : "Teammate deactivated.",
   };
 }
 
@@ -181,22 +181,22 @@ export async function reactivateAdminAction(
 
 export async function setRoleAction(
   userId: string,
-  role: "admin" | "superadmin",
+  role: "host" | "owner",
 ): Promise<AdminUsersActionResult> {
   try {
-    await requireSuperadmin();
+    await requireOwner();
   } catch (err) {
     return fail(
-      err instanceof Error && err.message === "FORBIDDEN_SUPERADMIN_ONLY"
-        ? "Only superadmins can change roles."
+      err instanceof Error && err.message === "FORBIDDEN_OWNER_ONLY"
+        ? "Only Owners can change roles."
         : err instanceof Error
           ? err.message
           : "Authorization failed.",
     );
   }
   if (!userId) return fail("userId is required.");
-  if (role !== "admin" && role !== "superadmin")
-    return fail("role must be admin or superadmin.");
+  if (role !== "host" && role !== "owner")
+    return fail("role must be host or owner.");
 
   const supabase = getAdminSupabaseClient();
   const { error } = await supabase

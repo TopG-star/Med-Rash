@@ -4,7 +4,7 @@ import { useState } from "react";
 
 export type AdminUserMenuProps = {
   email: string;
-  role: "admin" | "superadmin";
+  role: "host" | "owner";
 };
 
 function truncate(text: string, max: number): string {

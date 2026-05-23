@@ -9,7 +9,7 @@ import {
   type HandlerResponse,
 } from "./http";
 
-type AdminRole = "admin" | "superadmin";
+type AdminRole = "host" | "owner";
 
 export type AdminAuth = {
   userId: string;
@@ -62,7 +62,7 @@ function defaultAuthClientFor(jwt: string): Pick<SupabaseClient, "auth"> {
  *      in app.admin_users.
  *   2. `x-medrash-internal-bypass: <MEDRASH_INTERNAL_BYPASS>` for server-to-
  *      server / scheduled calls that don't carry a user session. The bypass
- *      is treated as a synthetic "system" superadmin so it cannot be used
+   *      is treated as a synthetic "system" owner so it cannot be used
  *      to impersonate a real human.
  *
  * The legacy `x-medrash-admin-write-key` shared secret is ALSO honored as a
@@ -86,7 +86,7 @@ export async function requireAdminUserSession(
       auth: {
         userId: "00000000-0000-0000-0000-000000000000",
         email: "internal@medrash.system",
-        role: "superadmin",
+        role: "owner",
         via: "internal-bypass",
       },
     };
@@ -185,7 +185,7 @@ export async function requireAdminUserSession(
     };
   }
 
-  const role: AdminRole = row.role === "superadmin" ? "superadmin" : "admin";
+  const role: AdminRole = row.role === "owner" ? "owner" : "host";
   return {
     ok: true,
     auth: { userId, email, role, via: "bearer" },

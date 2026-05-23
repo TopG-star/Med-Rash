@@ -33,6 +33,14 @@ function fail(err: unknown, fallback: string): { ok: false; message: string } {
   };
 }
 
+async function requireOwnerSession() {
+  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
+  if (session.role !== "owner") {
+    throw new Error("Only Owners can edit the quiz bank.");
+  }
+  return session;
+}
+
 /* ============================================================================
  * Quiz actions
  * ========================================================================== */
@@ -40,7 +48,12 @@ function fail(err: unknown, fallback: string): { ok: false; message: string } {
 export async function createQuizAction(
   raw: Record<string, unknown>,
 ): Promise<QuizActionResult<QuizRecord>> {
-  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
+  let session;
+  try {
+    session = await requireOwnerSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
   let parsed;
   try {
     parsed = parseCreateQuizInput(raw, session.userId);
@@ -59,7 +72,11 @@ export async function createQuizAction(
 export async function updateQuizAction(
   raw: Record<string, unknown>,
 ): Promise<QuizActionResult<QuizRecord>> {
-  await requireAdminSession({ currentPath: "/quiz-bank" });
+  try {
+    await requireOwnerSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
   let parsed;
   try {
     parsed = parseUpdateQuizInput(raw);
@@ -80,7 +97,11 @@ export async function deactivateQuizAction(
   id: string,
   slug: string,
 ): Promise<QuizActionResult<QuizRecord>> {
-  await requireAdminSession({ currentPath: "/quiz-bank" });
+  try {
+    await requireOwnerSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
   if (!id || !slug) {
     return { ok: false, message: "id and slug are required." };
   }
@@ -102,7 +123,12 @@ export async function createQuestionAction(
   raw: Record<string, unknown>,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
-  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
+  let session;
+  try {
+    session = await requireOwnerSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
   let parsed;
   try {
     parsed = parseCreateQuestionInput(raw, session.userId);
@@ -123,7 +149,11 @@ export async function updateQuestionAction(
   raw: Record<string, unknown>,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
-  await requireAdminSession({ currentPath: "/quiz-bank" });
+  try {
+    await requireOwnerSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
   let parsed;
   try {
     parsed = parseUpdateQuestionInput(raw);
@@ -143,7 +173,11 @@ export async function deactivateQuestionAction(
   id: string,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
-  await requireAdminSession({ currentPath: "/quiz-bank" });
+  try {
+    await requireOwnerSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
   if (!id) {
     return { ok: false, message: "id is required." };
   }
@@ -178,7 +212,12 @@ export async function importQuestionsAction(
   quizSlug: string,
   drafts: CsvQuestionDraft[],
 ): Promise<QuizActionResult<BulkCreateQuestionsResult>> {
-  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
+  let session;
+  try {
+    session = await requireOwnerSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
   if (!quizId || !quizSlug) {
     return { ok: false, message: "quizId and quizSlug are required." };
   }
