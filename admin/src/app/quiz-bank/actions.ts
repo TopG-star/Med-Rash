@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireAdminSession } from "@/lib/admin-session";
 import {
   bulkCreateQuestions,
   createQuestionRecord,
@@ -39,9 +40,10 @@ function fail(err: unknown, fallback: string): { ok: false; message: string } {
 export async function createQuizAction(
   raw: Record<string, unknown>,
 ): Promise<QuizActionResult<QuizRecord>> {
+  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
   let parsed;
   try {
-    parsed = parseCreateQuizInput(raw);
+    parsed = parseCreateQuizInput(raw, session.userId);
   } catch (err) {
     return fail(err, "Invalid quiz input.");
   }
@@ -57,6 +59,7 @@ export async function createQuizAction(
 export async function updateQuizAction(
   raw: Record<string, unknown>,
 ): Promise<QuizActionResult<QuizRecord>> {
+  await requireAdminSession({ currentPath: "/quiz-bank" });
   let parsed;
   try {
     parsed = parseUpdateQuizInput(raw);
@@ -77,6 +80,7 @@ export async function deactivateQuizAction(
   id: string,
   slug: string,
 ): Promise<QuizActionResult<QuizRecord>> {
+  await requireAdminSession({ currentPath: "/quiz-bank" });
   if (!id || !slug) {
     return { ok: false, message: "id and slug are required." };
   }
@@ -98,9 +102,10 @@ export async function createQuestionAction(
   raw: Record<string, unknown>,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
+  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
   let parsed;
   try {
-    parsed = parseCreateQuestionInput(raw);
+    parsed = parseCreateQuestionInput(raw, session.userId);
   } catch (err) {
     return fail(err, "Invalid question input.");
   }
@@ -118,6 +123,7 @@ export async function updateQuestionAction(
   raw: Record<string, unknown>,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
+  await requireAdminSession({ currentPath: "/quiz-bank" });
   let parsed;
   try {
     parsed = parseUpdateQuestionInput(raw);
@@ -137,6 +143,7 @@ export async function deactivateQuestionAction(
   id: string,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
+  await requireAdminSession({ currentPath: "/quiz-bank" });
   if (!id) {
     return { ok: false, message: "id is required." };
   }
@@ -171,6 +178,7 @@ export async function importQuestionsAction(
   quizSlug: string,
   drafts: CsvQuestionDraft[],
 ): Promise<QuizActionResult<BulkCreateQuestionsResult>> {
+  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
   if (!quizId || !quizSlug) {
     return { ok: false, message: "quizId and quizSlug are required." };
   }
@@ -178,7 +186,11 @@ export async function importQuestionsAction(
     return { ok: false, message: "No rows to import." };
   }
   try {
-    const result = await bulkCreateQuestions(quizId, draftsToBulkInputs(drafts));
+    const result = await bulkCreateQuestions(
+      quizId,
+      draftsToBulkInputs(drafts),
+      session.userId,
+    );
     revalidatePath(`/quiz-bank/${quizSlug}`);
     revalidatePath("/quiz-bank");
     return { ok: true, data: result };

@@ -1,47 +1,58 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getMiddlewareSupabaseClient } from "@/lib/supabase-ssr";
+
+const PUBLIC_PATHS = new Set<string>([
+  "/login",
+  "/auth/callback",
+  "/auth/signout",
+  "/denied",
+]);
+
+function isPublic(pathname: string): boolean {
+  if (PUBLIC_PATHS.has(pathname)) return true;
+  if (pathname.startsWith("/_next/")) return true;
+  if (pathname.startsWith("/api/")) return true;
+  return false;
+}
+
 /**
  * Admin portal auth gate.
  *
- * Pilot-grade Basic Auth in front of the entire admin app. The credential is
- * read from `MEDRASH_ADMIN_PORTAL_KEY` (single shared secret). If the env var
- * is unset the middleware is a no-op so local development still works without
- * any setup.
- *
- * Expected `Authorization` header: `Basic base64("admin:<MEDRASH_ADMIN_PORTAL_KEY>")`.
+ * Refreshes the Supabase session on every request, bounces unauthenticated
+ * requests to /login?next=<originalPath>, and lets authenticated requests
+ * through to the page (where requireAdminSession enforces the allowlist).
  */
-export function middleware(request: NextRequest) {
-  const expected = process.env.MEDRASH_ADMIN_PORTAL_KEY;
-  if (!expected) {
-    return NextResponse.next();
+export async function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
+  const response = NextResponse.next({ request });
+
+  if (isPublic(pathname)) {
+    return response;
   }
 
-  const header = request.headers.get("authorization") ?? "";
-  if (header.toLowerCase().startsWith("basic ")) {
-    const encoded = header.slice(6).trim();
-    let decoded = "";
-    try {
-      decoded = atob(encoded);
-    } catch {
-      decoded = "";
-    }
-    const idx = decoded.indexOf(":");
-    if (idx !== -1) {
-      const password = decoded.slice(idx + 1);
-      if (password === expected) {
-        return NextResponse.next();
-      }
-    }
+  let user: { id: string } | null = null;
+  try {
+    const supabase = getMiddlewareSupabaseClient(request, response);
+    const { data } = await supabase.auth.getUser();
+    user = data.user ? { id: data.user.id } : null;
+  } catch (err) {
+    console.error("[middleware] supabase init failed", err);
+    return NextResponse.redirect(new URL("/denied?reason=config", request.url));
   }
 
-  return new NextResponse("Authentication required", {
-    status: 401,
-    headers: {
-      "WWW-Authenticate": 'Basic realm="MedRash Admin", charset="UTF-8"',
-    },
-  });
+  if (!user) {
+    const next = `${pathname}${search ?? ""}`;
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", next);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

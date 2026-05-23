@@ -2,16 +2,18 @@
 
 import { ReactNode, useEffect, useState } from "react";
 
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { AdminSidebar, type AdminSidebarUser } from "@/components/admin-sidebar";
+import { AdminUserMenu } from "@/components/admin-user-menu";
 
 type AdminShellProps = {
   title: string;
   subtitle: string;
   actions?: ReactNode;
+  user: AdminSidebarUser;
   children: ReactNode;
 };
 
-export function AdminShell({ title, subtitle, actions, children }: AdminShellProps) {
+export function AdminShell({ title, subtitle, actions, user, children }: AdminShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export function AdminShell({ title, subtitle, actions, children }: AdminShellPro
     <div className="min-h-screen">
       <main className="mx-auto grid w-full max-w-[1440px] gap-5 p-4 lg:grid-cols-[280px_1fr] lg:p-5">
         <div className="hidden lg:block">
-          <AdminSidebar />
+          <AdminSidebar user={user} />
         </div>
         <div className="flex min-w-0 flex-col gap-5">
           <header className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -47,7 +49,10 @@ export function AdminShell({ title, subtitle, actions, children }: AdminShellPro
                 <p className="mt-2 max-w-3xl text-base text-[var(--arena-ink-muted)]">{subtitle}</p>
               </div>
             </div>
-            {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
+            <div className="flex flex-wrap items-center gap-3">
+              {actions}
+              <AdminUserMenu email={user.email} role={user.role} />
+            </div>
           </header>
           {children}
         </div>
@@ -62,7 +67,7 @@ export function AdminShell({ title, subtitle, actions, children }: AdminShellPro
             className="absolute inset-0 bg-black/40"
           />
           <div className="absolute inset-y-0 left-0 w-[min(320px,85vw)] overflow-y-auto bg-[var(--arena-background)] p-4 shadow-2xl">
-            <AdminSidebar onClose={() => setDrawerOpen(false)} />
+            <AdminSidebar user={user} onClose={() => setDrawerOpen(false)} />
           </div>
         </div>
       ) : null}

@@ -16,7 +16,8 @@ export type HandlerResponse = {
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, OPTIONS",
-  "access-control-allow-headers": "content-type, x-medrash-gate-key",
+  "access-control-allow-headers":
+    "content-type, x-medrash-gate-key, authorization, x-medrash-admin-write-key, x-medrash-internal-bypass",
   "access-control-max-age": "86400",
 };
 

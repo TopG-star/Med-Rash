@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
+import { requireAdminSession } from "@/lib/admin-session";
 import { getAdminQuizDetailBySlug } from "@/lib/quiz-detail-queries";
 
 import { CsvImportPanel } from "./csv-import-panel";
@@ -16,6 +17,10 @@ type PageProps = { params: Promise<{ slug: string }> };
 
 export default async function QuizDetailPage({ params }: PageProps) {
   const { slug } = await params;
+  const session = await requireAdminSession({
+    currentPath: `/quiz-bank/${slug}`,
+  });
+  const user = { email: session.email, role: session.role };
 
   let detail;
   try {
@@ -25,6 +30,7 @@ export default async function QuizDetailPage({ params }: PageProps) {
       <AdminShell
         title="Quiz Detail"
         subtitle="Edit metadata and manage questions."
+        user={user}
         actions={
           <Link
             href="/quiz-bank"
@@ -56,6 +62,7 @@ export default async function QuizDetailPage({ params }: PageProps) {
     <AdminShell
       title={quiz.title}
       subtitle={`Slug: ${quiz.slug} · ${quiz.isActive ? "Active" : "Inactive"} · ${questions.length} question${questions.length === 1 ? "" : "s"}`}
+      user={user}
       actions={
         <Link
           href="/quiz-bank"

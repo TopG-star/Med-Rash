@@ -1,5 +1,8 @@
 import { HandlerEvent, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
-import { requireAdminWriteAuthorization } from "./_shared/admin-gate";
+import {
+  requireAdminUserSession,
+  requireLegacyWriteKey,
+} from "./_shared/admin-user-session";
 import {
   bulkCreateQuestions,
   createQuestionRecord,
@@ -43,8 +46,12 @@ export async function handler(event: HandlerEvent) {
   const methodGuard = requirePost(event);
   if (methodGuard) return methodGuard;
 
-  const authGuard = requireAdminWriteAuthorization(event);
-  if (authGuard) return authGuard;
+  const legacyGuard = requireLegacyWriteKey(event);
+  if (legacyGuard) return legacyGuard;
+
+  const authResult = await requireAdminUserSession(event);
+  if (!authResult.ok) return authResult.response;
+  const createdBy = authResult.auth.userId;
 
   let body: Record<string, unknown>;
   try {
@@ -82,7 +89,7 @@ export async function handler(event: HandlerEvent) {
   try {
     switch (op) {
       case "create_quiz": {
-        const parsed = parseCreateQuizInput(payload!);
+        const parsed = parseCreateQuizInput(payload!, createdBy);
         const quiz = await createQuizRecord(parsed);
         return jsonResponse(201, { ok: true, quiz });
       }
@@ -104,7 +111,7 @@ export async function handler(event: HandlerEvent) {
         return jsonResponse(200, { ok: true, quiz });
       }
       case "create_question": {
-        const parsed = parseCreateQuestionInput(payload!);
+        const parsed = parseCreateQuestionInput(payload!, createdBy);
         const question = await createQuestionRecord(parsed);
         return jsonResponse(201, { ok: true, question });
       }
@@ -163,7 +170,7 @@ export async function handler(event: HandlerEvent) {
           position: d.position,
           isActive: d.isActive,
         }));
-        const result = await bulkCreateQuestions(quizId, inputs);
+        const result = await bulkCreateQuestions(quizId, inputs, createdBy);
         return jsonResponse(201, {
           ok: true,
           createdCount: result.created.length,

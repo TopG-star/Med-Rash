@@ -2,17 +2,33 @@ import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
+import { ScopeToggle, type ScopeValue } from "@/components/scope-toggle";
+import { requireAdminSession } from "@/lib/admin-session";
 import { listAdminQuizzes, type AdminQuizSummary } from "@/lib/quiz-bank-queries";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export default async function QuizBankPage() {
+type SearchParams = { scope?: string };
+
+function parseScope(raw: string | undefined): ScopeValue {
+  return raw === "all" ? "all" : "mine";
+}
+
+export default async function QuizBankPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
+  const sp = await searchParams;
+  const scope = parseScope(sp.scope);
+
   let quizzes: AdminQuizSummary[] = [];
   let loadError: string | null = null;
 
   try {
-    quizzes = await listAdminQuizzes();
+    quizzes = await listAdminQuizzes({ scope, userId: session.userId });
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Failed to load quizzes.";
   }
@@ -21,8 +37,10 @@ export default async function QuizBankPage() {
     <AdminShell
       title="Quiz Bank Management"
       subtitle="Manage approved medical quizzes, question sets, and upload-ready content for live sessions and self-paced play."
+      user={{ email: session.email, role: session.role }}
       actions={
         <>
+          <ScopeToggle current={scope} label="Show" />
           <button
             className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold opacity-60"
             disabled

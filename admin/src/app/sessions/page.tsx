@@ -3,6 +3,8 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { EmptyState } from "@/components/empty-state";
 import { PanelCard } from "@/components/panel-card";
+import { ScopeToggle, type ScopeValue } from "@/components/scope-toggle";
+import { requireAdminSession } from "@/lib/admin-session";
 import { buildSessionJoinUrl } from "@/lib/session-create";
 import {
   listActiveQuizOptions,
@@ -24,7 +26,21 @@ function formatDate(value: string | null): string {
   return new Date(ms).toLocaleString();
 }
 
-export default async function SessionsPage() {
+type SearchParams = { scope?: string };
+
+function parseScope(raw: string | undefined): ScopeValue {
+  return raw === "all" ? "all" : "mine";
+}
+
+export default async function SessionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const session = await requireAdminSession({ currentPath: "/sessions" });
+  const sp = await searchParams;
+  const scope = parseScope(sp.scope);
+
   let quizOptions: AdminQuizOption[] = [];
   let sessions: AdminSessionRow[] = [];
   let loadError: string | null = null;
@@ -32,7 +48,7 @@ export default async function SessionsPage() {
   try {
     [quizOptions, sessions] = await Promise.all([
       listActiveQuizOptions(),
-      listAdminSessions(),
+      listAdminSessions({ scope, userId: session.userId }),
     ]);
   } catch (err) {
     loadError = err instanceof Error ? err.message : "Failed to load sessions.";
@@ -42,6 +58,8 @@ export default async function SessionsPage() {
     <AdminShell
       title="Sessions"
       subtitle="Create live sessions, attach an approved quiz, and generate QR-linked access for presentation or CME use."
+      user={{ email: session.email, role: session.role }}
+      actions={<ScopeToggle current={scope} label="Show" />}
     >
       {loadError ? (
         <PanelCard className="space-y-2">

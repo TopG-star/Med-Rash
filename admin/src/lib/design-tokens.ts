@@ -26,10 +26,17 @@ export const designTokens = {
   },
 } as const;
 
-export const adminNavigation = [
+export type AdminNavItem = {
+  href: string;
+  label: string;
+  requiresRole?: "superadmin";
+};
+
+export const adminNavigation: readonly AdminNavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/quiz-bank", label: "Quiz Bank" },
   { href: "/sessions", label: "Sessions" },
   { href: "/reports", label: "Reports" },
   { href: "/intelligence", label: "Intelligence" },
+  { href: "/admin-users", label: "Admin Users", requiresRole: "superadmin" },
 ] as const;

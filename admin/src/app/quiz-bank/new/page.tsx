@@ -2,16 +2,21 @@ import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
+import { requireAdminSession } from "@/lib/admin-session";
 
 import { QuizCreateForm } from "./quiz-create-form";
 
 export const dynamic = "force-dynamic";
 
-export default function NewQuizPage() {
+export default async function NewQuizPage() {
+  const session = await requireAdminSession({
+    currentPath: "/quiz-bank/new",
+  });
   return (
     <AdminShell
       title="Create Quiz"
       subtitle="Define a new quiz container. Questions are added on the next screen."
+      user={{ email: session.email, role: session.role }}
       actions={
         <Link
           href="/quiz-bank"

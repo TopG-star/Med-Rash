@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { requireAdminSession } from "@/lib/admin-session";
 import {
   createSessionRecord,
   parseCreateSessionInput,
@@ -16,17 +17,17 @@ export type CreateSessionActionResult =
  * Server Action invoked by the admin Sessions page form. Validates input,
  * inserts the session, revalidates the listing.
  *
- * Authorization: this action is only reachable through the admin app, which
- * itself is gated by the admin host's deployment policy. The Netlify HTTP
- * counterpart (session-create.ts) carries an explicit shared-secret gate for
- * scripted or external callers.
+ * Authorization: the caller must be on the admin allowlist. The user's
+ * Supabase id is recorded as created_by on the new session row.
  */
 export async function createSessionAction(
   rawInput: Record<string, unknown>,
 ): Promise<CreateSessionActionResult> {
+  const session = await requireAdminSession({ currentPath: "/sessions" });
+
   let parsed;
   try {
-    parsed = parseCreateSessionInput(rawInput);
+    parsed = parseCreateSessionInput(rawInput, session.userId);
   } catch (err) {
     return {
       ok: false,

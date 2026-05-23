@@ -2,6 +2,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { EmptyState } from "@/components/empty-state";
 import { MetricCard } from "@/components/metric-card";
 import { PanelCard } from "@/components/panel-card";
+import { requireAdminSession } from "@/lib/admin-session";
 import { getOverviewKpis } from "@/lib/overview-queries";
 import { getMostMissed, getFacilityPerformance } from "@/lib/reports-queries";
 import { widthClassFromPercent } from "@/lib/width-class";
@@ -26,6 +27,7 @@ function formatPercent(value: number | null): string {
 }
 
 export default async function DashboardPage() {
+  const session = await requireAdminSession({ currentPath: "/dashboard" });
   let loadError: string | null = null;
   let kpis = {
     totalUsers: 0,
@@ -55,6 +57,7 @@ export default async function DashboardPage() {
     <AdminShell
       title="Dashboard Overview"
       subtitle="Monitor pilot performance, participation quality, and the most immediate knowledge-gap signals."
+      user={{ email: session.email, role: session.role }}
       actions={
         <a
           className="arena-button bg-[var(--arena-primary)] px-5 py-3 font-semibold"

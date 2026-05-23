@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { EmptyState } from "@/components/empty-state";
 import { PanelCard } from "@/components/panel-card";
+import { requireAdminSession } from "@/lib/admin-session";
 import { listAdminQuizzes } from "@/lib/quiz-bank-queries";
 import {
   getFacilityPerformance,
@@ -58,6 +59,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
+  const session = await requireAdminSession({ currentPath: "/reports" });
   const params = await searchParams;
   const filters: ReportFilters = {
     startsAt: pickString(params.startsAt),
@@ -72,7 +74,7 @@ export default async function ReportsPage({
   // surface the message in-card without nuking the whole page.
   const [quizzesResult, mostMissedResult, facilityResult, treatmentResult] =
     await Promise.allSettled([
-      listAdminQuizzes(),
+      listAdminQuizzes({ scope: "all", userId: session.userId }),
       getMostMissed(10, {
         specialty: filters.specialty,
         facility: filters.facility,
@@ -93,6 +95,7 @@ export default async function ReportsPage({
     <AdminShell
       title="Reports"
       subtitle="Intelligence + bulk exports. All downloads stream live from Supabase via the service-role admin client."
+      user={{ email: session.email, role: session.role }}
     >
       <PanelCard title="Filters">
         <p className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">

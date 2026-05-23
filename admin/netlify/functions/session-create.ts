@@ -1,5 +1,8 @@
 import { jsonResponse, parseJsonBody, requirePost, toV2Handler, HandlerEvent } from "./_shared/http";
-import { requireAdminWriteAuthorization } from "./_shared/admin-gate";
+import {
+  requireAdminUserSession,
+  requireLegacyWriteKey,
+} from "./_shared/admin-user-session";
 import {
   createSessionRecord,
   parseCreateSessionInput,
@@ -9,8 +12,11 @@ export async function handler(event: HandlerEvent) {
   const methodGuard = requirePost(event);
   if (methodGuard) return methodGuard;
 
-  const authGuard = requireAdminWriteAuthorization(event);
-  if (authGuard) return authGuard;
+  const legacyGuard = requireLegacyWriteKey(event);
+  if (legacyGuard) return legacyGuard;
+
+  const authResult = await requireAdminUserSession(event);
+  if (!authResult.ok) return authResult.response;
 
   let body: Record<string, unknown>;
   try {
@@ -25,7 +31,7 @@ export async function handler(event: HandlerEvent) {
 
   let input;
   try {
-    input = parseCreateSessionInput(body);
+    input = parseCreateSessionInput(body, authResult.auth.userId);
   } catch (err) {
     return jsonResponse(400, {
       ok: false,

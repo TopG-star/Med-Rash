@@ -1,6 +1,7 @@
 import { AdminShell } from "@/components/admin-shell";
 import { MetricCard } from "@/components/metric-card";
 import { PanelCard } from "@/components/panel-card";
+import { requireAdminSession } from "@/lib/admin-session";
 import { getOverviewKpis } from "@/lib/overview-queries";
 import {
   getFacilityPerformance,
@@ -29,6 +30,7 @@ function formatPercent(value: number | null): string {
 }
 
 export default async function IntelligencePage() {
+  const session = await requireAdminSession({ currentPath: "/intelligence" });
   let loadError: string | null = null;
   let kpis = {
     totalUsers: 0,
@@ -57,6 +59,7 @@ export default async function IntelligencePage() {
     <AdminShell
       title="Intelligence"
       subtitle="Deep-dive into knowledge gaps, facility performance, and treatment perception patterns surfaced by answer-level analytics."
+      user={{ email: session.email, role: session.role }}
       actions={
         <a
           className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold"

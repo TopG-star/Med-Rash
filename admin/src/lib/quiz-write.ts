@@ -23,6 +23,7 @@ export type CreateQuizInput = {
   questionCountDefault: number;
   isActive: boolean;
   metadata: Record<string, unknown>;
+  createdBy: string | null;
 };
 
 export type UpdateQuizInput = {
@@ -46,6 +47,7 @@ export type CreateQuestionInput = {
   tags: string[];
   position: number | null; // null = append
   isActive: boolean;
+  createdBy: string | null;
 };
 
 export type UpdateQuestionInput = {
@@ -190,7 +192,10 @@ function parseMetadata(value: unknown): Record<string, unknown> {
  * Input parsers
  * ========================================================================== */
 
-export function parseCreateQuizInput(raw: Record<string, unknown>): CreateQuizInput {
+export function parseCreateQuizInput(
+  raw: Record<string, unknown>,
+  createdBy: string | null,
+): CreateQuizInput {
   return {
     slug: parseSlug(raw.slug),
     title: requireString(raw.title, "title", 160),
@@ -200,6 +205,7 @@ export function parseCreateQuizInput(raw: Record<string, unknown>): CreateQuizIn
     questionCountDefault: parseInteger(raw.questionCountDefault, "questionCountDefault", 1, 50),
     isActive: parseBoolean(raw.isActive, true),
     metadata: parseMetadata(raw.metadata),
+    createdBy,
   };
 }
 
@@ -216,7 +222,10 @@ export function parseUpdateQuizInput(raw: Record<string, unknown>): UpdateQuizIn
   };
 }
 
-export function parseCreateQuestionInput(raw: Record<string, unknown>): CreateQuestionInput {
+export function parseCreateQuestionInput(
+  raw: Record<string, unknown>,
+  createdBy: string | null,
+): CreateQuestionInput {
   const options = parseOptions(raw.options);
   const correctIndex = parseInteger(
     raw.correctIndex,
@@ -237,6 +246,7 @@ export function parseCreateQuestionInput(raw: Record<string, unknown>): CreateQu
         ? null
         : parseInteger(raw.position, "position", 0, 9999),
     isActive: parseBoolean(raw.isActive, true),
+    createdBy,
   };
 }
 
@@ -351,6 +361,7 @@ export async function createQuizRecord(input: CreateQuizInput): Promise<QuizReco
       question_count_default: input.questionCountDefault,
       is_active: input.isActive,
       metadata: input.metadata,
+      created_by: input.createdBy,
     })
     .select(QUIZ_COLUMNS)
     .single();
@@ -466,6 +477,7 @@ export async function createQuestionRecord(
       tags: input.tags,
       position,
       is_active: input.isActive,
+      created_by: input.createdBy,
     })
     .select(QUESTION_COLUMNS)
     .single();
@@ -536,7 +548,10 @@ export async function deactivateQuestionRecord(id: string): Promise<QuestionReco
  * Bulk question import (CSV)
  * ========================================================================== */
 
-export type BulkQuestionInput = Omit<CreateQuestionInput, "quizId" | "position"> & {
+export type BulkQuestionInput = Omit<
+  CreateQuestionInput,
+  "quizId" | "position" | "createdBy"
+> & {
   position?: number | null;
 };
 
@@ -558,6 +573,7 @@ export type BulkCreateQuestionsResult = {
 export async function bulkCreateQuestions(
   quizId: string,
   inputs: BulkQuestionInput[],
+  createdBy: string | null,
 ): Promise<BulkCreateQuestionsResult> {
   if (inputs.length === 0) {
     return { created: [], failures: [] };
@@ -602,6 +618,7 @@ export async function bulkCreateQuestions(
         tags: row.tags,
         position,
         is_active: row.isActive,
+        created_by: createdBy,
       })
       .select(QUESTION_COLUMNS)
       .single();

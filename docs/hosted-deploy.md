@@ -21,6 +21,7 @@ Site under management: <https://thriving-gingersnap-2f2932.netlify.app/>
    - [supabase/migrations/003_quiz_product_and_position.sql](../supabase/migrations/003_quiz_product_and_position.sql)
    - [supabase/migrations/004_attempts_season_key_guardrails.sql](../supabase/migrations/004_attempts_season_key_guardrails.sql)
    - [supabase/migrations/005_session_join_events.sql](../supabase/migrations/005_session_join_events.sql)
+   - [supabase/migrations/006_admin_auth.sql](../supabase/migrations/006_admin_auth.sql) — installs `app.admin_users` allowlist + `created_by` columns on quizzes/sessions/questions.
 3. Confirm the `app` schema is exposed in **Settings → API → Schema** so PostgREST + the
    admin client (which runs `db: { schema: "app" }`) can reach it.
 
@@ -50,14 +51,41 @@ unless noted. **Never** commit any of them.
 | --- | --- | --- |
 | `SUPABASE_URL` | admin SSR + functions | e.g. `https://abc123.supabase.co`. Build- and runtime-scoped. |
 | `SUPABASE_SERVICE_ROLE_KEY` | admin SSR + functions | **Secret.** Server-only. Never expose to a Client Component. |
+| `SUPABASE_ANON_KEY` | admin SSR + functions | Used to read the caller's Supabase session (cookie-bound on SSR; Bearer-bound on functions). |
 | `MEDRASH_GATE_API_KEY` | functions only | Shared header secret consumed by participant-facing endpoints (`quiz-list`, `attempt-submit`, `ranked-eligibility`, `session-resolve`). |
-| `MEDRASH_ADMIN_WRITE_KEY` | functions only | Shared header secret for admin-write endpoints (`session-create`, `quiz-bank-write`). |
+| `MEDRASH_ADMIN_WRITE_KEY` | functions only | **Optional defense-in-depth** shared secret. When set, admin-write functions require both `x-medrash-admin-write-key` AND a valid Supabase admin session. Leave empty to disable. |
+| `MEDRASH_INTERNAL_BYPASS` | functions only | **Secret.** Server-to-server bypass header for scheduled jobs. Senders pass `x-medrash-internal-bypass: <value>`. Leave UNSET in production unless a scheduled job needs it. |
+| `MEDRASH_ADMIN_PORTAL_BASE_URL` | admin SSR | Public origin of the admin app itself. Used to build the magic-link `emailRedirectTo` and the invitation redirect. Falls back to `NEXT_PUBLIC_SITE_URL`. |
+| `ADMIN_BOOTSTRAP_EMAIL` | seed script only | Email of the first superadmin. Consumed once by `admin/scripts/seed-admin.mjs`. |
 | `MEDRASH_APP_PUBLIC_BASE_URL` | admin SSR | Origin used to build session join URLs / QR codes. Set to the Flutter app's public origin (not the admin origin). |
 
 Recommended secret hygiene:
-- Generate the two `MEDRASH_*_KEY` secrets with `openssl rand -hex 32`.
-- Mark `SUPABASE_SERVICE_ROLE_KEY` and both `MEDRASH_*_KEY` as
+- Generate `MEDRASH_GATE_API_KEY` and `MEDRASH_INTERNAL_BYPASS` with `openssl rand -hex 32`. If `MEDRASH_ADMIN_WRITE_KEY` is set, generate it the same way.
+- Mark `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, and all `MEDRASH_*_KEY` / `MEDRASH_INTERNAL_BYPASS` values as
   **Sensitive** in Netlify so they are not logged in deploy output.
+
+### 2.1 Bootstrap the first superadmin (one-time)
+
+After migration 006 is applied and `SUPABASE_ANON_KEY` is set, seed the
+first admin from your local machine:
+
+```pwsh
+$env:SUPABASE_URL = "https://<ref>.supabase.co"
+$env:SUPABASE_SERVICE_ROLE_KEY = "<service role>"
+$env:ADMIN_BOOTSTRAP_EMAIL = "founder@medrash.example"
+cd admin
+node ./scripts/seed-admin.mjs
+cd ..
+Remove-Item Env:SUPABASE_URL, Env:SUPABASE_SERVICE_ROLE_KEY, Env:ADMIN_BOOTSTRAP_EMAIL
+```
+
+> The script must run from `admin/` so Node resolves `@supabase/supabase-js`
+> from `admin/node_modules`.
+
+The script invites the user via Supabase's email provider and upserts
+an `app.admin_users` row with `role = 'superadmin'` and
+`is_active = true`. From then on, every additional admin is invited
+from `/admin-users` inside the admin app — no scripts required.
 
 ---
 
@@ -130,8 +158,7 @@ Once verification §4 is green:
 
 ## 6. Out of scope for Phase 5
 
-- §6.2 admin auth gate (still open — admin app must not advertise its
-  URL publicly until shipped).
+- ~~§6.2 admin auth gate~~ — shipped in Phase A (migration 006 + Supabase Auth magic-link).
 - Scheduled / signed-URL exports.
 - Excel-native `.xlsx` output.
 - Auto-applied migrations via CI.

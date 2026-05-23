@@ -10,6 +10,7 @@ export type AdminSessionRow = {
   startsAt: string | null;
   endsAt: string | null;
   createdAt: string;
+  createdBy: string | null;
   quizId: string;
   quizTitle: string;
   attemptCount: number;
@@ -22,6 +23,16 @@ export type AdminQuizOption = {
   slug: string;
 };
 
+/**
+ * Visibility scope for the Sessions list.
+ *   - "mine" filters created_by = userId
+ *   - "all"  returns every row (still subject to the admin allowlist gate)
+ */
+export type ListScope = {
+  scope: "mine" | "all";
+  userId: string;
+};
+
 type SessionRow = {
   id: string;
   name: string;
@@ -30,6 +41,7 @@ type SessionRow = {
   starts_at: string | null;
   ends_at: string | null;
   created_at: string;
+  created_by: string | null;
   quiz_id: string;
   quizzes:
     | { title: string | null }
@@ -51,16 +63,27 @@ function isActiveNow(
 /**
  * List sessions newest-first with attached quiz title and a count of attempts.
  * Active = current time is within [starts_at, ends_at]; null bounds are open.
+ * When `filter.scope === "mine"`, only rows whose created_by matches the
+ * current admin are returned.
  */
-export async function listAdminSessions(): Promise<AdminSessionRow[]> {
+export async function listAdminSessions(
+  filter: ListScope = { scope: "all", userId: "" },
+): Promise<AdminSessionRow[]> {
   const supabase = getAdminSupabaseClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("sessions")
     .select(
-      "id, name, join_code, host_name, starts_at, ends_at, created_at, quiz_id, quizzes(title), attempts(id)",
+      "id, name, join_code, host_name, starts_at, ends_at, created_at, created_by, quiz_id, quizzes(title), attempts(id)",
     )
     .order("created_at", { ascending: false })
     .limit(50);
+
+  if (filter.scope === "mine") {
+    if (!filter.userId) return [];
+    query = query.eq("created_by", filter.userId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Failed to load sessions: ${error.message}`);
@@ -79,6 +102,7 @@ export async function listAdminSessions(): Promise<AdminSessionRow[]> {
       startsAt: row.starts_at,
       endsAt: row.ends_at,
       createdAt: row.created_at,
+      createdBy: row.created_by,
       quizId: row.quiz_id,
       quizTitle: quizRel?.title ?? "(unknown quiz)",
       attemptCount: (row.attempts ?? []).length,

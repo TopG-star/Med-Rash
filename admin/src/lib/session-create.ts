@@ -9,6 +9,7 @@ export type CreateSessionInput = {
   startsAt: string | null;
   endsAt: string | null;
   metadata: Record<string, unknown>;
+  createdBy: string | null;
 };
 
 export type CreatedSessionRow = {
@@ -66,9 +67,12 @@ function optionalIsoTimestamp(value: unknown, fieldName: string): string | null 
 /**
  * Validate + normalize raw input. Throws Error with caller-safe messages.
  * Used by both the Netlify HTTP handler and the admin server action.
+ * `createdBy` is sourced from the authenticated admin caller (never from
+ * the request payload) so spoofing the field is impossible.
  */
 export function parseCreateSessionInput(
   raw: Record<string, unknown>,
+  createdBy: string | null,
 ): CreateSessionInput {
   const quizId = requireString(raw.quizId, "quizId");
   const name = requireString(raw.name, "name");
@@ -92,7 +96,7 @@ export function parseCreateSessionInput(
       ? (metadataRaw as Record<string, unknown>)
       : {};
 
-  return { quizId, name, hostName, startsAt, endsAt, metadata };
+  return { quizId, name, hostName, startsAt, endsAt, metadata, createdBy };
 }
 
 function buildJoinUrl(joinCode: string): string {
@@ -166,6 +170,7 @@ export async function createSessionRecord(
         starts_at: input.startsAt,
         ends_at: input.endsAt,
         metadata: input.metadata ?? {},
+        created_by: input.createdBy,
       })
       .select(
         "id, quiz_id, name, join_code, host_name, starts_at, ends_at, metadata, created_at, updated_at",
