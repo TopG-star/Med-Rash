@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 
-import { initialLoginState, sendMagicLinkAction } from "./actions";
+import { sendMagicLinkAction } from "./actions";
+import { initialLoginState } from "./state";
 
 export function LoginForm({ next }: { next: string }) {
   const [state, formAction, pending] = useActionState(

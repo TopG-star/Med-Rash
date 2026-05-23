@@ -3,13 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { getServerSupabaseClient } from "@/lib/supabase-ssr";
-
-export type LoginActionState = {
-  status: "idle" | "sent" | "error";
-  message: string;
-};
-
-const INITIAL_STATE: LoginActionState = { status: "idle", message: "" };
+import type { LoginActionState } from "./state";
 
 export async function sendMagicLinkAction(
   _prev: LoginActionState,
@@ -70,5 +64,3 @@ export async function signOutAndRedirectAction() {
   await supabase.auth.signOut();
   redirect("/login");
 }
-
-export const initialLoginState = INITIAL_STATE;
