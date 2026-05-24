@@ -59,9 +59,11 @@ function makeFakeSupabase(opts: {
   return { supabase, calls, sessionUserId: () => sessionUserId };
 }
 
-describe("handleAuthCallbackGet", () => {
-  it("signs out the existing session BEFORE exchanging the new code", async () => {
-    // Owner is already signed in (cookie present).
+describe("handleAuthCallbackGet — PKCE path (with ?code=)", () => {
+  it("does NOT signOut before exchange (would wipe the PKCE code_verifier)", async () => {
+    // Owner is already signed in (cookie present). The PKCE exchange must
+    // still succeed because exchangeCodeForSession needs the code_verifier
+    // cookie that signInWithOtp set on this browser.
     const fake = makeFakeSupabase({
       currentUserId: "owner-uuid",
       exchangeResult: { userId: "invitee-uuid" },
@@ -72,16 +74,16 @@ describe("handleAuthCallbackGet", () => {
       code: "invitee-code",
     });
 
-    // Critical ordering invariant: signOut must run first, otherwise it
-    // would wipe the cookies that exchangeCodeForSession just wrote.
-    expect(fake.calls).toEqual(["signOut", "exchangeCodeForSession"]);
+    // No signOut on the PKCE path — that would break self-initiated magic
+    // link login by wiping the code_verifier cookie.
+    expect(fake.calls).toEqual(["exchangeCodeForSession"]);
     expect(result).toEqual({ ok: true, userId: "invitee-uuid" });
-
-    // And the resulting session is the invitee, not the owner.
-    expect(fake.sessionUserId()).toBe("invitee-uuid");
   });
 
-  it("invitee session wins when owner cookie was present (the bug we are fixing)", async () => {
+  it("invitee session displaces the owner cookie via exchange overwrite", async () => {
+    // exchangeCodeForSession atomically overwrites the sb-* session cookies
+    // with the new user's tokens, so the prior admin's session does not
+    // survive even though we did not call signOut.
     const fake = makeFakeSupabase({
       currentUserId: "owner-uuid",
       exchangeResult: { userId: "invitee-uuid" },
@@ -94,21 +96,6 @@ describe("handleAuthCallbackGet", () => {
 
     expect(fake.sessionUserId()).toBe("invitee-uuid");
     expect(fake.sessionUserId()).not.toBe("owner-uuid");
-  });
-
-  it("returns needsHashFlow when no code is present (no silent dashboard redirect)", async () => {
-    const fake = makeFakeSupabase({ currentUserId: "owner-uuid" });
-
-    const result = await handleAuthCallbackGet({
-      supabase: fake.supabase,
-      code: null,
-    });
-
-    // Even with no code, we still signed out the existing session: an
-    // ambiguous callback must NOT leave a stale cookie in place.
-    expect(fake.calls).toEqual(["signOut"]);
-    expect(result).toEqual({ needsHashFlow: true });
-    expect(fake.sessionUserId()).toBeNull();
   });
 
   it("returns ok:false with reason=exchange when exchange fails", async () => {
@@ -127,6 +114,24 @@ describe("handleAuthCallbackGet", () => {
       reason: "exchange",
       message: "invalid grant",
     });
+  });
+});
+
+describe("handleAuthCallbackGet — hash flow (no ?code=)", () => {
+  it("signs out the prior session and returns needsHashFlow", async () => {
+    const fake = makeFakeSupabase({ currentUserId: "owner-uuid" });
+
+    const result = await handleAuthCallbackGet({
+      supabase: fake.supabase,
+      code: null,
+    });
+
+    // Hash flow has no code_verifier in play, so signOut is safe — and
+    // necessary, so the visitor does not see the prior dashboard while the
+    // interstitial JS runs.
+    expect(fake.calls).toEqual(["signOut"]);
+    expect(result).toEqual({ needsHashFlow: true });
+    expect(fake.sessionUserId()).toBeNull();
   });
 });
 

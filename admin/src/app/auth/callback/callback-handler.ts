@@ -30,11 +30,21 @@ export type CallbackOutcome =
   | { needsHashFlow: true };
 
 /**
- * Handle the GET side of /auth/callback. Always signs out the existing
- * cookie session FIRST so that, if the visitor is opening an invite (or any
- * magic link) in a browser already authenticated as someone else, the prior
- * session is gone before the new tokens land. Order is critical: signOut
- * after exchangeCodeForSession would wipe the freshly-set cookies.
+ * Handle the GET side of /auth/callback.
+ *
+ * Two arrival modes:
+ *   - PKCE (?code=...): the requesting browser stored a `code_verifier`
+ *     cookie when signInWithOtp was called. exchangeCodeForSession needs
+ *     that cookie to succeed, so we MUST NOT signOut() first — doing so
+ *     would wipe the verifier and break self-initiated magic-link login.
+ *     exchangeCodeForSession atomically overwrites the session cookies
+ *     with the new user's tokens, which is enough to displace any prior
+ *     admin's session in the same browser.
+ *   - Hash flow (server-side invites, older implicit grant): tokens live
+ *     in window.location.hash and never reach the server. We signOut()
+ *     here (safe: no code_verifier in play) so the visitor cannot see a
+ *     stale dashboard while the interstitial runs, then return
+ *     needsHashFlow so the route can render the recovery page.
  */
 export async function handleAuthCallbackGet(args: {
   supabase: CallbackSupabase;
@@ -42,13 +52,12 @@ export async function handleAuthCallbackGet(args: {
 }): Promise<CallbackOutcome> {
   const { supabase, code } = args;
 
-  // 1) Wipe any session cookie the browser arrived with. This is the line
-  //    that prevents the "owner already logged in -> invitee sees owner"
-  //    confidentiality break.
-  await supabase.auth.signOut();
-
-  // 2a) PKCE path: server-visible ?code= parameter.
   if (code) {
+    // PKCE path. Do NOT signOut first — it would clear the code_verifier
+    // cookie and the exchange would fail. exchangeCodeForSession will
+    // overwrite the session cookies with the new user's tokens, so the
+    // "owner cookie present, invitee clicks link" scenario still resolves
+    // to the invitee's session (the new cookies replace the old ones).
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       return { ok: false, reason: "exchange", message: error.message };
@@ -56,10 +65,11 @@ export async function handleAuthCallbackGet(args: {
     return { ok: true, userId: data?.user?.id ?? null };
   }
 
-  // 2b) Hash-fragment path: tokens are in window.location.hash and never
-  //     reach the server. The route renders an interstitial that POSTs them
-  //     back. We do NOT silently redirect to the dashboard here — that was
-  //     the original bug.
+  // No code = hash flow (or a malformed arrival). Wipe any prior session
+  // cookie before handing off to the interstitial so the visitor cannot
+  // see a stale dashboard while the recovery JS runs. There is no
+  // code_verifier in play for the hash flow, so signOut is safe here.
+  await supabase.auth.signOut();
   return { needsHashFlow: true };
 }
 
