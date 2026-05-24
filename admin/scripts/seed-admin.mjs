@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // admin/scripts/seed-admin.mjs
 //
-// Bootstraps the first superadmin (or upgrades an existing admin to
-// superadmin) on a fresh Supabase project. Uses the Supabase Admin API,
+// Bootstraps the first owner (or upgrades an existing host to owner)
+// on a fresh Supabase project. Uses the Supabase Admin API,
 // not raw SQL on auth.users.
 //
 // Usage (must run from the admin/ directory so Node resolves
@@ -62,8 +62,9 @@ async function main() {
       {
         user_id: authUser.id,
         email,
-        role: "superadmin",
+        role: "owner",
         is_active: true,
+        status: "active",
         invited_at: new Date().toISOString(),
       },
       { onConflict: "user_id" },
@@ -76,8 +77,9 @@ async function main() {
   console.log("[seed-admin] OK");
   console.log(`  user_id : ${authUser.id}`);
   console.log(`  email   : ${email}`);
-  console.log(`  role    : superadmin`);
+  console.log(`  role    : owner`);
   console.log(`  active  : true`);
+  console.log(`  status  : active`);
   console.log("");
   console.log("Sign in by visiting /login and requesting a magic link to this address.");
 }
