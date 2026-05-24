@@ -42,6 +42,7 @@ type MostMissedRpcRow = {
 export async function getMostMissed(
   limit: number,
   filters: Pick<ReportFilters, "specialty" | "facility" | "sessionId"> = {},
+  scope: { createdBy?: string | null } = {},
 ): Promise<MostMissedRow[]> {
   const supabase = getAdminSupabaseClient();
   const { data, error } = await supabase.rpc("knowledge_gaps", {
@@ -49,6 +50,7 @@ export async function getMostMissed(
     specialty_filter: filters.specialty ?? null,
     facility_filter: filters.facility ?? null,
     session_filter: filters.sessionId ?? null,
+    created_by_filter: scope.createdBy ?? null,
   });
   if (error) {
     throw new Error(`Failed to load most-missed: ${error.message}`);
@@ -87,10 +89,12 @@ type FacilityPerformanceRpcRow = {
 
 export async function getFacilityPerformance(
   limit: number,
+  scope: { createdBy?: string | null } = {},
 ): Promise<FacilityPerformanceRow[]> {
   const supabase = getAdminSupabaseClient();
   const { data, error } = await supabase.rpc("facility_performance", {
     limit_count: limit,
+    created_by_filter: scope.createdBy ?? null,
   });
   if (error) {
     throw new Error(`Failed to load facility performance: ${error.message}`);
@@ -128,10 +132,12 @@ type TreatmentPerceptionRpcRow = {
 
 export async function getTreatmentPerception(
   limit: number,
+  scope: { createdBy?: string | null } = {},
 ): Promise<TreatmentPerceptionRow[]> {
   const supabase = getAdminSupabaseClient();
   const { data, error } = await supabase.rpc("treatment_perception_trends", {
     limit_count: limit,
+    created_by_filter: scope.createdBy ?? null,
   });
   if (error) {
     throw new Error(`Failed to load treatment perception: ${error.message}`);
@@ -220,6 +226,25 @@ function pickRel<T>(value: T | T[] | null): T | null {
 }
 
 /**
+ * Pre-fetch the session IDs created by a given admin user (Host). Returned
+ * list is used to client-side filter attempts/answers exports via `.in()`.
+ * Returns an empty list when the user has not created any sessions yet.
+ */
+async function getSessionIdsCreatedBy(userId: string): Promise<string[]> {
+  const supabase = getAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("sessions")
+    .select("id")
+    .eq("created_by", userId);
+  if (error) {
+    throw new Error(
+      `Failed to load host session ids for '${userId}': ${error.message}`,
+    );
+  }
+  return ((data as { id: string }[] | null) ?? []).map((r) => r.id);
+}
+
+/**
  * Minimal contract for the Supabase query-builder methods we chain in this
  * file. Kept narrow so we don't depend on the generated table-typings (the
  * admin client is created without them).
@@ -254,8 +279,18 @@ function applyAttemptFilters<TQuery extends FilterableQuery<TQuery>>(
 export async function getAttemptsExport(
   filters: ReportFilters,
   limit = 5000,
+  scope: { createdBy?: string | null } = {},
 ): Promise<AttemptExportRow[]> {
   const supabase = getAdminSupabaseClient();
+
+  // Host scoping: pre-resolve owned session IDs. Empty list short-circuits to
+  // zero rows so a Host never sees other teammates' attempts.
+  let allowedSessionIds: string[] | null = null;
+  if (scope.createdBy) {
+    allowedSessionIds = await getSessionIdsCreatedBy(scope.createdBy);
+    if (allowedSessionIds.length === 0) return [];
+  }
+
   let query = supabase
     .from("attempts")
     .select(
@@ -265,6 +300,9 @@ export async function getAttemptsExport(
     .limit(limit);
 
   query = applyAttemptFilters(query, filters);
+  if (allowedSessionIds) {
+    query = query.in("session_id", allowedSessionIds);
+  }
 
   const { data, error } = await query;
   if (error) {
@@ -408,8 +446,16 @@ type AnswerExportRpcRow = {
 export async function getAnswersExport(
   filters: ReportFilters,
   limit = 10000,
+  scope: { createdBy?: string | null } = {},
 ): Promise<AnswerExportRow[]> {
   const supabase = getAdminSupabaseClient();
+
+  let allowedSessionIds: string[] | null = null;
+  if (scope.createdBy) {
+    allowedSessionIds = await getSessionIdsCreatedBy(scope.createdBy);
+    if (allowedSessionIds.length === 0) return [];
+  }
+
   let query = supabase
     .from("answers")
     .select(
@@ -419,6 +465,9 @@ export async function getAnswersExport(
     .limit(limit);
 
   query = applyAttemptFilters(query, filters, "attempts.");
+  if (allowedSessionIds) {
+    query = query.in("attempts.session_id", allowedSessionIds);
+  }
 
   const { data, error } = await query;
   if (error) {

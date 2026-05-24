@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
 import { ScopeToggle, type ScopeValue } from "@/components/scope-toggle";
-import { requireOwner } from "@/lib/admin-session";
+import { requireAdminSession } from "@/lib/admin-session";
 import { listAdminQuizzes, type AdminQuizSummary } from "@/lib/quiz-bank-queries";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function QuizBankPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const session = await requireOwner({ currentPath: "/quiz-bank" });
+  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
   const sp = await searchParams;
   const scope = parseScope(sp.scope);
 
@@ -105,12 +105,21 @@ export default async function QuizBankPage({
                   <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
                     {quiz.questionCount} Question{quiz.questionCount === 1 ? "" : "s"}
                   </p>
-                  <Link
-                    href={`/quiz-bank/${quiz.slug}`}
-                    className="arena-button bg-[var(--arena-surface)] px-4 py-2 text-sm font-semibold"
-                  >
-                    Manage
-                  </Link>
+                  {session.role === "owner" || quiz.createdBy === session.userId ? (
+                    <Link
+                      href={`/quiz-bank/${quiz.slug}`}
+                      className="arena-button bg-[var(--arena-surface)] px-4 py-2 text-sm font-semibold"
+                    >
+                      Manage
+                    </Link>
+                  ) : (
+                    <span
+                      title="Hosts can only manage quizzes they created."
+                      className="arena-button bg-[var(--arena-surface)] px-4 py-2 text-sm font-semibold opacity-50"
+                    >
+                      View only
+                    </span>
+                  )}
                 </div>
               </div>
               {quiz.sampleQuestions.length > 0 ? (

@@ -111,3 +111,58 @@ export async function getAdminQuizDetailBySlug(
   const questions = ((qRows as QuestionRowDb[] | null) ?? []).map(toQuestion);
   return { quiz, questions };
 }
+
+/**
+ * Lightweight ownership lookup used by Host scoping. Returns the
+ * `created_by` UUID for a quiz identified by slug, or null when not found.
+ * Cheaper than {@link getAdminQuizDetailBySlug} for guard checks.
+ */
+export async function getQuizOwnerBySlug(
+  slug: string,
+): Promise<string | null> {
+  const supabase = getAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select("created_by")
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`Failed to load quiz owner '${slug}': ${error.message}`);
+  }
+  if (!data) return null;
+  return (data as { created_by: string | null }).created_by;
+}
+
+export async function getQuizOwnerById(
+  id: string,
+): Promise<string | null> {
+  const supabase = getAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("quizzes")
+    .select("created_by")
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`Failed to load quiz owner '${id}': ${error.message}`);
+  }
+  if (!data) return null;
+  return (data as { created_by: string | null }).created_by;
+}
+
+export async function getQuizIdForQuestion(
+  questionId: string,
+): Promise<string | null> {
+  const supabase = getAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("questions")
+    .select("quiz_id")
+    .eq("id", questionId)
+    .maybeSingle();
+  if (error) {
+    throw new Error(
+      `Failed to load parent quiz for question '${questionId}': ${error.message}`,
+    );
+  }
+  if (!data) return null;
+  return (data as { quiz_id: string }).quiz_id;
+}

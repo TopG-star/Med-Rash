@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
-import { requireOwner } from "@/lib/admin-session";
-import { getAdminQuizDetailBySlug } from "@/lib/quiz-detail-queries";
+import { requireAdminSession } from "@/lib/admin-session";
+import { getAdminQuizDetailBySlug, getQuizOwnerBySlug } from "@/lib/quiz-detail-queries";
 
 import { CsvImportPanel } from "./csv-import-panel";
 import { QuestionManager } from "./question-manager";
@@ -17,9 +17,19 @@ type PageProps = { params: Promise<{ slug: string }> };
 
 export default async function QuizDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const session = await requireOwner({
+  const session = await requireAdminSession({
     currentPath: `/quiz-bank/${slug}`,
   });
+
+  // Host scoping: Hosts may browse the index, but only manage quizzes they
+  // own. Owners can manage anything.
+  if (session.role === "host") {
+    const ownerId = await getQuizOwnerBySlug(slug);
+    if (ownerId && ownerId !== session.userId) {
+      redirect("/denied?reason=role");
+    }
+  }
+
   const user = { email: session.email, role: session.role };
 
   let detail;

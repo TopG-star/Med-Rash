@@ -1,7 +1,7 @@
 import { AdminShell } from "@/components/admin-shell";
 import { MetricCard } from "@/components/metric-card";
 import { PanelCard } from "@/components/panel-card";
-import { requireOwner } from "@/lib/admin-session";
+import { requireAdminSession } from "@/lib/admin-session";
 import { getOverviewKpis } from "@/lib/overview-queries";
 import {
   getFacilityPerformance,
@@ -30,7 +30,8 @@ function formatPercent(value: number | null): string {
 }
 
 export default async function IntelligencePage() {
-  const session = await requireOwner({ currentPath: "/intelligence" });
+  const session = await requireAdminSession({ currentPath: "/intelligence" });
+  const createdBy = session.role === "host" ? session.userId : null;
   let loadError: string | null = null;
   let kpis = {
     totalUsers: 0,
@@ -44,10 +45,10 @@ export default async function IntelligencePage() {
 
   try {
     [kpis, mostMissed, facilityPerformance, treatmentPerception] = await Promise.all([
-      getOverviewKpis(),
-      getMostMissed(6),
-      getFacilityPerformance(5),
-      getTreatmentPerception(3),
+      getOverviewKpis({ createdBy }),
+      getMostMissed(6, {}, { createdBy }),
+      getFacilityPerformance(5, { createdBy }),
+      getTreatmentPerception(3, { createdBy }),
     ]);
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load intelligence data.";

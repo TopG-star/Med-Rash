@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { EmptyState } from "@/components/empty-state";
 import { PanelCard } from "@/components/panel-card";
-import { requireOwner } from "@/lib/admin-session";
+import { requireAdminSession } from "@/lib/admin-session";
 import { listAdminQuizzes } from "@/lib/quiz-bank-queries";
 import {
   getFacilityPerformance,
@@ -59,7 +59,8 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const session = await requireOwner({ currentPath: "/reports" });
+  const session = await requireAdminSession({ currentPath: "/reports" });
+  const createdBy = session.role === "host" ? session.userId : null;
   const params = await searchParams;
   const filters: ReportFilters = {
     startsAt: pickString(params.startsAt),
@@ -75,13 +76,17 @@ export default async function ReportsPage({
   const [quizzesResult, mostMissedResult, facilityResult, treatmentResult] =
     await Promise.allSettled([
       listAdminQuizzes({ scope: "all", userId: session.userId }),
-      getMostMissed(10, {
-        specialty: filters.specialty,
-        facility: filters.facility,
-        sessionId: filters.sessionId,
-      }),
-      getFacilityPerformance(15),
-      getTreatmentPerception(10),
+      getMostMissed(
+        10,
+        {
+          specialty: filters.specialty,
+          facility: filters.facility,
+          sessionId: filters.sessionId,
+        },
+        { createdBy },
+      ),
+      getFacilityPerformance(15, { createdBy }),
+      getTreatmentPerception(10, { createdBy }),
     ]);
 
   const quizzes =

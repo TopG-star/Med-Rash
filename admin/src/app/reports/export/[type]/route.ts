@@ -5,7 +5,7 @@ import {
   serializeCsv,
   type CsvColumn,
 } from "@/lib/csv-export";
-import { requireOwner } from "@/lib/admin-session";
+import { requireAdminSession } from "@/lib/admin-session";
 import {
   getAnswersExport,
   getAttemptsExport,
@@ -179,7 +179,8 @@ export async function GET(
   req: NextRequest,
   context: { params: Promise<{ type: string }> },
 ): Promise<Response> {
-  await requireOwner({ currentPath: "/reports" });
+  const session = await requireAdminSession({ currentPath: "/reports" });
+  const createdBy = session.role === "host" ? session.userId : null;
   const { type } = await context.params;
   if (!isExportType(type)) {
     return new Response(
@@ -195,7 +196,7 @@ export async function GET(
     switch (type) {
       case "attempts": {
         const limit = readLimit(req, 5000, 50000);
-        const rows = await getAttemptsExport(filters, limit);
+        const rows = await getAttemptsExport(filters, limit, { createdBy });
         return csvResponse(
           serializeCsv(rows, ATTEMPTS_COLUMNS),
           `medrash-attempts-${suffix}`,
@@ -203,7 +204,7 @@ export async function GET(
       }
       case "answers": {
         const limit = readLimit(req, 10000, 100000);
-        const rows = await getAnswersExport(filters, limit);
+        const rows = await getAnswersExport(filters, limit, { createdBy });
         return csvResponse(
           serializeCsv(rows, ANSWERS_COLUMNS),
           `medrash-answers-${suffix}`,
@@ -211,11 +212,15 @@ export async function GET(
       }
       case "most-missed": {
         const limit = readLimit(req, 50, 500);
-        const rows = await getMostMissed(limit, {
-          specialty: filters.specialty,
-          facility: filters.facility,
-          sessionId: filters.sessionId,
-        });
+        const rows = await getMostMissed(
+          limit,
+          {
+            specialty: filters.specialty,
+            facility: filters.facility,
+            sessionId: filters.sessionId,
+          },
+          { createdBy },
+        );
         return csvResponse(
           serializeCsv(rows, MOST_MISSED_COLUMNS),
           `medrash-most-missed-${suffix}`,
@@ -223,7 +228,7 @@ export async function GET(
       }
       case "facility-performance": {
         const limit = readLimit(req, 50, 500);
-        const rows = await getFacilityPerformance(limit);
+        const rows = await getFacilityPerformance(limit, { createdBy });
         return csvResponse(
           serializeCsv(rows, FACILITY_COLUMNS),
           `medrash-facility-performance-${suffix}`,
@@ -231,7 +236,7 @@ export async function GET(
       }
       case "treatment-perception": {
         const limit = readLimit(req, 50, 500);
-        const rows = await getTreatmentPerception(limit);
+        const rows = await getTreatmentPerception(limit, { createdBy });
         return csvResponse(
           serializeCsv(rows, TREATMENT_COLUMNS),
           `medrash-treatment-perception-${suffix}`,
