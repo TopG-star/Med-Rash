@@ -130,6 +130,11 @@ export async function inviteAdminAction(
           email,
           role,
           is_active: true,
+          // Reset the lifecycle so a re-invite forces the user back through
+          // /auth/callback -> /onboarding. Profile columns (full_name,
+          // company, job_role) are intentionally not listed here so an
+          // existing profile survives a re-invite.
+          status: "invited",
           invited_by: session.userId,
           invited_at: new Date().toISOString(),
         },
@@ -146,6 +151,40 @@ export async function inviteAdminAction(
       err instanceof Error ? err.message : "Invite failed unexpectedly.",
     );
   }
+}
+
+/**
+ * Re-issue an invite to an existing teammate by userId. Used by the
+ * Re-invite button on invited/verified rows. Reuses inviteAdminAction so
+ * the flow (auth.admin.inviteUserByEmail + upsert with status='invited')
+ * stays in one place.
+ */
+export async function reinviteAdminAction(
+  userId: string,
+): Promise<AdminUsersActionResult> {
+  try {
+    await requireOwner();
+  } catch (err) {
+    return fail(
+      err instanceof Error && err.message === "FORBIDDEN_OWNER_ONLY"
+        ? "Only Owners can re-invite teammates."
+        : err instanceof Error
+          ? err.message
+          : "Authorization failed.",
+    );
+  }
+  if (!userId) return fail("userId is required.");
+
+  const supabase = getAdminSupabaseClient();
+  const { data, error } = await supabase
+    .from("admin_users")
+    .select("email, role")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) return fail(error.message);
+  if (!data) return fail("Teammate not found.");
+
+  return inviteAdminAction({ email: data.email, role: data.role });
 }
 
 async function setActive(

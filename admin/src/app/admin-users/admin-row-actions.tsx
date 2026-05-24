@@ -2,9 +2,12 @@
 
 import { useTransition, useState } from "react";
 
+import type { AdminStatus } from "@/lib/admin-users-queries";
+
 import {
   deactivateAdminAction,
   reactivateAdminAction,
+  reinviteAdminAction,
   setRoleAction,
 } from "./actions";
 
@@ -12,6 +15,7 @@ type Props = {
   userId: string;
   role: "host" | "owner";
   isActive: boolean;
+  status: AdminStatus;
   isSelf: boolean;
 };
 
@@ -19,6 +23,7 @@ export function AdminRowActions({
   userId,
   role,
   isActive,
+  status,
   isSelf,
 }: Props) {
   const [pending, startTransition] = useTransition();
@@ -45,6 +50,8 @@ export function AdminRowActions({
       isActive ? deactivateAdminAction(userId) : reactivateAdminAction(userId),
     );
 
+  const reinvite = () => run(() => reinviteAdminAction(userId));
+
   if (isSelf) {
     return (
       <span className="text-xs italic text-[var(--arena-ink-muted)]">
@@ -52,6 +59,8 @@ export function AdminRowActions({
       </span>
     );
   }
+
+  const showReinvite = status === "invited" || status === "verified";
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -73,6 +82,16 @@ export function AdminRowActions({
       >
         {isActive ? "Deactivate" : "Reactivate"}
       </button>
+      {showReinvite ? (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={reinvite}
+          className="arena-button bg-[var(--arena-secondary)] px-3 py-1 text-xs font-bold uppercase tracking-[0.05em] disabled:opacity-60"
+        >
+          Re-invite
+        </button>
+      ) : null}
       {msg ? (
         <span className="text-xs font-semibold text-[var(--arena-ink)]">
           {msg}
