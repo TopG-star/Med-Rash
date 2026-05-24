@@ -11,6 +11,7 @@ const REASON_COPY: Record<string, string> = {
   callback_no_code: "Your sign-in link is missing or expired. Request a new invite or magic link.",
   set_session: "We could not establish your session. Request a new invite or magic link.",
   allowlist: "Your account is not on the MedRash admin allowlist. Ask an Owner to invite you.",
+  inactive: "Your access has been deactivated. Ask an Owner to reactivate your account.",
 };
 
 export default async function DeniedPage({
