@@ -39,7 +39,9 @@ export default async function SessionsPage({
 }) {
   const session = await requireAdminSession({ currentPath: "/sessions" });
   const sp = await searchParams;
-  const scope = parseScope(sp.scope);
+  // Hosts can only see their own sessions; owners can toggle scope.
+  const scope: ScopeValue =
+    session.role === "owner" ? parseScope(sp.scope) : "mine";
 
   let quizOptions: AdminQuizOption[] = [];
   let sessions: AdminSessionRow[] = [];
@@ -59,7 +61,11 @@ export default async function SessionsPage({
       title="Sessions"
       subtitle="Create live sessions, attach an approved quiz, and generate QR-linked access for presentation or CME use."
       user={{ email: session.email, role: session.role }}
-      actions={<ScopeToggle current={scope} label="Show" />}
+      actions={
+        session.role === "owner" ? (
+          <ScopeToggle current={scope} label="Show" />
+        ) : null
+      }
     >
       {loadError ? (
         <PanelCard className="space-y-2">

@@ -2,14 +2,14 @@ import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireOwner } from "@/lib/admin-session";
 
 import { QuizCreateForm } from "./quiz-create-form";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewQuizPage() {
-  const session = await requireAdminSession({
+  const session = await requireOwner({
     currentPath: "/quiz-bank/new",
   });
   return (

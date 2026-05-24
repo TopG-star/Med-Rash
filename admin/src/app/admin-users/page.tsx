@@ -1,8 +1,6 @@
-import { redirect } from "next/navigation";
-
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireOwner } from "@/lib/admin-session";
 import { listAdminUsers } from "@/lib/admin-users-queries";
 
 import { AdminRowActions } from "./admin-row-actions";
@@ -19,10 +17,7 @@ function formatDate(value: string | null): string {
 }
 
 export default async function AdminUsersPage() {
-  const session = await requireAdminSession({ currentPath: "/admin-users" });
-  if (session.role !== "owner") {
-    redirect("/denied?reason=role");
-  }
+  const session = await requireOwner({ currentPath: "/admin-users" });
 
   let rows: Awaited<ReturnType<typeof listAdminUsers>> = [];
   let loadError: string | null = null;

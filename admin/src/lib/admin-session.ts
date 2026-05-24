@@ -75,3 +75,20 @@ export async function requireAdminSession(
   }
   return session;
 }
+
+/**
+ * Server Component / Server Action / Route Handler guard for Owner-only
+ * surfaces (quiz bank, reports, intelligence, team management). Behaves
+ * like {@link requireAdminSession} but additionally redirects hosts to
+ * `/denied?reason=role`. Hosts must never reach owner-only data — hiding
+ * the nav link is not enough, the page itself must reject them.
+ */
+export async function requireOwner(
+  options: { currentPath?: string } = {},
+): Promise<AdminSession> {
+  const session = await requireAdminSession(options);
+  if (session.role !== "owner") {
+    redirect("/denied?reason=role");
+  }
+  return session;
+}

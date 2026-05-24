@@ -34,9 +34,9 @@ export type AdminNavItem = {
 
 export const adminNavigation: readonly AdminNavItem[] = [
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/quiz-bank", label: "Quiz Bank" },
+  { href: "/quiz-bank", label: "Quiz Bank", requiresRole: "owner" },
   { href: "/sessions", label: "Sessions" },
-  { href: "/reports", label: "Reports" },
-  { href: "/intelligence", label: "Intelligence" },
+  { href: "/reports", label: "Reports", requiresRole: "owner" },
+  { href: "/intelligence", label: "Intelligence", requiresRole: "owner" },
   { href: "/admin-users", label: "Team", requiresRole: "owner" },
 ] as const;

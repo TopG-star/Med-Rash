@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { EmptyState } from "@/components/empty-state";
 import { PanelCard } from "@/components/panel-card";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireOwner } from "@/lib/admin-session";
 import { listAdminQuizzes } from "@/lib/quiz-bank-queries";
 import {
   getFacilityPerformance,
@@ -59,7 +59,7 @@ export default async function ReportsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const session = await requireAdminSession({ currentPath: "/reports" });
+  const session = await requireOwner({ currentPath: "/reports" });
   const params = await searchParams;
   const filters: ReportFilters = {
     startsAt: pickString(params.startsAt),

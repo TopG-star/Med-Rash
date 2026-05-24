@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireOwner } from "@/lib/admin-session";
 import { getAdminQuizDetailBySlug } from "@/lib/quiz-detail-queries";
 
 import { CsvImportPanel } from "./csv-import-panel";
@@ -17,7 +17,7 @@ type PageProps = { params: Promise<{ slug: string }> };
 
 export default async function QuizDetailPage({ params }: PageProps) {
   const { slug } = await params;
-  const session = await requireAdminSession({
+  const session = await requireOwner({
     currentPath: `/quiz-bank/${slug}`,
   });
   const user = { email: session.email, role: session.role };

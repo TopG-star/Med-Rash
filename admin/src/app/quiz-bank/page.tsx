@@ -3,7 +3,7 @@ import Link from "next/link";
 import { AdminShell } from "@/components/admin-shell";
 import { PanelCard } from "@/components/panel-card";
 import { ScopeToggle, type ScopeValue } from "@/components/scope-toggle";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireOwner } from "@/lib/admin-session";
 import { listAdminQuizzes, type AdminQuizSummary } from "@/lib/quiz-bank-queries";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function QuizBankPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const session = await requireAdminSession({ currentPath: "/quiz-bank" });
+  const session = await requireOwner({ currentPath: "/quiz-bank" });
   const sp = await searchParams;
   const scope = parseScope(sp.scope);
 

@@ -5,6 +5,7 @@ import {
   serializeCsv,
   type CsvColumn,
 } from "@/lib/csv-export";
+import { requireOwner } from "@/lib/admin-session";
 import {
   getAnswersExport,
   getAttemptsExport,
@@ -178,6 +179,7 @@ export async function GET(
   req: NextRequest,
   context: { params: Promise<{ type: string }> },
 ): Promise<Response> {
+  await requireOwner({ currentPath: "/reports" });
   const { type } = await context.params;
   if (!isExportType(type)) {
     return new Response(

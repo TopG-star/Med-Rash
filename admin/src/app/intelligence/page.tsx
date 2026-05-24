@@ -1,7 +1,7 @@
 import { AdminShell } from "@/components/admin-shell";
 import { MetricCard } from "@/components/metric-card";
 import { PanelCard } from "@/components/panel-card";
-import { requireAdminSession } from "@/lib/admin-session";
+import { requireOwner } from "@/lib/admin-session";
 import { getOverviewKpis } from "@/lib/overview-queries";
 import {
   getFacilityPerformance,
@@ -30,7 +30,7 @@ function formatPercent(value: number | null): string {
 }
 
 export default async function IntelligencePage() {
-  const session = await requireAdminSession({ currentPath: "/intelligence" });
+  const session = await requireOwner({ currentPath: "/intelligence" });
   let loadError: string | null = null;
   let kpis = {
     totalUsers: 0,
