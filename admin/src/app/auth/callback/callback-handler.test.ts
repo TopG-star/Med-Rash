@@ -3,6 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   handleAuthCallbackGet,
   handleAuthCallbackPost,
+  resolvePostAuthDestination,
+  type AdminLookup,
+  type AdminStatus,
   type CallbackSupabase,
 } from "./callback-handler";
 
@@ -184,5 +187,119 @@ describe("handleAuthCallbackPost", () => {
       reason: "set_session",
       message: "bad token",
     });
+  });
+});
+
+function makeFakeLookup(
+  init:
+    | { ok: true; status: AdminStatus }
+    | { ok: false; reason: "not_found" | "error" },
+): { lookup: AdminLookup; markVerifiedCalls: number; current: () => AdminStatus | null } {
+  let current: AdminStatus | null = init.ok ? init.status : null;
+  let markVerifiedCalls = 0;
+  const lookup: AdminLookup = {
+    selectStatus: vi.fn(async (_userId: string) => {
+      if (!init.ok) return { ok: false as const, reason: init.reason };
+      return { ok: true as const, status: current ?? init.status };
+    }),
+    markVerified: vi.fn(async (_userId: string) => {
+      markVerifiedCalls += 1;
+      if (current === "invited") current = "verified";
+      return { ok: true as const };
+    }),
+  };
+  return {
+    lookup,
+    get markVerifiedCalls() {
+      return markVerifiedCalls;
+    },
+    current: () => current,
+  } as unknown as { lookup: AdminLookup; markVerifiedCalls: number; current: () => AdminStatus | null };
+}
+
+describe("resolvePostAuthDestination", () => {
+  it("denies with allowlist when userId is null (no session)", async () => {
+    const fake = makeFakeLookup({ ok: true, status: "active" });
+    const dest = await resolvePostAuthDestination({
+      userId: null,
+      next: "/dashboard",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "denied", reason: "allowlist" });
+    expect(fake.lookup.selectStatus).not.toHaveBeenCalled();
+  });
+
+  it("denies with allowlist when admin_users row is missing", async () => {
+    const fake = makeFakeLookup({ ok: false, reason: "not_found" });
+    const dest = await resolvePostAuthDestination({
+      userId: "u",
+      next: "/dashboard",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "denied", reason: "allowlist" });
+  });
+
+  it("denies with config on lookup error (so we don't leak access on DB failure)", async () => {
+    const fake = makeFakeLookup({ ok: false, reason: "error" });
+    const dest = await resolvePostAuthDestination({
+      userId: "u",
+      next: "/dashboard",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "denied", reason: "config" });
+  });
+
+  it("denies with inactive for deactivated users", async () => {
+    const fake = makeFakeLookup({ ok: true, status: "deactivated" });
+    const dest = await resolvePostAuthDestination({
+      userId: "u",
+      next: "/dashboard",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "denied", reason: "inactive" });
+    expect(fake.lookup.markVerified).not.toHaveBeenCalled();
+  });
+
+  it("flips invited -> verified and routes to /onboarding", async () => {
+    const fake = makeFakeLookup({ ok: true, status: "invited" });
+    const dest = await resolvePostAuthDestination({
+      userId: "u",
+      next: "/dashboard",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "redirect", path: "/onboarding" });
+    expect(fake.lookup.markVerified).toHaveBeenCalledTimes(1);
+    expect(fake.current()).toBe("verified");
+  });
+
+  it("routes verified users to /onboarding without re-flipping", async () => {
+    const fake = makeFakeLookup({ ok: true, status: "verified" });
+    const dest = await resolvePostAuthDestination({
+      userId: "u",
+      next: "/dashboard",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "redirect", path: "/onboarding" });
+    expect(fake.lookup.markVerified).not.toHaveBeenCalled();
+  });
+
+  it("active users go to next (honoring a deep link)", async () => {
+    const fake = makeFakeLookup({ ok: true, status: "active" });
+    const dest = await resolvePostAuthDestination({
+      userId: "u",
+      next: "/quiz-bank",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "redirect", path: "/quiz-bank" });
+  });
+
+  it("invited users do NOT keep the deep link — onboarding interrupts", async () => {
+    const fake = makeFakeLookup({ ok: true, status: "invited" });
+    const dest = await resolvePostAuthDestination({
+      userId: "u",
+      next: "/quiz-bank",
+      lookup: fake.lookup,
+    });
+    expect(dest).toEqual({ kind: "redirect", path: "/onboarding" });
   });
 });

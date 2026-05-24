@@ -1,10 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { getAdminSupabaseClient } from "@/lib/supabase-server";
 import { getServerSupabaseClient } from "@/lib/supabase-ssr";
 
 import {
   handleAuthCallbackGet,
   handleAuthCallbackPost,
+  resolvePostAuthDestination,
+  type AdminLookup,
+  type AdminStatus,
   type CallbackSupabase,
 } from "./callback-handler";
 
@@ -12,6 +16,57 @@ export const dynamic = "force-dynamic";
 
 function safeNext(raw: string | null | undefined): string {
   return raw && raw.startsWith("/") ? raw : "/dashboard";
+}
+
+const VALID_STATUSES: ReadonlySet<AdminStatus> = new Set<AdminStatus>([
+  "invited",
+  "verified",
+  "active",
+  "deactivated",
+]);
+
+/**
+ * Adapter around the service-role client that satisfies AdminLookup.
+ * Lives in the route (not the handler module) so the handler stays
+ * client-free for testing.
+ */
+function makeAdminLookup(): AdminLookup {
+  const supabase = getAdminSupabaseClient();
+  return {
+    async selectStatus(userId) {
+      const { data, error } = await supabase
+        .from("admin_users")
+        .select("status, is_active")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error) {
+        console.error("[auth/callback] selectStatus failed", error);
+        return { ok: false, reason: "error" };
+      }
+      if (!data) return { ok: false, reason: "not_found" };
+      // is_active=false is a hard kill switch from the old schema; treat
+      // it as deactivated regardless of the lifecycle column.
+      if (data.is_active === false) return { ok: true, status: "deactivated" };
+      const raw = typeof data.status === "string" ? data.status : "";
+      if (!VALID_STATUSES.has(raw as AdminStatus)) {
+        console.error("[auth/callback] unknown admin_users.status", raw);
+        return { ok: false, reason: "error" };
+      }
+      return { ok: true, status: raw as AdminStatus };
+    },
+    async markVerified(userId) {
+      const { error } = await supabase
+        .from("admin_users")
+        .update({ status: "verified" })
+        .eq("user_id", userId)
+        .eq("status", "invited");
+      if (error) {
+        console.error("[auth/callback] markVerified failed", error);
+        return { ok: false };
+      }
+      return { ok: true };
+    },
+  };
 }
 
 /**
@@ -47,7 +102,17 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(denied);
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  const destination = await resolvePostAuthDestination({
+    userId: result.userId,
+    next,
+    lookup: makeAdminLookup(),
+  });
+  if (destination.kind === "denied") {
+    const denied = new URL("/denied", request.url);
+    denied.searchParams.set("reason", destination.reason);
+    return NextResponse.redirect(denied);
+  }
+  return NextResponse.redirect(new URL(destination.path, request.url));
 }
 
 /**
@@ -93,7 +158,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json({ ok: true, next });
+  const destination = await resolvePostAuthDestination({
+    userId: result.userId,
+    next,
+    lookup: makeAdminLookup(),
+  });
+  if (destination.kind === "denied") {
+    // The interstitial JS treats `ok:false` as "navigate to /denied with
+    // the given reason", which is exactly what we want here.
+    return NextResponse.json(
+      { ok: false, reason: destination.reason },
+      { status: 200 },
+    );
+  }
+  return NextResponse.json({ ok: true, next: destination.path });
 }
 
 /**
