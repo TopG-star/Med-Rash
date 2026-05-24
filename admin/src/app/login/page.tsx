@@ -28,8 +28,8 @@ export default async function LoginPage({
           Sign in
         </h1>
         <p className="text-sm text-[var(--arena-ink-muted)]">
-          We&apos;ll email you a 6-digit code (and a magic link as backup).
-          Only allowlisted addresses can reach the dashboard.
+          We&apos;ll email you a 6-digit code. Only allowlisted addresses can
+          reach the dashboard.
         </p>
       </header>
       <Suspense fallback={null}>

@@ -131,7 +131,7 @@ function CodeStep({
         <p className="text-sm text-[var(--arena-ink-muted)]">
           We sent a 6-digit code to{" "}
           <span className="font-semibold text-[var(--arena-ink)]">{email}</span>
-          . The magic link in the same email also works.
+          . The code expires in 1 hour.
         </p>
         <label className="block space-y-2">
           <span className="text-sm font-semibold">6-digit code</span>

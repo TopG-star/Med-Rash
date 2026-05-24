@@ -101,7 +101,7 @@ export async function requestOtpAction(
 
   return {
     status: "code_sent",
-    message: `Code sent to ${email}. Enter it below — or use the magic link in the same email.`,
+    message: `Code sent to ${email}. Enter the 6-digit code below.`,
     email,
     next,
     nextResendAt: Date.now() + RESEND_COOLDOWN_MS,
