@@ -109,20 +109,17 @@ function CodeStep({
   sentMessage,
   errorMessage,
 }: CodeStepProps) {
-  const [secondsLeft, setSecondsLeft] = useState(() =>
-    resendAt ? Math.max(0, Math.ceil((resendAt - Date.now()) / 1000)) : 0,
-  );
+  // Derive secondsLeft from a `now` ticker rather than mirroring resendAt
+  // into its own state. This keeps the effect free of synchronous setState
+  // calls (see react-hooks/set-state-in-effect).
+  const [now, setNow] = useState(() => Date.now());
+  const secondsLeft = resendAt
+    ? Math.max(0, Math.ceil((resendAt - now) / 1000))
+    : 0;
 
   useEffect(() => {
-    if (!resendAt) {
-      setSecondsLeft(0);
-      return;
-    }
-    const tick = () => {
-      setSecondsLeft(Math.max(0, Math.ceil((resendAt - Date.now()) / 1000)));
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
+    if (!resendAt) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [resendAt]);
 
