@@ -178,9 +178,22 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     });
   }
 
+  let body: Record<string, unknown>;
+  let joinCode: string;
   try {
-    const body = parseJsonBody(event);
-    const joinCode = parseJoinCode(body);
+    body = parseJsonBody(event);
+    joinCode = parseJoinCode(body);
+  } catch (parseErr) {
+    await applyMinimumLatency(startedAtMs);
+    const message = parseErr instanceof Error ? parseErr.message : 'Invalid request body.';
+    return jsonResponse(400, {
+      ok: false,
+      code: 'BAD_REQUEST',
+      message,
+    });
+  }
+
+  try {
     const supabase = getSupabaseAdminClient();
 
     const { data, error } = await supabase
@@ -205,6 +218,7 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       .maybeSingle();
 
     if (error) {
+      console.error('[session-resolve] supabase query failed:', error.message);
       await applyMinimumLatency(startedAtMs);
       return jsonResponse(500, {
         ok: false,
@@ -222,7 +236,19 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       });
     }
 
-    const session = buildSessionPayload(data as Record<string, unknown>);
+    let session: ResolvedSessionPayload;
+    try {
+      session = buildSessionPayload(data as Record<string, unknown>);
+    } catch (payloadErr) {
+      const message = payloadErr instanceof Error ? payloadErr.message : 'Session payload invalid.';
+      console.error('[session-resolve] payload build failed:', message);
+      await applyMinimumLatency(startedAtMs);
+      return jsonResponse(500, {
+        ok: false,
+        code: 'SESSION_QUIZ_MISSING',
+        message: 'Session is misconfigured (quiz link missing or inactive). Contact the host.',
+      });
+    }
 
     // Best-effort dedupe-on-participant join-event log so the admin Live view
     // can show "X devices resolved this code" even when no attempts land.
@@ -256,12 +282,14 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       ok: true,
       session,
     });
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unexpected error.';
+    console.error('[session-resolve] unhandled failure:', message);
     await applyMinimumLatency(startedAtMs);
-    return jsonResponse(400, {
+    return jsonResponse(500, {
       ok: false,
-      code: 'BAD_REQUEST',
-      message: 'Invalid request.',
+      code: 'SESSION_RESOLVE_FAILED',
+      message: 'Unable to resolve session right now. Please retry shortly.',
     });
   }
 }

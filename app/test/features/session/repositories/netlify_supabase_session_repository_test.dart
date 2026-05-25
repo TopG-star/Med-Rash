@@ -122,6 +122,88 @@ void main() {
       expect(capturedBody!.containsKey('deviceInstallId'), isFalse);
     });
   });
+
+  group('NetlifySupabaseSessionRepository error taxonomy', () {
+    Future<void> expectErrorCodeMapsTo({
+      required int statusCode,
+      required String code,
+      String? serverMessage,
+      required Matcher containsText,
+    }) async {
+      final http.Client mockHttp = MockClient((http.Request request) async {
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'ok': false,
+            'code': code,
+            if (serverMessage != null) 'message': serverMessage,
+          }),
+          statusCode,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+      final SessionRepository repo = NetlifySupabaseSessionRepository(
+        httpClient: MedRashHttpClient(
+          functionsBaseUrl: 'https://example.test/.netlify/functions/',
+          httpClient: mockHttp,
+        ),
+      );
+      await expectLater(
+        repo.resolveSessionByJoinCode('ABCDE'),
+        throwsA(
+          isA<StateError>().having((e) => e.message, 'message', containsText),
+        ),
+      );
+    }
+
+    test('SESSION_NOT_FOUND surfaces the join code in the message', () async {
+      await expectErrorCodeMapsTo(
+        statusCode: 404,
+        code: 'SESSION_NOT_FOUND',
+        containsText: contains('ABCDE'),
+      );
+    });
+
+    test('SESSION_QUIZ_MISSING tells the user to contact the host', () async {
+      await expectErrorCodeMapsTo(
+        statusCode: 500,
+        code: 'SESSION_QUIZ_MISSING',
+        containsText: contains('host'),
+      );
+    });
+
+    test('SESSION_RESOLVE_QUERY_FAILED maps to retry-soon copy', () async {
+      await expectErrorCodeMapsTo(
+        statusCode: 500,
+        code: 'SESSION_RESOLVE_QUERY_FAILED',
+        containsText: contains('retry'),
+      );
+    });
+
+    test('RATE_LIMITED maps to wait-and-retry copy', () async {
+      await expectErrorCodeMapsTo(
+        statusCode: 429,
+        code: 'RATE_LIMITED',
+        containsText: contains('Too many'),
+      );
+    });
+
+    test('BAD_REQUEST falls through to server message when present', () async {
+      await expectErrorCodeMapsTo(
+        statusCode: 400,
+        code: 'BAD_REQUEST',
+        serverMessage: 'joinCode is required.',
+        containsText: contains('joinCode is required'),
+      );
+    });
+
+    test('unknown code with no message falls back to generic copy', () async {
+      await expectErrorCodeMapsTo(
+        statusCode: 500,
+        code: 'NEW_UNHANDLED_CODE',
+        containsText: contains('Unable to resolve session'),
+      );
+    });
+  });
 }
 
 class _FixedDeviceIdentityService implements DeviceIdentityService {

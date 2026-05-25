@@ -70,13 +70,38 @@ class NetlifySupabaseSessionRepository implements SessionRepository {
       );
       return _parseSessionFromResponse(response);
     } on MedRashGateException catch (error) {
-      if (error.statusCode == 429 || error.code == 'RATE_LIMITED') {
-        throw StateError('Too many session lookups right now. Please retry shortly.');
-      }
-      if (error.statusCode == 404) {
-        throw StateError('Session code not found. Please verify the QR code and try again.');
-      }
-      throw StateError('Unable to resolve session right now. Please retry shortly.');
+      throw StateError(_describeGateFailure(error, normalized));
     }
+  }
+
+  /// Map the server's structured error envelope to a participant-friendly
+  /// message. Falls back to a generic copy only when the server returned
+  /// no recognised code AND no human-readable message — that way ops can
+  /// see the real cause in console.error / Netlify logs while participants
+  /// still get a helpful hint instead of "Unable to join session right now".
+  String _describeGateFailure(MedRashGateException error, String joinCode) {
+    final String serverMessage = (error.body['message'] as String? ?? '').trim();
+    switch (error.code) {
+      case 'SESSION_NOT_FOUND':
+        return 'Session code $joinCode not found. Verify the code with the host and try again.';
+      case 'SESSION_QUIZ_MISSING':
+        return 'This session is not playable yet (the quiz is missing or inactive). Ask the host to relink it.';
+      case 'SESSION_RESOLVE_QUERY_FAILED':
+      case 'SESSION_RESOLVE_FAILED':
+        return 'Session lookup is failing right now. Please retry in a moment.';
+      case 'RATE_LIMITED':
+        return 'Too many session lookups. Wait a few seconds and try again.';
+      case 'BAD_REQUEST':
+        return serverMessage.isNotEmpty
+            ? serverMessage
+            : 'That session code looks malformed. Please re-scan or re-type it.';
+    }
+    if (error.statusCode == 401 || error.statusCode == 403) {
+      return 'This app build is not authorised to look up sessions. Contact support.';
+    }
+    if (serverMessage.isNotEmpty) {
+      return serverMessage;
+    }
+    return 'Unable to resolve session right now. Please retry shortly.';
   }
 }
