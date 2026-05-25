@@ -23,6 +23,7 @@ type ResolvedSessionPayload = {
   questionCount: number;
   timeLimit: string;
   host: string;
+  mode: 'ranked' | 'learning';
 };
 
 function parseJoinCode(body: Record<string, unknown>): string {
@@ -147,6 +148,7 @@ function buildSessionPayload(row: Record<string, unknown>): ResolvedSessionPaylo
     questionCount,
     timeLimit: metadataTimeLimit ?? computeTimeLimit(questionCount),
     host: typeof row.host_name === 'string' && row.host_name.trim().length > 0 ? row.host_name : 'Medical Team Lead',
+    mode: row.mode === 'learning' ? 'learning' : 'ranked',
   };
 }
 
@@ -178,22 +180,9 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     });
   }
 
-  let body: Record<string, unknown>;
-  let joinCode: string;
   try {
-    body = parseJsonBody(event);
-    joinCode = parseJoinCode(body);
-  } catch (parseErr) {
-    await applyMinimumLatency(startedAtMs);
-    const message = parseErr instanceof Error ? parseErr.message : 'Invalid request body.';
-    return jsonResponse(400, {
-      ok: false,
-      code: 'BAD_REQUEST',
-      message,
-    });
-  }
-
-  try {
+    const body = parseJsonBody(event);
+    const joinCode = parseJoinCode(body);
     const supabase = getSupabaseAdminClient();
 
     const { data, error } = await supabase
@@ -204,6 +193,7 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
         name,
         join_code,
         host_name,
+        mode,
         metadata,
         quizzes (
           slug,
@@ -218,7 +208,6 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       .maybeSingle();
 
     if (error) {
-      console.error('[session-resolve] supabase query failed:', error.message);
       await applyMinimumLatency(startedAtMs);
       return jsonResponse(500, {
         ok: false,
@@ -236,19 +225,7 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       });
     }
 
-    let session: ResolvedSessionPayload;
-    try {
-      session = buildSessionPayload(data as Record<string, unknown>);
-    } catch (payloadErr) {
-      const message = payloadErr instanceof Error ? payloadErr.message : 'Session payload invalid.';
-      console.error('[session-resolve] payload build failed:', message);
-      await applyMinimumLatency(startedAtMs);
-      return jsonResponse(500, {
-        ok: false,
-        code: 'SESSION_QUIZ_MISSING',
-        message: 'Session is misconfigured (quiz link missing or inactive). Contact the host.',
-      });
-    }
+    const session = buildSessionPayload(data as Record<string, unknown>);
 
     // Best-effort dedupe-on-participant join-event log so the admin Live view
     // can show "X devices resolved this code" even when no attempts land.
@@ -282,14 +259,12 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       ok: true,
       session,
     });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unexpected error.';
-    console.error('[session-resolve] unhandled failure:', message);
+  } catch {
     await applyMinimumLatency(startedAtMs);
-    return jsonResponse(500, {
+    return jsonResponse(400, {
       ok: false,
-      code: 'SESSION_RESOLVE_FAILED',
-      message: 'Unable to resolve session right now. Please retry shortly.',
+      code: 'BAD_REQUEST',
+      message: 'Invalid request.',
     });
   }
 }

@@ -2,12 +2,17 @@ import "server-only";
 
 import { getAdminSupabaseClient } from "./supabase-server";
 
+export type SessionMode = "ranked" | "learning";
+export const SESSION_MODES: readonly SessionMode[] = ["ranked", "learning"] as const;
+export const DEFAULT_SESSION_MODE: SessionMode = "ranked";
+
 export type CreateSessionInput = {
   quizId: string;
   name: string;
   hostName: string | null;
   startsAt: string | null;
   endsAt: string | null;
+  mode: SessionMode;
   metadata: Record<string, unknown>;
   createdBy: string | null;
 };
@@ -20,6 +25,7 @@ export type CreatedSessionRow = {
   hostName: string | null;
   startsAt: string | null;
   endsAt: string | null;
+  mode: SessionMode;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -90,13 +96,22 @@ export function parseCreateSessionInput(
     throw new Error("endsAt must be on or after startsAt.");
   }
 
+  const modeRaw = raw.mode;
+  let mode: SessionMode = DEFAULT_SESSION_MODE;
+  if (modeRaw !== undefined && modeRaw !== null && modeRaw !== "") {
+    if (typeof modeRaw !== "string" || !SESSION_MODES.includes(modeRaw as SessionMode)) {
+      throw new Error("mode must be 'ranked' or 'learning'.");
+    }
+    mode = modeRaw as SessionMode;
+  }
+
   const metadataRaw = raw.metadata;
   const metadata =
     metadataRaw && typeof metadataRaw === "object" && !Array.isArray(metadataRaw)
       ? (metadataRaw as Record<string, unknown>)
       : {};
 
-  return { quizId, name, hostName, startsAt, endsAt, metadata, createdBy };
+  return { quizId, name, hostName, startsAt, endsAt, mode, metadata, createdBy };
 }
 
 function buildJoinUrl(joinCode: string): string {
@@ -122,6 +137,7 @@ type SessionInsertRow = {
   host_name: string | null;
   starts_at: string | null;
   ends_at: string | null;
+  mode: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
@@ -169,11 +185,12 @@ export async function createSessionRecord(
         host_name: input.hostName,
         starts_at: input.startsAt,
         ends_at: input.endsAt,
+        mode: input.mode,
         metadata: input.metadata ?? {},
         created_by: input.createdBy,
       })
       .select(
-        "id, quiz_id, name, join_code, host_name, starts_at, ends_at, metadata, created_at, updated_at",
+        "id, quiz_id, name, join_code, host_name, starts_at, ends_at, mode, metadata, created_at, updated_at",
       )
       .single();
 
@@ -195,6 +212,9 @@ export async function createSessionRecord(
       hostName: row.host_name,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
+      mode: SESSION_MODES.includes(row.mode as SessionMode)
+        ? (row.mode as SessionMode)
+        : DEFAULT_SESSION_MODE,
       metadata: row.metadata ?? {},
       createdAt: row.created_at,
       updatedAt: row.updated_at,

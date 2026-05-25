@@ -42,6 +42,7 @@ export function SessionCreateForm({ quizOptions }: Props) {
       hostName: String(formData.get("hostName") ?? ""),
       startsAt: toIsoOrNull(String(formData.get("startsAt") ?? "")),
       endsAt: toIsoOrNull(String(formData.get("endsAt") ?? "")),
+      mode: String(formData.get("mode") ?? "ranked"),
     };
 
     startTransition(async () => {
@@ -117,6 +118,21 @@ export function SessionCreateForm({ quizOptions }: Props) {
               className="arena-panel w-full px-4 py-3"
               placeholder="e.g. Dr. Mensah"
             />
+          </label>
+          <label className="md:col-span-2 space-y-2">
+            <span className="text-sm font-semibold">Session Mode</span>
+            <select
+              name="mode"
+              required
+              defaultValue="ranked"
+              className="arena-panel w-full px-4 py-3"
+            >
+              <option value="ranked">Ranked — single official attempt, counts on leaderboard</option>
+              <option value="learning">Learning — unlimited practice, no leaderboard impact</option>
+            </select>
+            <span className="block text-xs text-[var(--arena-ink-muted)]">
+              Participants land straight in this mode. They can switch only if their ranked attempt is already used.
+            </span>
           </label>
           <label className="space-y-2">
             <span className="text-sm font-semibold">Starts At (optional)</span>

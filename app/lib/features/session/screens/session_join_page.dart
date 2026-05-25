@@ -252,18 +252,34 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
                 ),
               ),
               const SizedBox(height: 24),
-              ArenaButton(
-                label: canStartRanked ? 'Ranked Mode' : 'Ranked Attempt Used',
-                icon: Icons.emoji_events_outlined,
-                onPressed: canStartRanked ? () => _startMode(session, QuizMode.ranked) : null,
-              ),
-              const SizedBox(height: 16),
-              ArenaButton(
-                label: 'Learning Mode',
-                icon: Icons.school_outlined,
-                backgroundColor: Colors.white,
-                onPressed: () => _startMode(session, QuizMode.learning),
-              ),
+              // Honour the host-declared session mode (Gap 6): one primary CTA
+              // only. For Ranked sessions, when the participant has already
+              // burned their official attempt, surface a secondary
+              // "Switch to Learning Mode" affordance so the lobby is never a
+              // dead end.
+              if (session.mode == 'learning') ...<Widget>[
+                ArenaButton(
+                  label: 'Start Learning Mode',
+                  icon: Icons.school_outlined,
+                  onPressed: () => _startMode(session, QuizMode.learning),
+                ),
+              ] else ...<Widget>[
+                ArenaButton(
+                  label: canStartRanked ? 'Start Ranked Mode' : 'Ranked Attempt Used',
+                  icon: Icons.emoji_events_outlined,
+                  onPressed:
+                      canStartRanked ? () => _startMode(session, QuizMode.ranked) : null,
+                ),
+                if (!canStartRanked) ...<Widget>[
+                  const SizedBox(height: 12),
+                  ArenaButton(
+                    label: 'Switch to Learning Mode',
+                    icon: Icons.school_outlined,
+                    backgroundColor: Colors.white,
+                    onPressed: () => _startMode(session, QuizMode.learning),
+                  ),
+                ],
+              ],
             ],
           );
         },
