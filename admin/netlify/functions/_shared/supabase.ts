@@ -5,7 +5,22 @@ export type IdentityProfile = {
   nickname: string;
   facility: string;
   specialty: string;
+  // Optional recovery email. `undefined` means the client did not provide one
+  // on this call and the server must NOT touch the existing column (preserves
+  // a previously-saved email). `null` is reserved for an explicit clear in 6c
+  // and is not yet emitted by the client.
+  email?: string | null;
 };
+
+// Thrown by resolveOrCreateUserId when a write trips users_email_lower_idx.
+// Handlers translate this into HTTP 409 EMAIL_TAKEN so the client can prompt
+// the user to pick a different recovery email.
+export class EmailTakenError extends Error {
+  constructor() {
+    super("That email is already linked to another profile.");
+    this.name = "EmailTakenError";
+  }
+}
 
 export type IdentityInput = {
   participantId: string;
@@ -53,6 +68,31 @@ export function getSupabaseAdminClient(): SupabaseClient<any, "app", any, any, a
   return adminClient;
 }
 
+// Conservative RFC-like email shape. Intentionally not RFC-5322-complete: we
+// only need to reject obvious garbage (spaces, missing @, missing dot) before
+// it reaches Postgres. Final uniqueness is enforced by users_email_lower_idx.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseOptionalEmail(value: unknown): string | null | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null) {
+    return null;
+  }
+  if (typeof value !== "string") {
+    throw new Error("email must be a string when provided.");
+  }
+  const normalized = value.trim().toLowerCase();
+  if (normalized.length === 0) {
+    return null;
+  }
+  if (normalized.length > 254 || !EMAIL_REGEX.test(normalized)) {
+    throw new Error("email looks malformed.");
+  }
+  return normalized;
+}
+
 export function parseIdentityInput(raw: Record<string, unknown>): IdentityInput {
   const participantId = readString(raw.participantId, "");
   const deviceInstallId = readString(raw.deviceInstallId, "");
@@ -68,6 +108,7 @@ export function parseIdentityInput(raw: Record<string, unknown>): IdentityInput 
       : {};
 
   const guestFallback = `Guest-${deviceInstallId.slice(0, 4).toUpperCase()}`;
+  const email = parseOptionalEmail(profile.email);
 
   return {
     participantId,
@@ -77,6 +118,7 @@ export function parseIdentityInput(raw: Record<string, unknown>): IdentityInput 
       nickname: readString(profile.nickname, guestFallback),
       facility: readString(profile.facility, "Unknown Facility"),
       specialty: readString(profile.specialty, "General"),
+      ...(email === undefined ? {} : { email }),
     },
   };
 }
@@ -147,6 +189,12 @@ export async function resolveOrCreateUserId(
     throw new Error(`Failed to resolve user identity: ${existingError.message}`);
   }
 
+  // Only forward `email` to the DB when the client actually sent one this
+  // call. An omitted field (`undefined`) must NOT clobber a previously-saved
+  // recovery email. An explicit `null` clears it (reserved for 6c settings).
+  const emailColumn: { email?: string | null } =
+    identity.profile.email === undefined ? {} : { email: identity.profile.email };
+
   if (existingUser && typeof existingUser === "object" && "id" in existingUser) {
     const userId = String((existingUser as Record<string, unknown>).id);
 
@@ -162,10 +210,14 @@ export async function resolveOrCreateUserId(
         nickname: identity.profile.nickname,
         facility: identity.profile.facility,
         specialty: identity.profile.specialty,
+        ...emailColumn,
       })
       .eq("id", userId);
 
     if (updateError) {
+      if (isUniqueViolation(updateError) && isEmailUniqueViolation(updateError)) {
+        throw new EmailTakenError();
+      }
       throw new Error(`Failed to refresh user profile: ${updateError.message}`);
     }
 
@@ -180,6 +232,7 @@ export async function resolveOrCreateUserId(
       nickname: identity.profile.nickname,
       facility: identity.profile.facility,
       specialty: identity.profile.specialty,
+      ...emailColumn,
       metadata: {
         identity_spine_id: identity.participantId,
         device_install_id: identity.deviceInstallId,
@@ -189,12 +242,23 @@ export async function resolveOrCreateUserId(
     .single();
 
   if (insertError) {
+    if (isUniqueViolation(insertError) && isEmailUniqueViolation(insertError)) {
+      throw new EmailTakenError();
+    }
     throw new Error(`Failed to create user from identity spine: ${insertError.message}`);
   }
 
   const userId = String((inserted as Record<string, unknown>).id);
   await upsertUserDevice(supabase, userId, identity.deviceInstallId);
   return userId;
+}
+
+function isEmailUniqueViolation(error: PostgrestError): boolean {
+  // Match the partial unique index name created in migration 009 and the
+  // column it covers. Either signal is enough; we check both because
+  // PostgREST's surfaced fields vary slightly across versions.
+  const haystack = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
+  return haystack.includes("users_email_lower_idx") || haystack.includes("(lower(email))");
 }
 
 export function isUniqueViolation(error: PostgrestError): boolean {

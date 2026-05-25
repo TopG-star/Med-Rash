@@ -31,11 +31,18 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     with OperationRunnerState<QuickJoinPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _facilityController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   late final ProfileRepository _profileRepository;
   late final AuthStateManager _authStateManager;
   String _specialty = 'Doctor';
   String _nickname = '';
   String? _pendingJoinCode;
+  String? _emailError;
+
+  // Conservative shape check matched against the trimmed/lowercased value.
+  // Mirrors the server-side EMAIL_REGEX in admin/_shared/supabase.ts so the
+  // user sees the same verdict either way.
+  static final RegExp _emailFormat = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
 
   @override
   void initState() {
@@ -60,6 +67,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     _authStateManager.removeListener(_onAuthChanged);
     _nameController.dispose();
     _facilityController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -128,6 +136,29 @@ class _QuickJoinPageState extends State<QuickJoinPage>
             controller: _facilityController,
             hintText: 'e.g. Korle-Bu Teaching Hospital',
             onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 20),
+          Text('EMAIL (OPTIONAL)', style: Theme.of(context).textTheme.labelMedium),
+          const SizedBox(height: 8),
+          _ArenaTextField(
+            controller: _emailController,
+            hintText: 'you@example.com',
+            keyboardType: TextInputType.emailAddress,
+            onChanged: (_) {
+              if (_emailError != null) {
+                setState(() => _emailError = null);
+              }
+            },
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Text(
+              _emailError ?? 'Lets you recover this profile if you switch phones. Skip to stay anonymous.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: _emailError != null ? tokens.error : tokens.textSecondary,
+                  ),
+            ),
           ),
           const SizedBox(height: 20),
           Text('SPECIALTY', style: Theme.of(context).textTheme.labelMedium),
@@ -211,18 +242,36 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                 : 'Start Playing',
             onPressed: _canStart
                 ? () async {
-                    await runOperation(() async {
-                      await _profileRepository.quickJoin(
-                        fullName: _nameController.text,
-                        facility: _facilityController.text,
-                        specialty: _specialty,
-                        nickname: _nickname,
-                      );
-                      await getIt<AuthStateManager>().markJoined();
-                    });
-                    if (context.mounted) {
-                      context.go(_postOnboardingDestination());
+                    final String? validated = _validateEmail();
+                    if (_emailError != null) {
+                      return;
                     }
+                    bool emailTaken = false;
+                    String? takenMessage;
+                    await runOperation(() async {
+                      try {
+                        await _profileRepository.quickJoin(
+                          fullName: _nameController.text,
+                          facility: _facilityController.text,
+                          specialty: _specialty,
+                          nickname: _nickname,
+                          email: validated,
+                        );
+                        await getIt<AuthStateManager>().markJoined();
+                      } on EmailTakenException catch (error) {
+                        emailTaken = true;
+                        takenMessage = error.message;
+                      }
+                    });
+                    if (!context.mounted) return;
+                    if (emailTaken) {
+                      setState(() {
+                        _emailError = takenMessage ??
+                            'That email is already linked to another profile.';
+                      });
+                      return;
+                    }
+                    context.go(_postOnboardingDestination());
                   }
                 : null,
           ),
@@ -235,6 +284,27 @@ class _QuickJoinPageState extends State<QuickJoinPage>
   bool get _canStart {
     return _nameController.text.trim().isNotEmpty &&
         _facilityController.text.trim().isNotEmpty;
+  }
+
+  /// Validates the optional email input. Returns the normalised value (or
+  /// null for skip) and sets [_emailError] when malformed. Empty input is
+  /// always valid — email is opt-in.
+  String? _validateEmail() {
+    final String raw = _emailController.text.trim().toLowerCase();
+    if (raw.isEmpty) {
+      if (_emailError != null) {
+        setState(() => _emailError = null);
+      }
+      return null;
+    }
+    if (raw.length > 254 || !_emailFormat.hasMatch(raw)) {
+      setState(() => _emailError = 'Enter a valid email or leave the field blank.');
+      return null;
+    }
+    if (_emailError != null) {
+      setState(() => _emailError = null);
+    }
+    return raw;
   }
 
   /// Pick the post-onboarding hop. Order of preference:
@@ -258,11 +328,13 @@ class _ArenaTextField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     this.onChanged,
+    this.keyboardType,
   });
 
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String>? onChanged;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
@@ -272,6 +344,7 @@ class _ArenaTextField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: TextField(
         controller: controller,
+        keyboardType: keyboardType,
         decoration: InputDecoration(
           hintText: hintText,
           border: InputBorder.none,

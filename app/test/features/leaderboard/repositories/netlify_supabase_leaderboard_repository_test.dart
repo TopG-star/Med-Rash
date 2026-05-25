@@ -141,6 +141,7 @@ class _NullProfileRepository implements ProfileRepository {
     required String facility,
     required String specialty,
     String? nickname,
+    String? email,
   }) {
     throw UnimplementedError();
   }

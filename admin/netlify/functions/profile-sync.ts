@@ -1,4 +1,4 @@
-import { getSupabaseAdminClient, parseIdentityInput, resolveOrCreateUserId } from "./_shared/supabase";
+import { EmailTakenError, getSupabaseAdminClient, parseIdentityInput, resolveOrCreateUserId } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireGateAuthorization } from "./_shared/gate";
 
@@ -36,6 +36,13 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       profile: identity.profile,
     });
   } catch (error) {
+    if (error instanceof EmailTakenError) {
+      return jsonResponse(409, {
+        ok: false,
+        code: "EMAIL_TAKEN",
+        message: "That email is already linked to another profile. Use a different email or leave it blank.",
+      });
+    }
     return jsonResponse(400, {
       ok: false,
       code: "BAD_REQUEST",

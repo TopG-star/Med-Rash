@@ -17,6 +17,7 @@ class UserProfile {
     required this.specialty,
     required this.totalPoints,
     required this.rank,
+    this.email,
   });
 
   /// The participant's real name. Confidential outside of confirmations.
@@ -28,4 +29,9 @@ class UserProfile {
   final String specialty;
   final int totalPoints;
   final int rank;
+
+  /// Optional recovery email captured in slice 6a. Used by slice 6b to rebind
+  /// this `app.users` row to a new device after a reinstall / phone switch.
+  /// Never displayed in public UI.
+  final String? email;
 }

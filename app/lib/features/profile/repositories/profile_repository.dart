@@ -11,14 +11,30 @@ import '../../../core/infra/identity_snapshot.dart';
 import '../../../core/infra/medrash_http_client.dart';
 import '../models/user_profile.dart';
 
+/// Raised when the server rejects a profile sync because another `app.users`
+/// row already owns the supplied recovery email. The UI catches this from
+/// [ProfileRepository.quickJoin] and prompts the participant to pick a
+/// different email (or clear it and continue without recovery).
+class EmailTakenException implements Exception {
+  const EmailTakenException(this.message);
+  final String message;
+  @override
+  String toString() => 'EmailTakenException: $message';
+}
+
 abstract class ProfileRepository {
   Future<UserProfile?> getProfile();
 
+  /// Persists the onboarding profile locally and (when [email] is non-empty)
+  /// awaits the server sync so an `EMAIL_TAKEN` collision surfaces to the
+  /// caller as [EmailTakenException] before the user leaves the screen.
+  /// When [email] is null/empty the sync remains best-effort.
   Future<UserProfile> quickJoin({
     required String fullName,
     required String facility,
     required String specialty,
     String? nickname,
+    String? email,
   });
 
   /// Silently mint a guest profile so a QR-deep-link visitor can land on a
@@ -84,6 +100,7 @@ class LocalProfileRepository implements ProfileRepository {
   static const String _keySpecialty = 'medrash.profile.specialty';
   static const String _keyTotalPoints = 'medrash.profile.total_points';
   static const String _keyRank = 'medrash.profile.rank';
+  static const String _keyEmail = 'medrash.profile.email';
 
   @override
   Future<UserProfile?> getProfile() async {
@@ -92,6 +109,7 @@ class LocalProfileRepository implements ProfileRepository {
       return null;
     }
 
+    final String? storedEmail = _preferences.getString(_keyEmail);
     return UserProfile(
       fullName: fullName,
       nickname: _preferences.getString(_keyNickname) ?? generateNickname(fullName: fullName),
@@ -99,6 +117,7 @@ class LocalProfileRepository implements ProfileRepository {
       specialty: _preferences.getString(_keySpecialty) ?? 'Doctor',
       totalPoints: _preferences.getInt(_keyTotalPoints) ?? 0,
       rank: _preferences.getInt(_keyRank) ?? 0,
+      email: (storedEmail == null || storedEmail.isEmpty) ? null : storedEmail,
     );
   }
 
@@ -108,6 +127,7 @@ class LocalProfileRepository implements ProfileRepository {
     required String facility,
     required String specialty,
     String? nickname,
+    String? email,
   }) async {
     final String generatedNickname = nickname?.trim().isNotEmpty == true
         ? nickname!.trim()
@@ -115,6 +135,8 @@ class LocalProfileRepository implements ProfileRepository {
 
     const int seedPoints = 0;
     const int seedRank = 0;
+    final String? normalizedEmail =
+        (email == null || email.trim().isEmpty) ? null : email.trim().toLowerCase();
 
     await _preferences.setString(_keyFullName, fullName.trim());
     await _preferences.setString(_keyFacility, facility.trim());
@@ -122,6 +144,11 @@ class LocalProfileRepository implements ProfileRepository {
     await _preferences.setString(_keyNickname, generatedNickname);
     await _preferences.setInt(_keyTotalPoints, seedPoints);
     await _preferences.setInt(_keyRank, seedRank);
+    if (normalizedEmail == null) {
+      await _preferences.remove(_keyEmail);
+    } else {
+      await _preferences.setString(_keyEmail, normalizedEmail);
+    }
 
     final UserProfile profile = UserProfile(
       fullName: fullName.trim(),
@@ -130,9 +157,24 @@ class LocalProfileRepository implements ProfileRepository {
       specialty: specialty.trim(),
       totalPoints: seedPoints,
       rank: seedRank,
+      email: normalizedEmail,
     );
 
-    _broadcastProfileUpdate(profile);
+    // When the user opted into recovery, await the sync so an EMAIL_TAKEN
+    // collision surfaces as EmailTakenException before navigation. When no
+    // email was supplied we keep the historic best-effort behaviour: emit
+    // the event and let the background sync run.
+    if (normalizedEmail != null) {
+      _eventBus?.emit(ProfileUpdatedEvent(
+        fullName: profile.fullName,
+        nickname: profile.nickname,
+        facility: profile.facility,
+        specialty: profile.specialty,
+      ));
+      await _syncProfileToServer(profile, rethrowTaken: true);
+    } else {
+      _broadcastProfileUpdate(profile);
+    }
     return profile;
   }
 
@@ -184,6 +226,7 @@ class LocalProfileRepository implements ProfileRepository {
     await _preferences.remove(_keySpecialty);
     await _preferences.remove(_keyTotalPoints);
     await _preferences.remove(_keyRank);
+    await _preferences.remove(_keyEmail);
   }
 
   @override
@@ -269,7 +312,10 @@ class LocalProfileRepository implements ProfileRepository {
     unawaited(_syncProfileToServer(profile));
   }
 
-  Future<void> _syncProfileToServer(UserProfile profile) async {
+  Future<void> _syncProfileToServer(
+    UserProfile profile, {
+    bool rethrowTaken = false,
+  }) async {
     final MedRashHttpClient? httpClient = _httpClient;
     final AuthStateManager? authStateManager = _authStateManager;
     if (httpClient == null || authStateManager == null) {
@@ -294,8 +340,27 @@ class LocalProfileRepository implements ProfileRepository {
           'nickname': profile.nickname,
           'facility': profile.facility,
           'specialty': profile.specialty,
+          // Only include `email` when the local profile actually carries one
+          // so an unrelated profile edit (e.g. nickname change) never clears
+          // a previously-saved recovery email server-side.
+          if (profile.email != null && profile.email!.isNotEmpty) 'email': profile.email,
         },
       });
+    } on MedRashGateException catch (error, stack) {
+      if (rethrowTaken && error.code == 'EMAIL_TAKEN') {
+        final String? serverMessage = error.body['message']?.toString();
+        throw EmailTakenException(
+          (serverMessage != null && serverMessage.isNotEmpty)
+              ? serverMessage
+              : 'That email is already linked to another profile.',
+        );
+      }
+      developer.log(
+        'profile-sync failed; server-side users row will refresh on next attempt-submit',
+        name: 'LocalProfileRepository',
+        error: error,
+        stackTrace: stack,
+      );
     } catch (error, stack) {
       // Best-effort: failure here just leaves app.users stale until the next
       // attempt-submit refreshes it. The local profile is already persisted.
