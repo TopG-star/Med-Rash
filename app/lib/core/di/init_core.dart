@@ -9,6 +9,7 @@ import '../infra/overlay_manager.dart';
 import '../../features/leaderboard/repositories/leaderboard_repository.dart';
 import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_repository.dart';
 import '../../features/profile/repositories/profile_repository.dart';
+import '../../features/profile/repositories/recovery_repository.dart';
 import '../../features/quiz/repositories/netlify_supabase_quiz_repository.dart';
 import '../../features/quiz/repositories/quiz_repository.dart';
 import '../../features/quiz/storage/quiz_attempt_store.dart';
@@ -78,6 +79,13 @@ Future<void> initCore() async {
       profileRepository: getIt<ProfileRepository>(),
       eventBus: getIt<EventBus>(),
       fallback: InMemoryLeaderboardRepository(),
+    ),
+  );
+
+  getIt.registerLazySingleton<RecoveryRepository>(
+    () => NetlifyRecoveryRepository(
+      httpClient: getIt<MedRashHttpClient>(),
+      authStateManager: getIt<AuthStateManager>(),
     ),
   );
 

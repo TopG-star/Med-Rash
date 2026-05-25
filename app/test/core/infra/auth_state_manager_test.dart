@@ -194,4 +194,41 @@ void main() {
       expect(prefs.getBool(_boundProfileKey), isTrue);
     });
   });
+
+  group('AuthStateManager.adoptRecoveredIdentity', () {
+    test('swaps the participant id, keeps the device, marks profile bound',
+        () async {
+      final AuthStateManager auth = await _bootAuth();
+      final String? originalDevice = auth.deviceId;
+      expect(originalDevice, isNotNull);
+
+      await auth.adoptRecoveredIdentity(
+        participantId: 'pid-recovered',
+        deviceInstallId: originalDevice!,
+      );
+
+      expect(auth.participantId, 'pid-recovered');
+      expect(auth.deviceId, originalDevice);
+      expect(auth.hasProfile, isTrue);
+      expect(auth.lastSignedOutSnapshot, isNull);
+
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString(_participantKey), 'pid-recovered');
+      expect(prefs.getString(_deviceKey), originalDevice);
+      expect(prefs.getBool(_boundProfileKey), isTrue);
+    });
+
+    test('also clears any stale soft-sign-out snapshot', () async {
+      final AuthStateManager auth = await _bootAuth();
+      await auth.signOut(keepDeviceId: true, profile: _profile);
+      expect(auth.lastSignedOutSnapshot, isNotNull);
+
+      await auth.adoptRecoveredIdentity(
+        participantId: 'pid-new',
+        deviceInstallId: auth.deviceId!,
+      );
+
+      expect(auth.lastSignedOutSnapshot, isNull);
+    });
+  });
 }

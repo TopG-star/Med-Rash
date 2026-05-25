@@ -326,4 +326,9 @@ class _StubProfileRepository implements ProfileRepository {
   Future<UserProfile> restoreFromSnapshot(IdentitySnapshot snapshot) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UserProfile> persistRecoveredProfile(UserProfile profile) {
+    throw UnimplementedError();
+  }
 }

@@ -264,3 +264,140 @@ function isEmailUniqueViolation(error: PostgrestError): boolean {
 export function isUniqueViolation(error: PostgrestError): boolean {
   return error.code === "23505";
 }
+
+// ---------------------------------------------------------------------------
+// Slice 6b — OTP-confirmed identity recovery on a new device.
+// ---------------------------------------------------------------------------
+
+// Anon-keyed Supabase client used purely for the auth OTP endpoints
+// (signInWithOtp / verifyOtp). The service-role client cannot trigger an
+// email delivery — that path requires the public auth API context.
+let authClient: SupabaseClient | null = null;
+
+export function getSupabaseAuthClient(): SupabaseClient {
+  if (authClient) {
+    return authClient;
+  }
+
+  const url = process.env.SUPABASE_URL?.trim();
+  const anonKey = process.env.SUPABASE_ANON_KEY?.trim();
+
+  if (!url || !anonKey) {
+    throw new Error("SUPABASE_URL and SUPABASE_ANON_KEY must be configured for recovery OTP.");
+  }
+
+  authClient = createClient(url, anonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  return authClient;
+}
+
+export type RecoveryUserRow = {
+  id: string;
+  fullName: string;
+  nickname: string;
+  facility: string;
+  specialty: string;
+  email: string | null;
+  claimedAuthUserId: string | null;
+};
+
+// Looks up an app.users row by the recovery email captured in 6a. Comparison
+// is case-insensitive via the partial unique index users_email_lower_idx.
+// Returns null when no profile carries that email (the caller maps this to
+// PROFILE_NOT_FOUND on the recover-request endpoint).
+export async function findUserByRecoveryEmail(
+  supabase: SupabaseClient,
+  rawEmail: string,
+): Promise<RecoveryUserRow | null> {
+  const normalized = rawEmail.trim().toLowerCase();
+  if (!normalized || !EMAIL_REGEX.test(normalized) || normalized.length > 254) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, full_name, nickname, facility, specialty, email, claimed_auth_user_id")
+    .ilike("email", normalized)
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Recovery lookup failed: ${error.message}`);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const row = data as Record<string, unknown>;
+  return {
+    id: String(row.id),
+    fullName: String(row.full_name ?? ""),
+    nickname: String(row.nickname ?? ""),
+    facility: String(row.facility ?? ""),
+    specialty: String(row.specialty ?? ""),
+    email: row.email == null ? null : String(row.email),
+    claimedAuthUserId: row.claimed_auth_user_id == null ? null : String(row.claimed_auth_user_id),
+  };
+}
+
+// Sets app.users.claimed_auth_user_id once an OTP has been verified. Called
+// only after Supabase Auth confirms the email belongs to the verifier.
+// claimed_auth_user_id is UNIQUE on app.users (migration 001), so attempting
+// to bind a Supabase Auth user that already claims a different profile is
+// surfaced as a 23505 the caller can map to a clean error.
+export async function setClaimedAuthUserId(
+  supabase: SupabaseClient,
+  userId: string,
+  authUserId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("users")
+    .update({ claimed_auth_user_id: authUserId })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error(`Failed to bind auth user: ${error.message}`);
+  }
+}
+
+// Re-points the new-device guest user_id (source) onto the recovered
+// user_id (target) inside a single Postgres transaction. See
+// supabase/migrations/011_user_recovery_merge.sql for the dedup policy
+// (ranked best-score wins, learning attempts move wholesale, devices
+// rotate, session_join_events collide-then-drop).
+export async function mergeUserInto(
+  supabase: SupabaseClient,
+  sourceUserId: string,
+  targetUserId: string,
+): Promise<void> {
+  if (sourceUserId === targetUserId) {
+    return;
+  }
+
+  const { error } = await supabase.rpc("merge_user_into", {
+    source_user_id: sourceUserId,
+    target_user_id: targetUserId,
+  });
+
+  if (error) {
+    throw new Error(`Failed to merge users: ${error.message}`);
+  }
+}
+
+// Rotates a device install onto an arbitrary user_id. Same shape as the
+// internal upsertUserDevice used during normal identity resolution, but
+// exported so the recovery endpoint can rebind without going through
+// resolveOrCreateUserId (which would also rewrite the profile fields).
+export async function bindDeviceToUser(
+  supabase: SupabaseClient,
+  userId: string,
+  deviceInstallId: string,
+): Promise<void> {
+  await upsertUserDevice(supabase, userId, deviceInstallId);
+}

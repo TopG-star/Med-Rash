@@ -32,7 +32,12 @@ AuthRedirectDecision computeAuthRedirect({
   required String? Function(String?) safeNext,
 }) {
   final bool joining = matchedLocation == '/join';
-  if (!hasProfile && !joining) {
+  // /recover is a guest-allowed route too: a freshly-installed user reaches
+  // it from QuickJoin's "Already have a profile?" link before any local
+  // profile is bound. We let the user pass through regardless of profile
+  // state so both pre- and post-onboarding recovery work from one route.
+  final bool recovering = matchedLocation == '/recover';
+  if (!hasProfile && !joining && !recovering) {
     if (fastJoinEnabled && _isSessionPath(matchedLocation)) {
       return const AuthRedirectDecision(fastJoin: true);
     }

@@ -139,4 +139,25 @@ class AuthStateManager extends ChangeNotifier {
     _lastSignedOutSnapshot = null;
     notifyListeners();
   }
+
+  /// Replaces the on-device participant id with one recovered from the
+  /// server (slice 6b OTP rebind). The device install id is preserved
+  /// because the server has already merged the freshly-minted guest user
+  /// into the recovered profile; any future call from this device must
+  /// resolve to the recovered participant.
+  Future<void> adoptRecoveredIdentity({
+    required String participantId,
+    required String deviceInstallId,
+  }) async {
+    await _deviceIdentityService.adoptRecoveredIdentity(
+      participantId: participantId,
+      deviceInstallId: deviceInstallId,
+    );
+    await _deviceIdentityService.clearSnapshot();
+    _deviceId = deviceInstallId;
+    _participantId = participantId;
+    _hasProfile = true;
+    _lastSignedOutSnapshot = null;
+    notifyListeners();
+  }
 }

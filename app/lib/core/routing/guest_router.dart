@@ -1,6 +1,7 @@
 import 'package:go_router/go_router.dart';
 
 import '../../features/profile/screens/quick_join_page.dart';
+import '../../features/profile/screens/recovery_page.dart';
 import 'app_router.dart';
 
 List<RouteBase> buildGuestRoutes() {
@@ -10,6 +11,10 @@ List<RouteBase> buildGuestRoutes() {
       builder: (_, GoRouterState state) => QuickJoinPage(
         nextPath: safeNextPath(state.uri.queryParameters['next']),
       ),
+    ),
+    GoRoute(
+      path: '/recover',
+      builder: (_, GoRouterState state) => const RecoveryPage(),
     ),
   ];
 }

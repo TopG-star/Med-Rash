@@ -275,6 +275,16 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                   }
                 : null,
           ),
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton(
+              onPressed: () => context.push('/recover'),
+              child: Text(
+                'Already have a profile? Recover \u2192',
+                style: TextStyle(color: tokens.primary, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
         ],
         ),
       ),

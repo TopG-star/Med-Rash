@@ -67,6 +67,12 @@ abstract class ProfileRepository {
   /// reconcile any drift in points/rank.
   Future<UserProfile> restoreFromSnapshot(IdentitySnapshot snapshot);
 
+  /// Persists a profile recovered from the server (slice 6b OTP rebind).
+  /// Unlike [quickJoin] this never POSTs to profile-sync — the recovered row
+  /// already exists server-side. Points/rank reset to zero locally and will
+  /// be reconciled by the next leaderboard fetch.
+  Future<UserProfile> persistRecoveredProfile(UserProfile profile);
+
   /// Increment the persisted career-points counter by [delta]. Called when a
   /// ranked attempt is successfully submitted so the Profile screen reflects
   /// the cumulative score across every quiz the participant has played.
@@ -247,6 +253,35 @@ class LocalProfileRepository implements ProfileRepository {
       rank: snapshot.rank,
     );
     _broadcastProfileUpdate(profile);
+    return profile;
+  }
+
+  @override
+  Future<UserProfile> persistRecoveredProfile(UserProfile profile) async {
+    await _preferences.setString(_keyFullName, profile.fullName);
+    await _preferences.setString(_keyNickname, profile.nickname);
+    await _preferences.setString(_keyFacility, profile.facility);
+    await _preferences.setString(_keySpecialty, profile.specialty);
+    // Points + rank start at 0 locally; the next leaderboard fetch fills the
+    // real numbers in. We don't trust whatever the recover-verify payload
+    // sent because the server-truth view is the leaderboard.
+    await _preferences.setInt(_keyTotalPoints, 0);
+    await _preferences.setInt(_keyRank, 0);
+    final String? email = profile.email;
+    if (email == null || email.isEmpty) {
+      await _preferences.remove(_keyEmail);
+    } else {
+      await _preferences.setString(_keyEmail, email);
+    }
+
+    // Emit but do NOT trigger a server sync — the recovered row already
+    // exists and we'd just round-trip the same data.
+    _eventBus?.emit(ProfileUpdatedEvent(
+      fullName: profile.fullName,
+      nickname: profile.nickname,
+      facility: profile.facility,
+      specialty: profile.specialty,
+    ));
     return profile;
   }
 

@@ -164,4 +164,9 @@ class _NullProfileRepository implements ProfileRepository {
   Future<UserProfile> restoreFromSnapshot(IdentitySnapshot snapshot) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<UserProfile> persistRecoveredProfile(UserProfile profile) {
+    throw UnimplementedError();
+  }
 }

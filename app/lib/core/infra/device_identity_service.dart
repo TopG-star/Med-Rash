@@ -90,6 +90,20 @@ class DeviceIdentityService {
     await _preferences.setBool(_boundProfileKey, true);
   }
 
+  /// Adopts a participant id recovered from the server (slice 6b OTP flow)
+  /// in place of the freshly-minted guest id on this install. The device
+  /// install id is preserved on disk because the server already merged the
+  /// guest user_id into the recovered user_id, so any downstream call keyed
+  /// on this device must now resolve to the recovered participant.
+  Future<void> adoptRecoveredIdentity({
+    required String participantId,
+    required String deviceInstallId,
+  }) async {
+    await _preferences.setString(_deviceKey, deviceInstallId);
+    await _preferences.setString(_participantKey, participantId);
+    await _preferences.setBool(_boundProfileKey, true);
+  }
+
   /// Returns the last soft-sign-out snapshot, or null if absent or expired.
   /// Expired snapshots are eagerly deleted so a stale device never resurrects
   /// a stranger's identity.
