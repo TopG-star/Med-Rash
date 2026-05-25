@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +13,7 @@ import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../session/storage/last_session_store.dart';
 import '../repositories/profile_repository.dart';
 
 class QuickJoinPage extends StatefulWidget {
@@ -32,6 +35,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
   late final AuthStateManager _authStateManager;
   String _specialty = 'Doctor';
   String _nickname = '';
+  String? _pendingJoinCode;
 
   @override
   void initState() {
@@ -40,6 +44,15 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     _authStateManager = getIt<AuthStateManager>();
     _nickname = _profileRepository.generateNickname();
     _authStateManager.addListener(_onAuthChanged);
+    // Capture QR-borne joinCode immediately so a router race or a lost
+    // `nextPath` (e.g. SPA fallback dropping the deep link) cannot orphan
+    // the participant on Mode Selection without a way back to their session.
+    _pendingJoinCode = joinCodeFromNextPath(widget.nextPath);
+    final String? code = _pendingJoinCode;
+    if (code != null) {
+      // Fire-and-forget: a write failure here must not block onboarding.
+      unawaited(getIt<LastSessionStore>().record(code));
+    }
   }
 
   @override
@@ -208,7 +221,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                       await getIt<AuthStateManager>().markJoined();
                     });
                     if (context.mounted) {
-                      context.go(widget.nextPath ?? '/home');
+                      context.go(_postOnboardingDestination());
                     }
                   }
                 : null,
@@ -222,6 +235,21 @@ class _QuickJoinPageState extends State<QuickJoinPage>
   bool get _canStart {
     return _nameController.text.trim().isNotEmpty &&
         _facilityController.text.trim().isNotEmpty;
+  }
+
+  /// Pick the post-onboarding hop. Order of preference:
+  ///   1. QR joinCode captured at page-build time → `/session/<code>` directly.
+  ///      Defensive against `widget.nextPath` getting nulled by a router
+  ///      race (e.g. listenable refresh from `markJoined()` before our
+  ///      explicit `context.go`).
+  ///   2. The raw sanitized `nextPath` we were handed.
+  ///   3. Mode Selection home as the final fallback.
+  String _postOnboardingDestination() {
+    final String? code = _pendingJoinCode;
+    if (code != null && code.isNotEmpty) {
+      return '/session/${Uri.encodeComponent(code)}';
+    }
+    return widget.nextPath ?? '/home';
   }
 }
 
