@@ -49,6 +49,65 @@ async function readErrorSnippet(response) {
   }
 }
 
+async function runParticipantDeepLinkChecks() {
+  // Optional smokes. Skip cleanly when the env var isn't set so the
+  // existing Supabase-only invocation still works unchanged.
+  const appBase = readEnv('MEDRASH_APP_PUBLIC_BASE_URL').replace(/\/+$/, '');
+  const functionsBase = readEnv('MEDRASH_FUNCTIONS_BASE_URL').replace(/\/+$/, '');
+
+  if (!appBase) {
+    console.log(
+      '[hosted-check] SKIP participant deep-link check (MEDRASH_APP_PUBLIC_BASE_URL not set).',
+    );
+  } else {
+    // The participant app is a Flutter SPA. The Netlify rewrite
+    // `/* -> /index.html (200)` is the single most failure-prone piece
+    // of the deep-link contract: when it regresses, a cold visit to
+    // `/session/<code>` 404s before Flutter ever boots and users
+    // assume the QR is broken. Prove the shell is actually served at
+    // both `/` and a representative deep path.
+    const probes = [
+      { label: 'root', url: `${appBase}/` },
+      { label: 'deep-link /session/SMOKE', url: `${appBase}/session/SMOKE` },
+    ];
+    for (const probe of probes) {
+      const response = await fetchWithTimeout(probe.url, {
+        method: 'GET',
+        headers: { Accept: 'text/html' },
+      });
+      if (!response.ok) {
+        const snippet = await readErrorSnippet(response);
+        throw new Error(
+          `Participant ${probe.label} probe failed (${response.status} ${response.statusText}): ${snippet}`,
+        );
+      }
+      const body = await response.text();
+      if (!body.includes('flutter_bootstrap.js')) {
+        throw new Error(
+          `Participant ${probe.label} probe at ${probe.url} returned 200 but body did not contain 'flutter_bootstrap.js' (SPA fallback or wrong site?). First 280 chars: ${body.trim().slice(0, 280)}`,
+        );
+      }
+      console.log(`[hosted-check] Participant ${probe.label} probe passed.`);
+    }
+  }
+
+  if (!functionsBase) {
+    console.log(
+      '[hosted-check] SKIP functions health check (MEDRASH_FUNCTIONS_BASE_URL not set).',
+    );
+    return;
+  }
+  const healthUrl = `${functionsBase}/health`;
+  const healthResponse = await fetchWithTimeout(healthUrl, { method: 'GET' });
+  if (!healthResponse.ok) {
+    const snippet = await readErrorSnippet(healthResponse);
+    throw new Error(
+      `Functions health check failed at ${healthUrl} (${healthResponse.status} ${healthResponse.statusText}): ${snippet}`,
+    );
+  }
+  console.log(`[hosted-check] Functions health check passed (${healthUrl}).`);
+}
+
 async function run() {
   const supabaseUrl = ensureEnv('SUPABASE_URL').replace(/\/+$/, '');
   const serviceRoleKey = ensureEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -99,6 +158,8 @@ async function run() {
 
     console.log(`[hosted-check] Table '${table}' reachable.`);
   }
+
+  await runParticipantDeepLinkChecks();
 
   console.log('[hosted-check] Hosted Supabase smoke checks passed.');
 }

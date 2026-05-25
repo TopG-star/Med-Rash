@@ -98,17 +98,25 @@ service-role key and all 7 required tables respond.
 ```pwsh
 $env:SUPABASE_URL = "https://<ref>.supabase.co"
 $env:SUPABASE_SERVICE_ROLE_KEY = "<paste service role here>"
+# Optional — when set, also smoke the participant SPA + functions origin:
+$env:MEDRASH_APP_PUBLIC_BASE_URL = "https://<participant-site>.netlify.app"
+$env:MEDRASH_FUNCTIONS_BASE_URL  = "https://<admin-site>.netlify.app/.netlify/functions"
 node ./scripts/hosted-check.mjs
 ```
 
 Expected output: `Connectivity check passed` followed by `Table 'X'
 reachable` for users, quizzes, questions, sessions, attempts, answers,
-session_join_events. Any failure aborts the deploy plan.
+session_join_events. When the two optional URLs are set, the script
+also asserts `/` and `/session/SMOKE` return the Flutter shell (proving
+the SPA fallback is wired) and that `/.netlify/functions/health`
+returns 200. Any failure aborts the deploy plan.
 
 After the run:
 ```pwsh
 Remove-Item Env:SUPABASE_URL
 Remove-Item Env:SUPABASE_SERVICE_ROLE_KEY
+Remove-Item Env:MEDRASH_APP_PUBLIC_BASE_URL -ErrorAction SilentlyContinue
+Remove-Item Env:MEDRASH_FUNCTIONS_BASE_URL  -ErrorAction SilentlyContinue
 ```
 
 ---
