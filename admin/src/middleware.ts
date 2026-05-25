@@ -53,6 +53,12 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // Exclude Next.js internals, static assets, AND /.netlify/* so that
+    // Netlify Functions (e.g. /.netlify/functions/session-resolve called
+    // by the Flutter participant app) are dispatched by Netlify's edge
+    // BEFORE Next.js middleware runs. Without the /.netlify/ exclusion,
+    // unauthenticated function calls get 307-redirected to /login,
+    // breaking every cross-origin participant API call.
+    "/((?!_next/static|_next/image|favicon.ico|\\.netlify/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

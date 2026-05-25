@@ -98,11 +98,32 @@ async function runParticipantDeepLinkChecks() {
     return;
   }
   const healthUrl = `${functionsBase}/health`;
-  const healthResponse = await fetchWithTimeout(healthUrl, { method: 'GET' });
+  // redirect: 'manual' so a stray middleware redirect (e.g. Next.js
+  // matcher accidentally claiming /.netlify/functions/*) surfaces as a
+  // 3xx with Location pointing at /login instead of silently following
+  // through to an HTML page that masquerades as a 200 success.
+  const healthResponse = await fetchWithTimeout(healthUrl, {
+    method: 'GET',
+    redirect: 'manual',
+  });
+  if (healthResponse.status >= 300 && healthResponse.status < 400) {
+    const location = healthResponse.headers.get('location') ?? '(none)';
+    throw new Error(
+      `Functions health check at ${healthUrl} returned ${healthResponse.status} redirect to '${location}'. ` +
+        `This usually means the admin Next.js middleware matcher is intercepting /.netlify/functions/* before Netlify can dispatch the function. ` +
+        `Confirm admin/src/middleware.ts excludes \\\\.netlify/ from its matcher.`,
+    );
+  }
   if (!healthResponse.ok) {
     const snippet = await readErrorSnippet(healthResponse);
     throw new Error(
       `Functions health check failed at ${healthUrl} (${healthResponse.status} ${healthResponse.statusText}): ${snippet}`,
+    );
+  }
+  const healthBody = await healthResponse.text();
+  if (!healthBody.includes('"status":"ok"')) {
+    throw new Error(
+      `Functions health check at ${healthUrl} returned 200 but body did not contain '"status":"ok"'. First 280 chars: ${healthBody.trim().slice(0, 280)}`,
     );
   }
   console.log(`[hosted-check] Functions health check passed (${healthUrl}).`);
