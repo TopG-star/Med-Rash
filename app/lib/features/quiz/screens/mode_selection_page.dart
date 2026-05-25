@@ -13,6 +13,7 @@ import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../session/events/last_session_recorded_event.dart';
 import '../../session/storage/last_session_store.dart';
+import '../../profile/widgets/complete_profile_banner.dart';
 
 /// Front-door landing page introduced in Slice 2a of the QR-deep-link
 /// workstream. Surfaces three primary entry points (Live / Ranked / Learn)
@@ -67,6 +68,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
       actions: const <Widget>[IdentityBadge()],
       child: ListView(
         children: <Widget>[
+          const CompleteProfileBanner(),
           Text(
             MedRashStrings.modeSelectionIntro,
             style: theme.textTheme.bodyLarge,

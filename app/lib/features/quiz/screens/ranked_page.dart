@@ -13,6 +13,7 @@ import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../models/quiz.dart';
 import '../repositories/quiz_repository.dart';
 import '../storage/ranked_best_score_store.dart';
+import '../../profile/widgets/complete_profile_banner.dart';
 
 /// Ranked tab. Lists active quizzes and surfaces a gold/silver/bronze badge
 /// on each row reflecting the local device's best ranked score (Slice 2c).
@@ -61,6 +62,7 @@ class _RankedPageState extends State<RankedPage> {
           final List<Quiz> quizzes = snapshot.data!;
           return ListView(
             children: <Widget>[
+              const CompleteProfileBanner(),
               Text(
                 MedRashStrings.rankedIntro,
                 style: Theme.of(context).textTheme.bodyLarge,

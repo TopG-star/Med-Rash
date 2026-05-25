@@ -10,6 +10,7 @@ import '../../features/leaderboard/repositories/leaderboard_repository.dart';
 import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_repository.dart';
 import '../../features/profile/repositories/profile_repository.dart';
 import '../../features/profile/repositories/recovery_repository.dart';
+import '../../features/profile/storage/guest_profile_prompt_store.dart';
 import '../../features/quiz/repositories/netlify_supabase_quiz_repository.dart';
 import '../../features/quiz/repositories/quiz_repository.dart';
 import '../../features/quiz/storage/quiz_attempt_store.dart';
@@ -66,6 +67,9 @@ Future<void> initCore() async {
   getIt.registerLazySingleton<RankedBestScoreStore>(
     () => RankedBestScoreStore(preferences, eventBus: getIt<EventBus>()),
   );
+  getIt.registerLazySingleton<GuestProfilePromptStore>(
+    () => GuestProfilePromptStore(preferences, eventBus: getIt<EventBus>()),
+  );
   final AuthStateManager authStateManager = AuthStateManager(
     deviceIdentityService: getIt<DeviceIdentityService>(),
   );
@@ -92,4 +96,11 @@ Future<void> initCore() async {
   // Hydrate persisted quiz state (active attempt + cached completed snapshot)
   // and best-effort seed live quiz data before any screen tries to use it.
   await getIt<QuizRepository>().initialize();
+
+  // Eagerly construct stores whose constructors subscribe to global events
+  // we cannot afford to miss before any UI reads them. The GuestProfilePromptStore
+  // listens for AttemptSubmittedEvent — that event typically fires from
+  // QuizResultPage on the QR-deep-link path BEFORE the participant ever
+  // visits Home/Ranked (which are where the store is otherwise first read).
+  getIt<GuestProfilePromptStore>();
 }
