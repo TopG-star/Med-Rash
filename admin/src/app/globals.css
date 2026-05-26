@@ -63,3 +63,35 @@ select {
   transform: translate(4px, 4px);
   box-shadow: none;
 }
+
+/*
+ * Dark host control room scope. Applied to a wrapper inside the live
+ * session page so the surrounding admin chrome stays light. Overrides only
+ * the arena CSS variables \u2014 every component on the page picks the dark
+ * palette up automatically through var() lookups.
+ */
+.host-room-dark {
+  --arena-background: #0c0c14;
+  --arena-surface: #181826;
+  --arena-surface-muted: #20203a;
+  --arena-panel: #20203a;
+  --arena-ink: #f4f1ff;
+  --arena-ink-muted: #9a93c2;
+  --arena-outline: #f4f1ff;
+  --arena-outline-muted: #2c2c4a;
+  --arena-shadow: #000000;
+  color: var(--arena-ink);
+  background-color: var(--arena-background);
+  background-image: radial-gradient(rgba(115, 246, 251, 0.08) 1px, transparent 1px);
+  background-size: 18px 18px;
+  border-radius: 20px;
+  padding: 24px;
+  border: 2px solid var(--arena-outline-muted);
+}
+
+.host-room-dark .arena-panel {
+  background: var(--arena-surface);
+  border-color: var(--arena-outline-muted);
+  box-shadow: 4px 4px 0 0 var(--arena-outline-muted);
+  color: var(--arena-ink);
+}

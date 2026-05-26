@@ -343,9 +343,21 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
 
 > Tablet/desktop primary, mobile fallback. This is **new functionality**, not a reskin — MedRash currently has no host-live presenter surface.
 
-- [ ] **3a. Host control room** — dark theme, live audience count, real-time per-option distribution bars, question broadcast, timer.
+- [x] **3a. Host control room** — dark theme, live audience count, real-time per-option distribution bars, question broadcast, timer. *(complete — self-paced model, session-duration countdown, polling kept; Realtime migration deferred to Slice 3d.)*
+  - **Verification (Slice 3a)**
+    - Scope: Admin Next.js live session page (`/sessions/[id]/live`). Flutter side unaffected.
+    - Snapshot query: `getSessionLiveSnapshot` extended with `hostName`, `startsAt`, `endsAt`, `totalQuestions`, `perQuestion[]` (each entry: questionId, prompt, options, correctIndex, totalAnswers, optionCounts[]). Aggregates `app.answers` keyed by `attempt_id IN session attempts` joined with active `app.questions` ordered by `position`.
+    - Hero strip: Host Control Room eyebrow + session name + quiz/host subtitle + yellow "JOIN · <code>" chip + countdown pill that toggles between *Starts in / Ends in / Ended / Open session* tones, ticking once per second client-side.
+    - Metrics row: Joined (audience, with scanned-vs-joined delta), Submitted (with completion %), Last Activity (with refresh stamp). Replaces the prior projector layout.
+    - Answer distribution: `PanelCard "Answer Distribution"` listing every active question with prompt, total-answers chip, and a stack of horizontal bars per option. Correct option marked with green tint + Correct badge. Bars fade to 25% when zero votes. Empty state when no questions are loaded.
+    - Top 5: existing panel preserved inside the dark scope, restyled via CSS vars (no shape change).
+    - Dark theme: `.host-room-dark` CSS class added to `globals.css`, scoped to the host control room wrapper. Overrides `--arena-*` palette to a near-black / muted-violet surface set and re-applies `.arena-panel` box-shadow + outline with the muted outline color. Admin shell chrome stays light.
+    - Polling: existing 3 s `fetch` loop with `AbortController` preserved; Realtime migration tracked separately as Slice 3d.
+    - PASS `npx tsc --noEmit` (0 errors, ~120s).
+    - PASS `npx eslint src/app/sessions/[id]/live src/lib/session-queries.ts` (0 errors).
 - [ ] **3b. QR / share panel** — large QR, copyable join code, deep link.
 - [ ] **3c. End-of-session recap** — final standings, knowledge-gap highlights, export CTA.
+- [ ] **3d. Realtime migration** — replace the 3 s poll on the host control room with Supabase Realtime (Postgres changes on `app.attempts` + `app.answers`, plus a Broadcast channel keyed by session id). Keep polling as a fallback when the Realtime subscription drops.
 - [ ] Dark theme `AppTheme.dark()` wired through (depends on Slice 1a tokens having a dark counterpart — add a Slice 3 sub-step to extend tokens for dark mode).
 
 ---

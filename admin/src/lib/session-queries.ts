@@ -146,11 +146,29 @@ export type SessionLiveTopRow = {
   completedAt: string;
 };
 
+/**
+ * Aggregate per-question distribution across every answer submitted in this
+ * session. Drives the host control room's distribution bars.
+ * `optionCounts[i]` = number of participants who picked option index `i`.
+ */
+export type SessionLiveQuestionStat = {
+  questionId: string;
+  prompt: string;
+  options: string[];
+  correctIndex: number;
+  totalAnswers: number;
+  optionCounts: number[];
+};
+
 export type SessionLiveSnapshot = {
   sessionId: string;
   name: string;
   joinCode: string;
+  hostName: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
   quizTitle: string;
+  totalQuestions: number;
   isActiveNow: boolean;
   joined: number;
   /**
@@ -162,6 +180,7 @@ export type SessionLiveSnapshot = {
   submitted: number;
   lastActivityAt: string | null;
   top5: SessionLiveTopRow[];
+  perQuestion: SessionLiveQuestionStat[];
 };
 
 type LiveAttemptRow = {
@@ -181,9 +200,24 @@ type LiveSessionHeader = {
   id: string;
   name: string;
   join_code: string;
+  host_name: string | null;
+  quiz_id: string;
   starts_at: string | null;
   ends_at: string | null;
   quizzes: { title: string | null } | Array<{ title: string | null }> | null;
+};
+
+type LiveQuestionRow = {
+  id: string;
+  prompt: string;
+  options: unknown;
+  correct_index: number;
+  position: number | null;
+};
+
+type LiveAnswerRow = {
+  question_id: string;
+  selected_index: number;
 };
 
 /**
@@ -199,7 +233,9 @@ export async function getSessionLiveSnapshot(
 
   const { data: headerData, error: headerError } = await supabase
     .from("sessions")
-    .select("id, name, join_code, starts_at, ends_at, quizzes(title)")
+    .select(
+      "id, name, join_code, host_name, quiz_id, starts_at, ends_at, quizzes(title)",
+    )
     .eq("id", sessionId)
     .maybeSingle();
 
@@ -282,16 +318,77 @@ export async function getSessionLiveSnapshot(
   const quizRel = Array.isArray(header.quizzes) ? header.quizzes[0] : header.quizzes;
   const nowMs = Date.now();
 
+  // Per-question distribution. We pull the quiz's active questions and any
+  // answers for attempts belonging to this session, then aggregate counts in
+  // memory. Capped at 500 attempts above so this stays bounded.
+  const { data: questionsData, error: questionsError } = await supabase
+    .from("questions")
+    .select("id, prompt, options, correct_index, position")
+    .eq("quiz_id", header.quiz_id)
+    .eq("is_active", true)
+    .order("position", { ascending: true, nullsFirst: false });
+  if (questionsError) {
+    throw new Error(`Failed to load questions: ${questionsError.message}`);
+  }
+  const questions = (questionsData as LiveQuestionRow[] | null) ?? [];
+
+  const attemptIds = attempts.map((a) => a.id);
+  let answers: LiveAnswerRow[] = [];
+  if (attemptIds.length > 0) {
+    const { data: answersData, error: answersError } = await supabase
+      .from("answers")
+      .select("question_id, selected_index")
+      .in("attempt_id", attemptIds);
+    if (answersError) {
+      throw new Error(`Failed to load answers: ${answersError.message}`);
+    }
+    answers = (answersData as LiveAnswerRow[] | null) ?? [];
+  }
+
+  const countsByQuestion = new Map<string, Map<number, number>>();
+  for (const ans of answers) {
+    let bucket = countsByQuestion.get(ans.question_id);
+    if (!bucket) {
+      bucket = new Map<number, number>();
+      countsByQuestion.set(ans.question_id, bucket);
+    }
+    bucket.set(ans.selected_index, (bucket.get(ans.selected_index) ?? 0) + 1);
+  }
+
+  const perQuestion: SessionLiveQuestionStat[] = questions.map((q) => {
+    const optionsArr = Array.isArray(q.options)
+      ? (q.options as unknown[]).map((o) => String(o))
+      : [];
+    const bucket = countsByQuestion.get(q.id);
+    const optionCounts = optionsArr.map(
+      (_, idx) => bucket?.get(idx) ?? 0,
+    );
+    const totalAnswers = optionCounts.reduce((acc, v) => acc + v, 0);
+    return {
+      questionId: q.id,
+      prompt: q.prompt,
+      options: optionsArr,
+      correctIndex: q.correct_index,
+      totalAnswers,
+      optionCounts,
+    };
+  });
+
   return {
     sessionId: header.id,
     name: header.name,
     joinCode: header.join_code,
+    hostName: header.host_name,
+    startsAt: header.starts_at,
+    endsAt: header.ends_at,
     quizTitle: quizRel?.title ?? "(unknown quiz)",
+    totalQuestions: questions.length,
     isActiveNow: isActiveNow(header.starts_at, header.ends_at, nowMs),
     joined: uniqueUsers.size,
     scanned,
     submitted,
     lastActivityAt: lastActivityMs > 0 ? new Date(lastActivityMs).toISOString() : null,
     top5,
+    perQuestion,
   };
 }
