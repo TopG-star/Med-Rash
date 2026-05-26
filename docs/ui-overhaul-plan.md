@@ -324,7 +324,18 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
         - [x] PASS `flutter analyze` → No issues found (11.8s).
         - [x] PASS `flutter test` → All tests passed (108/108).
         - [ ] Visual smoke on real device — deferred to bundle review after Slice 2h.
-- [ ] **2h. Badges & Achievements** — design-only placeholder (no schema yet); collection grid + tier rings + locked states with "Coming soon" framing on real entries.
+- [x] **2h. Badges & Achievements** *(complete — design-only placeholder)* — collection grid + tier rings + locked states with "Coming soon" framing on real entries.
+    - Route: new `/badges` mounted in [app/lib/core/routing/user_router.dart](app/lib/core/routing/user_router.dart) → `BadgesPage`.
+    - Hero (`_BadgesHero`): pulse-glow gradient backdrop + `ArenaCard` with circular gold badge icon (workspace_premium + glow), Poppins800 'Earn Your Badges', `ArenaChip('COMING SOON')`, and tokenised explainer body.
+    - Collection grid (`_BadgeGrid` / `_BadgeTile`): responsive `GridView.builder` (3 cols mobile / 4 cols ≥600px), six static previews (First Win, Streak x3, Top 10, CME 25, Host x5, Legend) with `Tooltip` hint copy.
+    - Locked ring (`_LockedRing`): 76-px circle on tier surface with 2-px tier-accent border, dimmed tier icon (0.45 opacity), and bottom-right lock badge on `surface` with outline border.
+    - Tier strip (`_TierStrip` / `_TierCard`): three equal-width `ArenaCard`s for Bronze / Silver / Gold with tier-accent icon disc and uppercase Poppins800 label.
+    - Tier styles (`_TierStyle` + `_styleFor`): Bronze = `#B87333` on `#FFEBD6`; Silver = `tokens.tertiary` on `tokens.primarySoft`; Gold = `tokens.onSecondary` on `tokens.secondary`.
+    - No schema, no event wiring, no persistence — every tile is locked and labelled "Coming soon" in the hero, matching the plan's design-only constraint.
+    - Verification *(workspace `c:/Users/USER/Desktop/Personal/medRash`, mode local)*:
+        - [x] PASS `flutter analyze` → No issues found (6.1s).
+        - [x] PASS `flutter test` → All tests passed (108/108).
+        - [ ] Visual smoke on real device — deferred to bundle review.
 
 ---
 

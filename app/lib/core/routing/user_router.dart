@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/badges/screens/badges_page.dart';
 import '../../features/leaderboard/screens/world_rank_page.dart';
 import '../../features/profile/screens/profile_page.dart';
 import '../../features/quiz/models/quiz_detail_launch.dart';
@@ -79,6 +80,10 @@ List<RouteBase> buildUserRoutes() {
     GoRoute(
       path: '/profile',
       builder: (_, __) => const ProfilePage(),
+    ),
+    GoRoute(
+      path: '/badges',
+      builder: (_, __) => const BadgesPage(),
     ),
   ];
 }
