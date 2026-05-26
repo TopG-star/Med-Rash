@@ -9,6 +9,8 @@ import type {
   SessionLiveSnapshot,
 } from "@/lib/session-queries";
 
+import { SharePanel } from "./share-panel";
+
 const POLL_INTERVAL_MS = 3000;
 const COUNTDOWN_TICK_MS = 1000;
 
@@ -77,9 +79,16 @@ function deriveCountdown(
 type LiveViewProps = {
   sessionId: string;
   initial: SessionLiveSnapshot;
+  joinUrl: string | null;
+  joinUrlError: string | null;
 };
 
-export function LiveView({ sessionId, initial }: LiveViewProps) {
+export function LiveView({
+  sessionId,
+  initial,
+  joinUrl,
+  joinUrlError,
+}: LiveViewProps) {
   const [snapshot, setSnapshot] = useState<SessionLiveSnapshot>(initial);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
@@ -176,6 +185,13 @@ export function LiveView({ sessionId, initial }: LiveViewProps) {
           Live refresh failed: {error}. Retrying every 3 seconds.
         </p>
       ) : null}
+
+      <SharePanel
+        sessionName={snapshot.name}
+        joinCode={snapshot.joinCode}
+        joinUrl={joinUrl}
+        configError={joinUrlError}
+      />
 
       <PanelCard title="Answer Distribution">
         {snapshot.perQuestion.length === 0 ? (

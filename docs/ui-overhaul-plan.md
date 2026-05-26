@@ -355,7 +355,14 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
     - Polling: existing 3 s `fetch` loop with `AbortController` preserved; Realtime migration tracked separately as Slice 3d.
     - PASS `npx tsc --noEmit` (0 errors, ~120s).
     - PASS `npx eslint src/app/sessions/[id]/live src/lib/session-queries.ts` (0 errors).
-- [ ] **3b. QR / share panel** — large QR, copyable join code, deep link.
+- [x] **3b. QR / share panel** — large QR, copyable join code, deep link. *(complete — projector-grade share surface embedded inside the host control room.)*
+  - **Verification (Slice 3b)**
+    - Scope: Admin Next.js live session page (`/sessions/[id]/live`). No schema, query, or Flutter changes.
+    - New component `share-panel.tsx`: 320×320 white-card QR (lazy-loaded `qrcode` at width 480, error-correction M), giant Anybody-font join code in yellow with thin-space triplets, full join URL line, **Copy link** + **Open in tab** buttons. Toast feedback ("Copied!") on Clipboard API success; falls back to a modal with an auto-selected read-only input when the Clipboard API is blocked.
+    - Server resolution: `page.tsx` calls `buildSessionJoinUrl(joinCode)` once inside a try/catch and forwards `joinUrl` + `joinUrlError` to `LiveView`. When `MEDRASH_APP_PUBLIC_BASE_URL` is unset, the panel renders with buttons disabled, the QR slot shows a "QR unavailable…" hint, and an amber config-error banner explains the missing env var.
+    - Placement: rendered above `Answer Distribution`, below the metrics row, so it's both visible on first load and easy to project full-screen by scrolling. Inherits `.host-room-dark` palette automatically.
+    - PASS `npx tsc --noEmit` (0 errors).
+    - PASS `npx eslint "src/app/sessions/[id]/live"` (0 errors).
 - [ ] **3c. End-of-session recap** — final standings, knowledge-gap highlights, export CTA.
 - [ ] **3d. Realtime migration** — replace the 3 s poll on the host control room with Supabase Realtime (Postgres changes on `app.attempts` + `app.answers`, plus a Broadcast channel keyed by session id). Keep polling as a fallback when the Realtime subscription drops.
 - [ ] Dark theme `AppTheme.dark()` wired through (depends on Slice 1a tokens having a dark counterpart — add a Slice 3 sub-step to extend tokens for dark mode).
