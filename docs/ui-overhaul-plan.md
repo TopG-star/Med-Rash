@@ -172,19 +172,24 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
 
 ---
 
-### Slice 1b — Responsive breakpoint helpers *(not started)*
+### Slice 1b — Responsive breakpoint helpers *(complete)*
 
 **Goal:** Add screen-shape primitives so participant screens stay mobile-first while host/admin surfaces unlock multi-column layouts on ≥ medium breakpoints.
 
-- [ ] New file `app/lib/core/layout/arena_breakpoints.dart` — exports `Breakpoint { compact, medium, expanded }` enum + `Breakpoint.of(context)` from `MediaQuery.size.width`.
-- [ ] New file `app/lib/core/layout/arena_responsive.dart` — `ResponsiveBuilder` (LayoutBuilder wrapper that yields current Breakpoint), `ResponsiveValue<T>` (pick value by breakpoint).
-- [ ] Audit `MedRashConstrainedBody` — does it stay (cap reading width) or absorb the new helpers? Decision pending.
-- [ ] No screen migrations in this slice; just the primitives.
+> **Note:** Earlier plan called for two new files (`arena_breakpoints.dart` + `arena_responsive.dart`). Reality: `app/lib/core/ui/responsive.dart` already shipped `MedRashBreakpoint { compact, medium, expanded }` + `context.breakpoint` + `MedRashConstrainedBody`. Slice 1b extends the existing module in place rather than duplicating the enum.
 
-#### Verification
+- [x] Extended `app/lib/core/ui/responsive.dart` with `medRashBreakpointForWidth(double)` (pure helper for tests and nested layouts).
+- [x] Added `ResponsiveValue<T>` with `compact` required + `medium`/`expanded` falling back to the next-smaller value (mobile-first ergonomics).
+- [x] Added `ResponsiveBuilder` (LayoutBuilder-backed) so nested layouts can pick rail vs bottom-nav from the locally available width instead of the full-screen MediaQuery.
+- [x] Added `BuildContext.isMedium` helper (we already had `isCompact` + `isExpanded`).
+- [x] Audited `MedRashConstrainedBody` — keep as-is. It caps reading width at 560 dp on `>= medium` screens; the new helpers don't replace that role.
+- [x] No screen migrations in this slice; just the primitives.
 
-- [ ] Unit test for `Breakpoint.of(...)` boundaries.
-- [ ] `flutter analyze` clean.
+#### Verification (Slice 1b)
+
+- **Workspace:** `c:\Users\USER\Desktop\Personal\medRash\app`, mode: local.
+- `flutter analyze` → **PASS** (`No issues found!`).
+- `flutter test test/core/ui/responsive_test.dart` → **PASS** (9/9 new tests: width buckets at 600/1024 boundaries + `ResponsiveValue` fallback + `ResponsiveBuilder` at three sizes).
 
 ---
 

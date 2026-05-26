@@ -32,7 +32,68 @@ extension MedRashBreakpointContext on BuildContext {
   }
 
   bool get isCompact => breakpoint == MedRashBreakpoint.compact;
+  bool get isMedium => breakpoint == MedRashBreakpoint.medium;
   bool get isExpanded => breakpoint == MedRashBreakpoint.expanded;
+}
+
+/// Resolves a [MedRashBreakpoint] from a raw width. Exposed for tests and for
+/// nested layouts that already have a width in hand (e.g. inside a
+/// [LayoutBuilder]) and want to avoid re-reading `MediaQuery`.
+MedRashBreakpoint medRashBreakpointForWidth(double width) {
+  if (width < 600) return MedRashBreakpoint.compact;
+  if (width < 1024) return MedRashBreakpoint.medium;
+  return MedRashBreakpoint.expanded;
+}
+
+/// Picks one value per breakpoint. `medium` and `expanded` fall back to the
+/// next-smaller value when omitted so callers only specify the bucket they
+/// actually care about (mobile-first ergonomics).
+@immutable
+class ResponsiveValue<T> {
+  const ResponsiveValue({
+    required this.compact,
+    this.medium,
+    this.expanded,
+  });
+
+  final T compact;
+  final T? medium;
+  final T? expanded;
+
+  T resolve(MedRashBreakpoint bp) {
+    switch (bp) {
+      case MedRashBreakpoint.compact:
+        return compact;
+      case MedRashBreakpoint.medium:
+        return medium ?? compact;
+      case MedRashBreakpoint.expanded:
+        return expanded ?? medium ?? compact;
+    }
+  }
+
+  T of(BuildContext context) => resolve(context.breakpoint);
+}
+
+/// LayoutBuilder-backed responsive wrapper. Use this inside a nested layout
+/// (rail vs bottom-nav, side panel vs sheet) where a parent may constrain the
+/// child width below the full screen width that `MediaQuery` reports.
+class ResponsiveBuilder extends StatelessWidget {
+  const ResponsiveBuilder({super.key, required this.builder});
+
+  final Widget Function(BuildContext context, MedRashBreakpoint breakpoint)
+      builder;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext ctx, BoxConstraints constraints) {
+        final double width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : MediaQuery.sizeOf(ctx).width;
+        return builder(ctx, medRashBreakpointForWidth(width));
+      },
+    );
+  }
 }
 
 /// Centers and caps the readable width of its child once the screen is wider
