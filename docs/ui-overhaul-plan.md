@@ -310,7 +310,20 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
         - [x] PASS `flutter analyze` → No issues found (19.3s).
         - [x] PASS `flutter test` → All tests passed (108/108).
         - [ ] Visual smoke on real device — deferred to bundle review after Slice 2h.
-- [ ] **2g. Profile** — monogram header, stats tiles, recent attempts, edit form, sign-out modal.
+- [x] **2g. Profile** *(complete)* — monogram header, stats tiles, recent attempts, edit form, sign-out modal.
+    - Hero (`_ProfileHero`): pulse-glow gradient backdrop + `ArenaCard` with a 116-px gold-ringed `MonogramAvatar` (gold border + 18-px gold glow), Poppins800 display name, `@nickname` pill on `primarySoft`, and surfaceMuted meta chips for specialty/facility.
+    - Stats row (`_StatsRow` / `_StatTile`): two equal-width `ArenaCard` tiles with circular icon badges (primary/primarySoft + onSecondary/secondary), `CountUpNumber` values; rank tile formats as `#N` (em-dash when 0).
+    - Edit form: `_SectionLabel('IDENTITY')` over icon-led field cards for Nickname (32-char limit) and Facility, plus `_SpecialtyField` dropdown with `expand_more_rounded` icon and `Haptics.selection` on change.
+    - Save Profile CTA: gold `ArenaButton` wrapped in `PressScale`, fires `Haptics.submit`, swaps to "Saving…" with `_saving` gate to prevent double-submit; preserves `_profileRepository.updateProfile(nickname, facility, specialty)` + snackbar.
+    - Secure-Your-Progress card (`_ClaimAccountCard`): `primarySoft` surface, primary shield icon, gold `SOON` chip, disabled white CTA (behaviour unchanged — still `onPressed: null`).
+    - Sign-Out card (`_SignOutCard`): `dangerSurface` accent with circular `error` icon badge and PressScale-wrapped red CTA.
+    - Sign-out modal (`_SignOutSheet` / `_SignOutOptionCard`): rounded sheet with two `PressScale` option cards (phone icon for keep-device / group icon for rotate) on tokenised surfaces, each with title + helper copy + chevron; preserves both `_SignOutChoice` branches and the full `clearAll → clearActive → clearCompleted → auth.signOut → IdentityResetEvent → /join` flow verbatim.
+    - Recent attempts strip — deferred (no attempt-history repository API in `app/lib/features/profile` or `app/lib/features/quiz` yet); will be re-opened once attempt history is exposed.
+    - Behaviour preserved verbatim: `_loadProfile`, `ProfilePointsUpdatedEvent` listener, dropdown specialty options (Emergency Medicine / Pharmacy / General Practice), Save snackbar, full sign-out cleanup chain, `IdentityResetEvent(keptDeviceId: …)` emission, redirect to `/join`.
+    - Verification *(workspace `c:/Users/USER/Desktop/Personal/medRash`, mode local)*:
+        - [x] PASS `flutter analyze` → No issues found (11.8s).
+        - [x] PASS `flutter test` → All tests passed (108/108).
+        - [ ] Visual smoke on real device — deferred to bundle review after Slice 2h.
 - [ ] **2h. Badges & Achievements** — design-only placeholder (no schema yet); collection grid + tier rings + locked states with "Coming soon" framing on real entries.
 
 ---
