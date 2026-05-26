@@ -1,8 +1,6 @@
 import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
-import { EmptyState } from "@/components/empty-state";
-import { PanelCard } from "@/components/panel-card";
 import { ScopeToggle, type ScopeValue } from "@/components/scope-toggle";
 import { requireAdminSession } from "@/lib/admin-session";
 import { buildSessionJoinUrl } from "@/lib/session-create";
@@ -67,95 +65,105 @@ export default async function SessionsPage({
         ) : null
       }
     >
-      {loadError ? (
-        <PanelCard className="space-y-2">
-          <h2 className="font-[family-name:var(--font-anybody)] text-xl font-extrabold uppercase tracking-tight">
-            Unable to load sessions
-          </h2>
-          <p className="text-sm font-medium text-[var(--arena-ink-muted)]">
-            {loadError}
-          </p>
-          <p className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-            Check that SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and MEDRASH_APP_PUBLIC_BASE_URL are configured.
-          </p>
-        </PanelCard>
-      ) : (
-        <PanelCard title="Create New Session">
-          <SessionCreateForm quizOptions={quizOptions} />
-        </PanelCard>
-      )}
-
-      <PanelCard title="Recent Sessions">
-        {sessions.length === 0 ? (
-          <EmptyState
-            icon={<span>📅</span>}
-            title="No sessions yet"
-            helper="Create one above to generate a QR-coded join link your participants can scan."
-          />
-        ) : (
-          <div className="space-y-4">
-            {sessions.map((session) => {
-              let joinUrl: string | null = null;
-              try {
-                joinUrl = buildSessionJoinUrl(session.joinCode);
-              } catch {
-                joinUrl = null;
-              }
-              return (
-              <div
-                key={session.id}
-                className="arena-panel flex flex-col gap-4 bg-[var(--arena-surface)] p-4 md:flex-row md:items-center md:justify-between"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`h-3 w-3 rounded-full ${session.isActiveNow ? "bg-green-500" : "bg-red-400"}`}
-                      aria-hidden
-                    />
-                    <p className="font-semibold">{session.name}</p>
-                  </div>
-                  <p className="mt-2 text-xs font-bold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-                    Join code · {session.joinCode} · {session.quizTitle}
-                  </p>
-                  <p className="mt-1 text-sm text-[var(--arena-ink-muted)]">
-                    {formatDate(session.startsAt)} → {formatDate(session.endsAt)} ·{" "}
-                    {session.attemptCount} attempt{session.attemptCount === 1 ? "" : "s"}
-                    {session.hostName ? ` · host ${session.hostName}` : ""}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Link
-                    href={`/sessions/${session.id}/live`}
-                    className="arena-button bg-[var(--arena-tertiary)] px-4 py-2 text-sm font-semibold"
-                  >
-                    Live view
-                  </Link>
-                  {joinUrl ? (
-                    <SessionRowActions
-                      sessionName={session.name}
-                      joinCode={session.joinCode}
-                      joinUrl={joinUrl}
-                    />
-                  ) : (
-                    <span className="text-xs font-semibold text-[var(--arena-ink-muted)]">
-                      Set MEDRASH_APP_PUBLIC_BASE_URL to enable Copy link / Show QR.
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="arena-button bg-[var(--arena-primary)] px-4 py-2 text-sm font-semibold opacity-60"
-                    disabled
-                    title="Export ships with Reports wiring."
-                  >
-                    Export Data
-                  </button>
-                </div>
-              </div>
-              );
-            })}
+      <div className="vp-scope vp-vstack vp-vstack-lg">
+        {loadError ? (
+          <div className="vp-card">
+            <h2 className="vp-quiz-title">Unable to load sessions</h2>
+            <p className="vp-quiz-summary">{loadError}</p>
+            <p className="vp-meta-row vp-mt-3">
+              <span>
+                Check that SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and
+                MEDRASH_APP_PUBLIC_BASE_URL are configured.
+              </span>
+            </p>
           </div>
+        ) : (
+          <section className="vp-panel">
+            <div className="vp-panel-head">
+              <h2 className="vp-panel-title">Create New Session</h2>
+            </div>
+            <SessionCreateForm quizOptions={quizOptions} />
+          </section>
         )}
-      </PanelCard>
+
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">Recent Sessions</h2>
+          </div>
+          {sessions.length === 0 ? (
+            <div className="vp-empty">
+              <div className="vp-empty-icon">📅</div>
+              <h3 className="vp-empty-title">No sessions yet</h3>
+              <p className="vp-empty-helper">
+                Create one above to generate a QR-coded join link your
+                participants can scan.
+              </p>
+            </div>
+          ) : (
+            <div className="vp-vstack">
+              {sessions.map((row) => {
+                let joinUrl: string | null = null;
+                try {
+                  joinUrl = buildSessionJoinUrl(row.joinCode);
+                } catch {
+                  joinUrl = null;
+                }
+                return (
+                  <div key={row.id} className="vp-row-card">
+                    <div className="vp-min-w-0">
+                      <p className="vp-row-title">
+                        <span
+                          className={`vp-status-dot ${row.isActiveNow ? "is-live" : "is-idle"}`}
+                          aria-hidden
+                        />
+                        {row.name}
+                      </p>
+                      <p className="vp-meta-row vp-row-meta">
+                        <span>Join code · {row.joinCode}</span>
+                        <span>{row.quizTitle}</span>
+                      </p>
+                      <p className="vp-row-sub">
+                        {formatDate(row.startsAt)} → {formatDate(row.endsAt)} ·{" "}
+                        {row.attemptCount} attempt
+                        {row.attemptCount === 1 ? "" : "s"}
+                        {row.hostName ? ` · host ${row.hostName}` : ""}
+                      </p>
+                    </div>
+                    <div className="vp-row-card-actions">
+                      <Link
+                        href={`/sessions/${row.id}/live`}
+                        className="vp-button vp-button-secondary vp-button-sm"
+                      >
+                        Live view
+                      </Link>
+                      {joinUrl ? (
+                        <SessionRowActions
+                          sessionName={row.name}
+                          joinCode={row.joinCode}
+                          joinUrl={joinUrl}
+                        />
+                      ) : (
+                        <span className="vp-help-text">
+                          Set MEDRASH_APP_PUBLIC_BASE_URL to enable Copy link /
+                          Show QR.
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="vp-button vp-button-primary vp-button-sm vp-disabled-soft"
+                        disabled
+                        title="Export ships with Reports wiring."
+                      >
+                        Export Data
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+      </div>
     </AdminShell>
   );
 }

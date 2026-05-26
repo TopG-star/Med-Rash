@@ -76,26 +76,26 @@ export function SessionCreateForm({ quizOptions }: Props) {
   }
 
   return (
-    <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-      <form action={handleSubmit} className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="md:col-span-2 space-y-2">
-            <span className="text-sm font-semibold">Session Name</span>
+    <div className="vp-split-grid">
+      <form action={handleSubmit} className="vp-vstack-md">
+        <div className="vp-form-grid cols-2">
+          <label className="vp-field col-span-2">
+            <span className="vp-label">Session Name</span>
             <input
               name="name"
               required
               maxLength={120}
-              className="arena-panel w-full px-4 py-3"
+              className="vp-input"
               placeholder="Q3 Cardiology Review"
             />
           </label>
-          <label className="md:col-span-2 space-y-2">
-            <span className="text-sm font-semibold">Select Quiz</span>
+          <label className="vp-field col-span-2">
+            <span className="vp-label">Select Quiz</span>
             <select
               name="quizId"
               required
               defaultValue=""
-              className="arena-panel w-full px-4 py-3"
+              className="vp-select"
               disabled={!hasQuizzes}
             >
               <option value="" disabled>
@@ -110,72 +110,69 @@ export function SessionCreateForm({ quizOptions }: Props) {
               ))}
             </select>
           </label>
-          <label className="md:col-span-2 space-y-2">
-            <span className="text-sm font-semibold">Host (optional)</span>
+          <label className="vp-field col-span-2">
+            <span className="vp-label">Host (optional)</span>
             <input
               name="hostName"
               maxLength={80}
-              className="arena-panel w-full px-4 py-3"
+              className="vp-input"
               placeholder="e.g. Dr. Mensah"
             />
           </label>
-          <label className="md:col-span-2 space-y-2">
-            <span className="text-sm font-semibold">Session Mode</span>
+          <label className="vp-field col-span-2">
+            <span className="vp-label">Session Mode</span>
             <select
               name="mode"
               required
               defaultValue="ranked"
-              className="arena-panel w-full px-4 py-3"
+              className="vp-select"
             >
-              <option value="ranked">Ranked — single official attempt, counts on leaderboard</option>
-              <option value="learning">Learning — unlimited practice, no leaderboard impact</option>
+              <option value="ranked">
+                Ranked — single official attempt, counts on leaderboard
+              </option>
+              <option value="learning">
+                Learning — unlimited practice, no leaderboard impact
+              </option>
             </select>
-            <span className="block text-xs text-[var(--arena-ink-muted)]">
-              Participants land straight in this mode. They can switch only if their ranked attempt is already used.
+            <span className="vp-help-text">
+              Participants land straight in this mode. They can switch only if
+              their ranked attempt is already used.
             </span>
           </label>
-          <label className="space-y-2">
-            <span className="text-sm font-semibold">Starts At (optional)</span>
+          <label className="vp-field">
+            <span className="vp-label">Starts At (optional)</span>
             <input
               name="startsAt"
               type="datetime-local"
-              className="arena-panel w-full px-4 py-3"
+              className="vp-input"
             />
           </label>
-          <label className="space-y-2">
-            <span className="text-sm font-semibold">Ends At (optional)</span>
-            <input
-              name="endsAt"
-              type="datetime-local"
-              className="arena-panel w-full px-4 py-3"
-            />
+          <label className="vp-field">
+            <span className="vp-label">Ends At (optional)</span>
+            <input name="endsAt" type="datetime-local" className="vp-input" />
           </label>
           <button
             type="submit"
             disabled={isPending || !hasQuizzes}
-            className="arena-button md:col-span-2 bg-[var(--arena-primary)] px-5 py-4 font-semibold disabled:opacity-60"
+            className="vp-button vp-button-primary col-span-2"
           >
             {isPending ? "Creating..." : "Generate Link & QR"}
           </button>
         </div>
         {error ? (
-          <p className="text-sm font-semibold text-[var(--arena-danger)]">
-            {error}
-          </p>
+          <p className="vp-banner vp-banner-error">{error}</p>
         ) : null}
       </form>
 
-      <div className="arena-panel space-y-4 bg-[var(--arena-surface)] p-6">
-        <h3 className="font-[family-name:var(--font-anybody)] text-lg font-extrabold uppercase tracking-tight">
-          Preview Area
-        </h3>
+      <div className="vp-preview-pane">
+        <h3 className="vp-preview-title">Preview Area</h3>
         {created ? (
-          <div className="space-y-3">
-            <p className="text-sm font-semibold">{created.sessionName}</p>
-            <p className="text-xs font-bold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
+          <div className="vp-vstack-sm">
+            <p className="vp-preview-prompt">{created.sessionName}</p>
+            <p className="vp-join-code-line">
               Join code · {created.joinCode}
             </p>
-            <div className="flex items-center justify-center rounded-[16px] border-[3px] border-[var(--arena-outline)] bg-white p-4">
+            <div className="vp-qr-frame">
               {created.qrDataUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -185,19 +182,15 @@ export function SessionCreateForm({ quizOptions }: Props) {
                   height={220}
                 />
               ) : (
-                <p className="text-xs font-semibold text-[var(--arena-ink-muted)]">
-                  QR render unavailable.
-                </p>
+                <p className="vp-qr-placeholder-text">QR render unavailable.</p>
               )}
             </div>
-            <p className="break-all text-xs font-medium text-[var(--arena-ink-muted)]">
-              {created.joinUrl}
-            </p>
+            <p className="vp-join-url">{created.joinUrl}</p>
           </div>
         ) : (
-          <div className="flex min-h-72 flex-col items-center justify-center rounded-[16px] bg-[var(--arena-panel)] p-6 text-center">
-            <div className="h-24 w-24 rounded-[16px] border-[3px] border-dashed border-[var(--arena-outline)] bg-[var(--arena-surface)]" />
-            <p className="mt-4 font-semibold">
+          <div className="vp-qr-placeholder">
+            <div className="vp-qr-placeholder-tile" />
+            <p className="vp-qr-placeholder-text">
               Generate a session to preview the QR code and join link.
             </p>
           </div>

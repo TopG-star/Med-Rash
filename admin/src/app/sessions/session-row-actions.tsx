@@ -84,7 +84,7 @@ export function SessionRowActions({ sessionName, joinCode, joinUrl }: Props) {
       <button
         type="button"
         onClick={handleCopy}
-        className="arena-button bg-[var(--arena-secondary)] px-4 py-2 text-sm font-semibold"
+        className="vp-button vp-button-ghost vp-button-sm"
         aria-label={`Copy join link for ${sessionName}`}
       >
         Copy link
@@ -92,7 +92,7 @@ export function SessionRowActions({ sessionName, joinCode, joinUrl }: Props) {
       <button
         type="button"
         onClick={handleShowQr}
-        className="arena-button bg-[var(--arena-primary)] px-4 py-2 text-sm font-semibold"
+        className="vp-button vp-button-primary vp-button-sm"
         aria-label={`Show QR code for ${sessionName}`}
       >
         Show QR
@@ -102,11 +102,7 @@ export function SessionRowActions({ sessionName, joinCode, joinUrl }: Props) {
         <div
           role="status"
           aria-live="polite"
-          className={`pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full border-[3px] border-[var(--arena-outline)] px-5 py-2 text-sm font-extrabold uppercase tracking-[0.05em] shadow-[6px_6px_0_0_var(--arena-outline)] ${
-            toast.kind === "success"
-              ? "bg-[var(--arena-success)] text-white"
-              : "bg-[var(--arena-danger)] text-white"
-          }`}
+          className={`vp-toast ${toast.kind === "success" ? "is-success" : "is-error"}`}
         >
           {toast.message}
         </div>
@@ -117,36 +113,28 @@ export function SessionRowActions({ sessionName, joinCode, joinUrl }: Props) {
           title="Copy join link"
           onClose={() => setShowFallback(false)}
         >
-          <p className="text-sm text-[var(--arena-ink-muted)]">
-            Clipboard access is blocked. Select the link below and copy it manually.
+          <p className="vp-modal-text">
+            Clipboard access is blocked. Select the link below and copy it
+            manually.
           </p>
           <input
             ref={fallbackInputRef}
             readOnly
             value={joinUrl}
             onFocus={(event) => event.currentTarget.select()}
-            className="arena-panel w-full px-3 py-2 text-sm"
+            className="vp-input"
           />
-          <p className="text-xs font-bold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-            Join code · {joinCode}
-          </p>
+          <p className="vp-join-code-line">Join code · {joinCode}</p>
         </ModalShell>
       ) : null}
 
       {showQr ? (
-        <ModalShell
-          title={`QR · ${sessionName}`}
-          onClose={() => setShowQr(false)}
-        >
-          <div className="flex items-center justify-center rounded-[16px] border-[3px] border-[var(--arena-outline)] bg-white p-4">
+        <ModalShell title={`QR · ${sessionName}`} onClose={() => setShowQr(false)}>
+          <div className="vp-qr-frame">
             {qrLoading ? (
-              <p className="text-xs font-semibold text-[var(--arena-ink-muted)]">
-                Rendering…
-              </p>
+              <p className="vp-qr-placeholder-text">Rendering…</p>
             ) : qrError ? (
-              <p className="text-xs font-semibold text-[var(--arena-danger)]">
-                {qrError}
-              </p>
+              <p className="vp-banner vp-banner-error">{qrError}</p>
             ) : qrDataUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -157,16 +145,12 @@ export function SessionRowActions({ sessionName, joinCode, joinUrl }: Props) {
               />
             ) : null}
           </div>
-          <p className="text-xs font-bold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-            Join code · {joinCode}
-          </p>
-          <p className="break-all text-xs font-medium text-[var(--arena-ink-muted)]">
-            {joinUrl}
-          </p>
+          <p className="vp-join-code-line">Join code · {joinCode}</p>
+          <p className="vp-join-url">{joinUrl}</p>
           <button
             type="button"
             onClick={handleCopy}
-            className="arena-button bg-[var(--arena-secondary)] px-4 py-2 text-sm font-semibold"
+            className="vp-button vp-button-secondary vp-button-sm"
           >
             Copy link
           </button>
@@ -196,22 +180,20 @@ function ModalShell({ title, onClose, children }: ModalShellProps) {
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+      className="vp-scope vp-modal-backdrop"
       onClick={onClose}
     >
       <div
-        className="arena-panel w-full max-w-md space-y-3 bg-[var(--arena-surface)] p-5"
+        className="vp-modal-shell"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="font-[family-name:var(--font-anybody)] text-lg font-extrabold uppercase tracking-tight">
-            {title}
-          </h3>
+        <div className="vp-modal-head">
+          <h3 className="vp-modal-title">{title}</h3>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded-full border-[3px] border-[var(--arena-outline)] bg-[var(--arena-panel)] px-3 py-1 text-sm font-bold"
+            className="vp-modal-close"
           >
             ✕
           </button>
