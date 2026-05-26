@@ -193,20 +193,22 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
 
 ---
 
-### Slice 1c — Motion primitives *(not started)*
+### Slice 1c — Motion primitives *(complete)*
 
-**Goal:** Reusable widgets + helpers that consume the `motion*` / `curve*` tokens from 1a. Still no screen migrations.
+**Goal:** Reusable widgets + helpers that consume the `ArenaMotion` durations/curves from 1a. Still no screen migrations.
 
-- [ ] `app/lib/core/motion/press_scale.dart` — wrapper widget that scales child to 0.97 on tap-down, springs back on release. Honors `MediaQuery.disableAnimationsOf`.
-- [ ] `app/lib/core/motion/count_up_number.dart` — `TweenAnimationBuilder<int>` wrapper for score/XP reveals.
-- [ ] `app/lib/core/motion/stagger_list.dart` — entrance stagger for list children (leaderboard rows, badge grid).
-- [ ] `app/lib/core/motion/shared_axis_page.dart` — `CustomTransitionPage` factory for go_router (replaces default slide).
-- [ ] `app/lib/core/motion/haptics.dart` — thin wrapper: `Haptics.selection()` / `.submit()` / `.celebrate()` mapping to light/medium/heavy.
+- [x] `app/lib/core/motion/press_scale.dart` — wrapper widget that scales child to `pressedScale` (default 0.97) on pointer-down, springs back on release. Honours `MediaQuery.disableAnimationsOf`. Opaque hit-testing so empty children still register.
+- [x] `app/lib/core/motion/count_up_number.dart` — `TweenAnimationBuilder<int>` wrapper for score/XP reveals; jumps to final value when reduced-motion is on. Optional `formatter` for thousands/units.
+- [x] `app/lib/core/motion/stagger_list.dart` — single parent `AnimationController` + per-row `Interval` (deterministic, timer-free) for leaderboard rows / badge grids. Reduced-motion path renders children at rest.
+- [x] `app/lib/core/motion/shared_axis_page.dart` — `sharedAxisPage<T>({state, child, duration?})` factory returning go_router `CustomTransitionPage` with fade + 4% x-axis slide; collapses to body widget under reduced-motion.
+- [x] `app/lib/core/motion/haptics.dart` — `Haptics.selection() / .submit() / .celebrate()` mapping to selection-click / medium / heavy. Swallows `MissingPluginException` for web + tests.
 
-#### Verification
+#### Verification *(2025-01 — c:\Users\USER\Desktop\Personal\medRash, local mode)*
 
-- [ ] Widget tests for each primitive (pump animation, assert final scale/value).
-- [ ] `prefers-reduced-motion` honoured (verified via test override).
+- [x] **PASS** `flutter analyze` → No issues found.
+- [x] **PASS** `flutter test test/core/motion/` → 13/13 (3 press-scale, 3 count-up, 2 stagger, 2 shared-axis, 3 haptics).
+- [x] **PASS** `flutter test` (full suite) → 96/96 (prior 83 + 13 new).
+- [x] **PASS** Reduced-motion honoured — verified per primitive via `MediaQuery(data: MediaQueryData(disableAnimations: true), …)` test wrappers.
 
 ---
 
