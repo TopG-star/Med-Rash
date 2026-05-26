@@ -260,7 +260,18 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
         - [x] **PASS** `flutter test` → 108/108 (prior 100 + 8 new `StreakStore` unit tests covering: empty read, first attempt, same-day idempotence, consecutive-day increment + best update, multi-day gap reset, post-grace-day read returning 0, grace-day read still alive, and `clear`). No prior widget test existed for `ModeSelectionPage`.
         - [x] **PASS** Reduced-motion safety — `CountUpNumber`, `PressScale`, `StaggerList`, and `Haptics` all already honour `MediaQuery.disableAnimations` / `MissingPluginException` paths from Slice 1c. The hero glow is a static gradient (no animation), so nothing new to gate.
         - [ ] Visual smoke on real device — deferred to bundle review after Slice 2c–2d so the participant pillar can be eyeballed end-to-end.
-- [ ] **2c. Session-join lobby** — session hero card, host-mode-aware single primary CTA (already correct from Gap 6; just reskin).
+- [x] **2c. Session-join lobby** *(complete)* — Vibrant Pulse reskin of `SessionJoinPage`. Behaviour preserved end-to-end (last-session record + event, `_loadSession`, `_startMode`, guest-nickname prompt + save, `Switch to Learning Mode` fallback when ranked attempt is burned, Gap-6 host-mode-aware single primary CTA).
+    - Hero session card wrapped in a static purple→gold pulse glow (gradient + shadow recipe matching the home hero) with `ArenaChip(session.category)` + gold `ArenaChip('CME')`, Poppins800 `headlineMedium` title, and Inter `bodyMedium` topic line.
+    - Metric tiles replace the grey nested cards with KPI-style white `ArenaCard`s: tinted icon circle, Poppins800 `headlineSmall` value with `height: 1`, uppercase `labelSmall` caption (Questions on primary/primarySoft, Time Limit on onSecondary/secondary).
+    - Host attribution card now uses `MonogramAvatar(source: session.host, …)` on a `primarySoft` surface with uppercase `HOSTED BY` eyebrow.
+    - Primary CTAs (Start Learning / Start Ranked) wrapped in `PressScale` + `Haptics.submit` and styled as gold pill (`secondary` / `onSecondary`); disabled `Ranked Attempt Used` state dims via `Opacity(0.55)` while the secondary `Switch to Learning Mode` button keeps its white outline-pill look.
+    - Guest nickname prompt switches from gold to `primarySoft` `ArenaCard` with white-filled outlined `TextField` (32-char limit, `LengthLimitingTextInputFormatter`), gold pill save button wrapped in `PressScale` + `Haptics.submit`.
+    - Loading and error states adopt `tokens.primary` for the spinner and Poppins copy, with a `PressScale`-wrapped `Retry` gold pill.
+    - **Verification** *(workspace: `c:\Users\USER\Desktop\Personal\medRash`, mode: local)*:
+        - [x] **PASS** `flutter analyze` → No issues found (ran in 11.1s).
+        - [x] **PASS** `flutter test` → 108/108 (unchanged; no widget test exists for `SessionJoinPage` and none was added in this slice — behaviour is exercised by upstream repository/event tests).
+        - [x] **PASS** Reduced-motion safety — `PressScale` and `Haptics` already honour `MediaQuery.disableAnimations` / `MissingPluginException` paths from Slice 1c. Hero glow is a static gradient; no new motion introduced.
+        - [ ] Visual smoke on real device — deferred to bundle review after Slice 2d.
 - [ ] **2d. Quiz Runner** — top gradient progress, category chip, letter-badge option cards, press-scale + haptics, correct/wrong flash.
 - [ ] **2e. Result + post-quiz** — score reveal with count-up, XP bar fill, "what's next" CTAs.
 - [ ] **2f. Leaderboard (World Rank)** — podium top-3 with monogram circles (gold ring on rank 1), scrollable list with stagger-in, sticky "You" row.
