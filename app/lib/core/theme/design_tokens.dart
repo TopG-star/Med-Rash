@@ -6,13 +6,17 @@ class ArenaDesignTokens {
     required this.background,
     required this.surface,
     required this.surfaceMuted,
+    required this.surfaceContainer,
     required this.outline,
     required this.outlineMuted,
     required this.textPrimary,
     required this.textSecondary,
     required this.primary,
     required this.primaryStrong,
+    required this.primarySoft,
     required this.secondary,
+    required this.secondaryStrong,
+    required this.onSecondary,
     required this.tertiary,
     required this.success,
     required this.error,
@@ -20,6 +24,9 @@ class ArenaDesignTokens {
     required this.warningSurface,
     required this.successSurface,
     required this.dangerSurface,
+    required this.rankGold,
+    required this.rankSilver,
+    required this.rankBronze,
     required this.borderWidth,
     required this.shadowOffset,
     required this.radiusLarge,
@@ -31,13 +38,17 @@ class ArenaDesignTokens {
   final Color background;
   final Color surface;
   final Color surfaceMuted;
+  final Color surfaceContainer;
   final Color outline;
   final Color outlineMuted;
   final Color textPrimary;
   final Color textSecondary;
   final Color primary;
   final Color primaryStrong;
+  final Color primarySoft;
   final Color secondary;
+  final Color secondaryStrong;
+  final Color onSecondary;
   final Color tertiary;
   final Color success;
   final Color error;
@@ -45,6 +56,9 @@ class ArenaDesignTokens {
   final Color warningSurface;
   final Color successSurface;
   final Color dangerSurface;
+  final Color rankGold;
+  final Color rankSilver;
+  final Color rankBronze;
   final double borderWidth;
   final double shadowOffset;
   final double radiusLarge;
@@ -53,28 +67,35 @@ class ArenaDesignTokens {
   final double pageMargin;
 
   static const ArenaDesignTokens light = ArenaDesignTokens(
-    background: Color(0xFFF9F9F9),
+    background: Color(0xFFF9F9FB),
     surface: Color(0xFFFFFFFF),
-    surfaceMuted: Color(0xFFEEEEEE),
-    outline: Color(0xFF111111),
-    outlineMuted: Color(0xFFCFC6AF),
-    textPrimary: Color(0xFF1B1B1B),
-    textSecondary: Color(0xFF4C4735),
-    primary: Color(0xFFFFDE59),
-    primaryStrong: Color(0xFF705D00),
-    secondary: Color(0xFF73F6FB),
+    surfaceMuted: Color(0xFFF5F3FA),
+    surfaceContainer: Color(0xFFECEEF0),
+    outline: Color(0xFFE5E0EC),
+    outlineMuted: Color(0xFFF1ECF7),
+    textPrimary: Color(0xFF1E1A2E),
+    textSecondary: Color(0xFF5C5470),
+    primary: Color(0xFF5300B7),
+    primaryStrong: Color(0xFF3D0085),
+    primarySoft: Color(0xFFEBDDFF),
+    secondary: Color(0xFFFFC329),
+    secondaryStrong: Color(0xFFF59E0B),
+    onSecondary: Color(0xFF261A00),
     tertiary: Color(0xFFFFD4E7),
-    success: Color(0xFF2EAD4F),
-    error: Color(0xFFBA1A1A),
-    shadow: Color(0xFF111111),
-    warningSurface: Color(0xFFFFF4E0),
-    successSurface: Color(0xFFE6F4EA),
-    dangerSurface: Color(0xFFFCE4E4),
-    borderWidth: 3,
-    shadowOffset: 4,
-    radiusLarge: 16,
-    radiusMedium: 12,
-    radiusSmall: 8,
+    success: Color(0xFF16A34A),
+    error: Color(0xFFDC2626),
+    shadow: Color(0xFF6D28D9),
+    warningSurface: Color(0xFFFFF7E6),
+    successSurface: Color(0xFFE8F5EC),
+    dangerSurface: Color(0xFFFDECEC),
+    rankGold: Color(0xFFFFC329),
+    rankSilver: Color(0xFFC0C0C0),
+    rankBronze: Color(0xFFCD7F32),
+    borderWidth: 1.5,
+    shadowOffset: 0,
+    radiusLarge: 24,
+    radiusMedium: 16,
+    radiusSmall: 12,
     pageMargin: 20,
   );
 
@@ -82,25 +103,32 @@ class ArenaDesignTokens {
     background: Color(0xFF131313),
     surface: Color(0xFF201F1F),
     surfaceMuted: Color(0xFF2A2A2A),
-    outline: Color(0xFF988D9F),
-    outlineMuted: Color(0xFF4D4354),
+    surfaceContainer: Color(0xFF252329),
+    outline: Color(0xFF3A2E4A),
+    outlineMuted: Color(0xFF2E2538),
     textPrimary: Color(0xFFE5E2E1),
     textSecondary: Color(0xFFCFC2D6),
     primary: Color(0xFFDDB7FF),
-    primaryStrong: Color(0xFF6900B3),
-    secondary: Color(0xFF4AE176),
+    primaryStrong: Color(0xFFB888FF),
+    primarySoft: Color(0xFF3D2B5C),
+    secondary: Color(0xFFFFD562),
+    secondaryStrong: Color(0xFFFFC329),
+    onSecondary: Color(0xFF261A00),
     tertiary: Color(0xFF4CD7F6),
     success: Color(0xFF4AE176),
     error: Color(0xFFFFB4AB),
-    shadow: Color(0xFF313030),
+    shadow: Color(0xFF000000),
     warningSurface: Color(0xFF3A2F0F),
     successSurface: Color(0xFF153D24),
     dangerSurface: Color(0xFF3D1515),
-    borderWidth: 3,
-    shadowOffset: 6,
-    radiusLarge: 16,
-    radiusMedium: 12,
-    radiusSmall: 8,
+    rankGold: Color(0xFFFFD75E),
+    rankSilver: Color(0xFFB7B7B7),
+    rankBronze: Color(0xFFC68A4C),
+    borderWidth: 1.5,
+    shadowOffset: 0,
+    radiusLarge: 24,
+    radiusMedium: 16,
+    radiusSmall: 12,
     pageMargin: 16,
   );
 }
