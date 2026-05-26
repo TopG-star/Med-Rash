@@ -101,7 +101,7 @@ class _LivePageState extends State<LivePage> {
                 const SizedBox(height: 16),
                 ArenaButton(
                   label: MedRashStrings.liveJoinCta,
-                  icon: Icons.login_outlined,
+                  icon: Icons.login_rounded,
                   onPressed: _canSubmit ? _submit : null,
                 ),
               ],
@@ -125,7 +125,7 @@ class _LivePageState extends State<LivePage> {
                 const SizedBox(height: 16),
                 ArenaButton(
                   label: MedRashStrings.liveScanQrCta,
-                  icon: Icons.qr_code_scanner_outlined,
+                  icon: Icons.qr_code_scanner_rounded,
                   backgroundColor: Colors.white,
                   onPressed: _openScanner,
                 ),

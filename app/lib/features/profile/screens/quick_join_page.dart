@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,7 +11,6 @@ import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/theme/theme_extensions.dart';
-import '../../session/storage/last_session_store.dart';
 import '../repositories/profile_repository.dart';
 
 class QuickJoinPage extends StatefulWidget {
@@ -31,18 +28,10 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     with OperationRunnerState<QuickJoinPage> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _facilityController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
   late final ProfileRepository _profileRepository;
   late final AuthStateManager _authStateManager;
   String _specialty = 'Doctor';
   String _nickname = '';
-  String? _pendingJoinCode;
-  String? _emailError;
-
-  // Conservative shape check matched against the trimmed/lowercased value.
-  // Mirrors the server-side EMAIL_REGEX in admin/_shared/supabase.ts so the
-  // user sees the same verdict either way.
-  static final RegExp _emailFormat = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
 
   @override
   void initState() {
@@ -51,15 +40,6 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     _authStateManager = getIt<AuthStateManager>();
     _nickname = _profileRepository.generateNickname();
     _authStateManager.addListener(_onAuthChanged);
-    // Capture QR-borne joinCode immediately so a router race or a lost
-    // `nextPath` (e.g. SPA fallback dropping the deep link) cannot orphan
-    // the participant on Mode Selection without a way back to their session.
-    _pendingJoinCode = joinCodeFromNextPath(widget.nextPath);
-    final String? code = _pendingJoinCode;
-    if (code != null) {
-      // Fire-and-forget: a write failure here must not block onboarding.
-      unawaited(getIt<LastSessionStore>().record(code));
-    }
   }
 
   @override
@@ -67,7 +47,6 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     _authStateManager.removeListener(_onAuthChanged);
     _nameController.dispose();
     _facilityController.dispose();
-    _emailController.dispose();
     super.dispose();
   }
 
@@ -138,29 +117,6 @@ class _QuickJoinPageState extends State<QuickJoinPage>
             onChanged: (_) => setState(() {}),
           ),
           const SizedBox(height: 20),
-          Text('EMAIL (OPTIONAL)', style: Theme.of(context).textTheme.labelMedium),
-          const SizedBox(height: 8),
-          _ArenaTextField(
-            controller: _emailController,
-            hintText: 'you@example.com',
-            keyboardType: TextInputType.emailAddress,
-            onChanged: (_) {
-              if (_emailError != null) {
-                setState(() => _emailError = null);
-              }
-            },
-          ),
-          const SizedBox(height: 6),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: Text(
-              _emailError ?? 'Lets you recover this profile if you switch phones. Skip to stay anonymous.',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _emailError != null ? tokens.error : tokens.textSecondary,
-                  ),
-            ),
-          ),
-          const SizedBox(height: 20),
           Text('SPECIALTY', style: Theme.of(context).textTheme.labelMedium),
           const SizedBox(height: 8),
           ArenaCard(
@@ -201,7 +157,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                 CircleAvatar(
                   radius: 28,
                   backgroundColor: tokens.primary,
-                  child: const Icon(Icons.person, color: Colors.black),
+                  child: const Icon(Icons.person_rounded, color: Colors.black),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -230,7 +186,7 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                       );
                     });
                   },
-                  icon: const Icon(Icons.edit_outlined),
+                  icon: const Icon(Icons.edit_rounded),
                 ),
               ],
             ),
@@ -242,48 +198,20 @@ class _QuickJoinPageState extends State<QuickJoinPage>
                 : 'Start Playing',
             onPressed: _canStart
                 ? () async {
-                    final String? validated = _validateEmail();
-                    if (_emailError != null) {
-                      return;
-                    }
-                    bool emailTaken = false;
-                    String? takenMessage;
                     await runOperation(() async {
-                      try {
-                        await _profileRepository.quickJoin(
-                          fullName: _nameController.text,
-                          facility: _facilityController.text,
-                          specialty: _specialty,
-                          nickname: _nickname,
-                          email: validated,
-                        );
-                        await getIt<AuthStateManager>().markJoined();
-                      } on EmailTakenException catch (error) {
-                        emailTaken = true;
-                        takenMessage = error.message;
-                      }
+                      await _profileRepository.quickJoin(
+                        fullName: _nameController.text,
+                        facility: _facilityController.text,
+                        specialty: _specialty,
+                        nickname: _nickname,
+                      );
+                      await getIt<AuthStateManager>().markJoined();
                     });
-                    if (!context.mounted) return;
-                    if (emailTaken) {
-                      setState(() {
-                        _emailError = takenMessage ??
-                            'That email is already linked to another profile.';
-                      });
-                      return;
+                    if (context.mounted) {
+                      context.go(widget.nextPath ?? '/home');
                     }
-                    context.go(_postOnboardingDestination());
                   }
                 : null,
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: TextButton(
-              onPressed: () => context.push('/recover'),
-              child: Text(
-                'Already have a profile? Recover \u2192',
-                style: TextStyle(color: tokens.primary, fontWeight: FontWeight.w600),
-              ),
-            ),
           ),
         ],
         ),
@@ -295,42 +223,6 @@ class _QuickJoinPageState extends State<QuickJoinPage>
     return _nameController.text.trim().isNotEmpty &&
         _facilityController.text.trim().isNotEmpty;
   }
-
-  /// Validates the optional email input. Returns the normalised value (or
-  /// null for skip) and sets [_emailError] when malformed. Empty input is
-  /// always valid — email is opt-in.
-  String? _validateEmail() {
-    final String raw = _emailController.text.trim().toLowerCase();
-    if (raw.isEmpty) {
-      if (_emailError != null) {
-        setState(() => _emailError = null);
-      }
-      return null;
-    }
-    if (raw.length > 254 || !_emailFormat.hasMatch(raw)) {
-      setState(() => _emailError = 'Enter a valid email or leave the field blank.');
-      return null;
-    }
-    if (_emailError != null) {
-      setState(() => _emailError = null);
-    }
-    return raw;
-  }
-
-  /// Pick the post-onboarding hop. Order of preference:
-  ///   1. QR joinCode captured at page-build time → `/session/<code>` directly.
-  ///      Defensive against `widget.nextPath` getting nulled by a router
-  ///      race (e.g. listenable refresh from `markJoined()` before our
-  ///      explicit `context.go`).
-  ///   2. The raw sanitized `nextPath` we were handed.
-  ///   3. Mode Selection home as the final fallback.
-  String _postOnboardingDestination() {
-    final String? code = _pendingJoinCode;
-    if (code != null && code.isNotEmpty) {
-      return '/session/${Uri.encodeComponent(code)}';
-    }
-    return widget.nextPath ?? '/home';
-  }
 }
 
 class _ArenaTextField extends StatelessWidget {
@@ -338,13 +230,11 @@ class _ArenaTextField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     this.onChanged,
-    this.keyboardType,
   });
 
   final TextEditingController controller;
   final String hintText;
   final ValueChanged<String>? onChanged;
-  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
@@ -354,7 +244,6 @@ class _ArenaTextField extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: TextField(
         controller: controller,
-        keyboardType: keyboardType,
         decoration: InputDecoration(
           hintText: hintText,
           border: InputBorder.none,
@@ -392,7 +281,7 @@ class _ResumeCard extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundColor: tokens.primary,
-                child: const Icon(Icons.person, color: Colors.black),
+                child: const Icon(Icons.person_rounded, color: Colors.black),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -465,7 +354,7 @@ class _SessionContextCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              const Icon(Icons.qr_code_2, color: Colors.black),
+              const Icon(Icons.qr_code_2_rounded, color: Colors.black),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(

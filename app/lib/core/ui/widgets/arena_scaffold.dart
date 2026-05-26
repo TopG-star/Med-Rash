@@ -33,7 +33,7 @@ class ArenaScaffold extends StatelessWidget {
         leading: showBack || showClose
             ? IconButton(
                 onPressed: () => context.pop(),
-                icon: Icon(showClose ? Icons.close : Icons.arrow_back),
+                icon: Icon(showClose ? Icons.close_rounded : Icons.arrow_back_rounded),
               )
             : null,
         actions: actions,

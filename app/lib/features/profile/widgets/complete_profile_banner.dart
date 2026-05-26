@@ -83,7 +83,7 @@ class _CompleteProfileBannerState extends State<CompleteProfileBanner> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Icon(Icons.account_circle_outlined, size: 32),
+            const Icon(Icons.account_circle_rounded, size: 32),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -102,7 +102,7 @@ class _CompleteProfileBannerState extends State<CompleteProfileBanner> {
                   const SizedBox(height: 12),
                   TextButton.icon(
                     onPressed: () => context.go('/profile'),
-                    icon: const Icon(Icons.arrow_forward),
+                    icon: const Icon(Icons.arrow_forward_rounded),
                     label: const Text('Complete profile'),
                   ),
                 ],
@@ -110,7 +110,7 @@ class _CompleteProfileBannerState extends State<CompleteProfileBanner> {
             ),
             IconButton(
               tooltip: 'Dismiss',
-              icon: const Icon(Icons.close),
+              icon: const Icon(Icons.close_rounded),
               onPressed: () => _promptStore.dismiss(),
             ),
           ],

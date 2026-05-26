@@ -78,7 +78,7 @@ class _IdentityBadgeState extends State<IdentityBadge> {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                Icon(Icons.person_outline, size: 16, color: tokens.outline),
+                Icon(Icons.person_rounded, size: 16, color: tokens.outline),
                 const SizedBox(width: 6),
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 140),

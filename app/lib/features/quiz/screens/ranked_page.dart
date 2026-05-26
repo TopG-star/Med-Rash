@@ -139,7 +139,7 @@ class _RankedTierBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.workspace_premium, size: 16, color: style.foreground),
+          Icon(Icons.workspace_premium_rounded, size: 16, color: style.foreground),
           const SizedBox(width: 6),
           Text(
             '${style.label} \u2022 $percent%',

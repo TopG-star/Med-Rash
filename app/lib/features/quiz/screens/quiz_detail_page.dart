@@ -104,7 +104,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                     child: Row(
                       children: <Widget>[
                         Icon(
-                          Icons.menu_book_outlined,
+                          Icons.menu_book_rounded,
                           color: context.arenaTokens.outline,
                         ),
                         const SizedBox(width: 12),
@@ -132,7 +132,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                       color: tokens.warningSurface,
                       child: Row(
                         children: <Widget>[
-                          Icon(Icons.person_pin_outlined, color: tokens.outline),
+                          Icon(Icons.person_pin_rounded, color: tokens.outline),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -190,7 +190,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                   child: ArenaCard(
                     child: Row(
                       children: <Widget>[
-                        const CircleAvatar(child: Icon(Icons.check)),
+                        const CircleAvatar(child: Icon(Icons.check_rounded)),
                         const SizedBox(width: 16),
                         Expanded(child: Text(objective)),
                       ],
@@ -204,7 +204,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                   label: learnOnly
                       ? MedRashStrings.learnStartCta
                       : 'Start Learning',
-                  icon: Icons.menu_book_outlined,
+                  icon: Icons.menu_book_rounded,
                   backgroundColor: learnOnly ? null : Colors.white,
                   onPressed: () => _startMode(quiz, QuizMode.learning),
                 ),
@@ -212,7 +212,7 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                 const SizedBox(height: 16),
                 ArenaButton(
                   label: canStartRanked ? 'Go Ranked' : 'Ranked Attempt Used',
-                  icon: Icons.workspace_premium_outlined,
+                  icon: Icons.workspace_premium_rounded,
                   onPressed:
                       canStartRanked ? () => _startMode(quiz, QuizMode.ranked) : null,
                 ),

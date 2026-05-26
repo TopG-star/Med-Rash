@@ -413,7 +413,7 @@ class _MergeWarningCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Icon(Icons.merge_type, color: tokens.primary),
+            Icon(Icons.merge_type_rounded, color: tokens.primary),
             const SizedBox(width: 12),
             Expanded(
               child: Text(

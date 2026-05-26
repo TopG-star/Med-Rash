@@ -81,28 +81,28 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
           _ModeCard(
             label: MedRashStrings.modeLiveLabel,
             description: MedRashStrings.modeLiveDescription,
-            icon: Icons.podcasts_outlined,
+            icon: Icons.podcasts_rounded,
             onTap: () => context.go('/live'),
           ),
           const SizedBox(height: 16),
           _ModeCard(
             label: MedRashStrings.modeRankedLabel,
             description: MedRashStrings.modeRankedDescription,
-            icon: Icons.workspace_premium_outlined,
+            icon: Icons.workspace_premium_rounded,
             onTap: () => context.go('/ranked'),
           ),
           const SizedBox(height: 16),
           _ModeCard(
             label: MedRashStrings.modeLearnLabel,
             description: MedRashStrings.modeLearnDescription,
-            icon: Icons.menu_book_outlined,
+            icon: Icons.menu_book_rounded,
             onTap: () => context.go('/learn'),
           ),
           const SizedBox(height: 32),
           Center(
             child: TextButton.icon(
               onPressed: () => context.go('/explore'),
-              icon: const Icon(Icons.travel_explore_outlined),
+              icon: const Icon(Icons.travel_explore_rounded),
               label: const Text(MedRashStrings.exploreCta),
             ),
           ),
@@ -128,7 +128,7 @@ class _ContinueLastSessionCard extends StatelessWidget {
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(Icons.history_outlined, color: tokens.outline),
+              Icon(Icons.history_rounded, color: tokens.outline),
               const SizedBox(width: 12),
               Text(
                 MedRashStrings.continueLastSessionTitle,
@@ -144,7 +144,7 @@ class _ContinueLastSessionCard extends StatelessWidget {
           const SizedBox(height: 16),
           ArenaButton(
             label: MedRashStrings.continueLastSessionCta,
-            icon: Icons.play_arrow_outlined,
+            icon: Icons.play_arrow_rounded,
             onPressed: () =>
                 context.go('/session/${Uri.encodeComponent(record.joinCode)}'),
           ),
@@ -213,7 +213,7 @@ class _ModeCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            Icon(Icons.chevron_right, color: tokens.outline),
+            Icon(Icons.chevron_right_rounded, color: tokens.outline),
           ],
         ),
       ),

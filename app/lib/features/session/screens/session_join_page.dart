@@ -162,7 +162,7 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
                   const SizedBox(height: 12),
                   ArenaButton(
                     label: 'Retry',
-                    icon: Icons.refresh,
+                    icon: Icons.refresh_rounded,
                     onPressed: () {
                       setState(() {
                         _futureSession = _loadSession();
@@ -226,8 +226,8 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
                       color: const Color(0xFFF1F1F1),
                       child: Row(
                         children: <Widget>[
-                          Expanded(child: _Metric(icon: Icons.quiz_outlined, value: '${session.questionCount}', label: 'Questions')),
-                          Expanded(child: _Metric(icon: Icons.timer_outlined, value: session.timeLimit, label: 'Time Limit')),
+                          Expanded(child: _Metric(icon: Icons.quiz_rounded, value: '${session.questionCount}', label: 'Questions')),
+                          Expanded(child: _Metric(icon: Icons.timer_rounded, value: session.timeLimit, label: 'Time Limit')),
                         ],
                       ),
                     ),
@@ -236,7 +236,7 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
                       color: const Color(0xFFF8F8F8),
                       child: Row(
                         children: <Widget>[
-                          const CircleAvatar(child: Icon(Icons.person)),
+                          const CircleAvatar(child: Icon(Icons.person_rounded)),
                           const SizedBox(width: 12),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,13 +260,13 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
               if (session.mode == 'learning') ...<Widget>[
                 ArenaButton(
                   label: 'Start Learning Mode',
-                  icon: Icons.school_outlined,
+                  icon: Icons.school_rounded,
                   onPressed: () => _startMode(session, QuizMode.learning),
                 ),
               ] else ...<Widget>[
                 ArenaButton(
                   label: canStartRanked ? 'Start Ranked Mode' : 'Ranked Attempt Used',
-                  icon: Icons.emoji_events_outlined,
+                  icon: Icons.emoji_events_rounded,
                   onPressed:
                       canStartRanked ? () => _startMode(session, QuizMode.ranked) : null,
                 ),
@@ -274,7 +274,7 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
                   const SizedBox(height: 12),
                   ArenaButton(
                     label: 'Switch to Learning Mode',
-                    icon: Icons.school_outlined,
+                    icon: Icons.school_rounded,
                     backgroundColor: Colors.white,
                     onPressed: () => _startMode(session, QuizMode.learning),
                   ),
@@ -375,7 +375,7 @@ class _GuestNicknamePromptState extends State<_GuestNicknamePrompt> {
           const SizedBox(height: 12),
           ArenaButton(
             label: _saving ? 'Saving…' : 'Save nickname',
-            icon: Icons.check,
+            icon: Icons.check_rounded,
             onPressed: _saving ? null : _submit,
           ),
         ],

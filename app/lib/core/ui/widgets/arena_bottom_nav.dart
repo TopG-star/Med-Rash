@@ -44,10 +44,10 @@ class ArenaBottomNav extends StatelessWidget {
       indicatorColor: tokens.primary,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
       destinations: const <NavigationDestination>[
-        NavigationDestination(icon: Icon(Icons.home_outlined), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.bar_chart_outlined), label: 'Rank'),
-        NavigationDestination(icon: Icon(Icons.travel_explore_outlined), label: 'Explore'),
-        NavigationDestination(icon: Icon(Icons.person_outline), label: 'Profile'),
+        NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+        NavigationDestination(icon: Icon(Icons.bar_chart_rounded), label: 'Rank'),
+        NavigationDestination(icon: Icon(Icons.travel_explore_rounded), label: 'Explore'),
+        NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
       ],
     );
   }

@@ -109,7 +109,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close),
+                                icon: const Icon(Icons.close_rounded),
                                 onPressed: _dismissError,
                               ),
                             ],
@@ -124,7 +124,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
           const SizedBox(height: 16),
           ArenaButton(
             label: MedRashStrings.liveScanQrCancel,
-            icon: Icons.keyboard_outlined,
+            icon: Icons.keyboard_rounded,
             backgroundColor: Colors.white,
             onPressed: () => Navigator.of(context).pop<String>(null),
           ),

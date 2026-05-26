@@ -85,7 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ArenaCard(
             child: Column(
               children: <Widget>[
-                const CircleAvatar(radius: 52, child: Icon(Icons.person, size: 44)),
+                const CircleAvatar(radius: 52, child: Icon(Icons.person_rounded, size: 44)),
                 const SizedBox(height: 16),
                 Text(
                   profile.fullName.trim().isEmpty ? profile.nickname : profile.fullName,
@@ -165,7 +165,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 20),
                 const ArenaButton(
                   label: 'Claim Account',
-                  icon: Icons.shield_outlined,
+                  icon: Icons.shield_rounded,
                   onPressed: null,
                 ),
               ],
@@ -207,7 +207,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 const SizedBox(height: 20),
                 ArenaButton(
                   label: 'Sign Out',
-                  icon: Icons.logout,
+                  icon: Icons.logout_rounded,
                   onPressed: _showSignOutSheet,
                 ),
               ],

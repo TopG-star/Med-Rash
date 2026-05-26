@@ -212,18 +212,19 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
 
 ---
 
-### Slice 1d — Icon family pass *(not started)*
+### Slice 1d — Icon family pass *(complete)*
 
 **Goal:** Decide and apply one icon family across the participant app for visual consistency with the reference (which uses rounded outline icons).
 
-- [ ] Decision: Material Symbols Rounded (built-in) vs Phosphor (`phosphor_flutter`) vs lucide. **Tentative recommendation:** Material Symbols Rounded — zero new deps, full Flutter integration, matches reference rounded-cap look.
-- [ ] Pick icon-size scale: `iconSm: 16`, `iconMd: 20`, `iconLg: 24`, `iconXl: 32`. Add as constants in `arena_design_tokens.dart`.
-- [ ] Sweep all icon callsites; replace per-screen `Icons.X` with the rounded variant. (Mechanical — `Icons.account_circle` → `Icons.account_circle_rounded`, etc.)
+- [x] **Decision: Material Symbols Rounded.** Zero new deps, full Flutter integration, matches reference rounded-cap look. Phosphor / lucide deferred — would require font asset + package and offer minimal additional benefit at this stage.
+- [x] Added `MedRashIconSize` (`sm: 16`, `md: 20`, `lg: 24`, `xl: 32`) to `app/lib/core/theme/design_tokens.dart`. Theme-invariant (no light/dark variant), so colocated with `MedRashSpace` rather than expanding `ArenaDesignTokens`.
+- [x] Swept all icon callsites in `app/lib/` — 41 unique tokens across 16 files normalised to `_rounded`. Mappings drop `_outlined` / `_outline` suffixes and add `_rounded` (e.g. `Icons.home_outlined` → `Icons.home_rounded`, `Icons.person_outline` → `Icons.person_rounded`, `Icons.workspace_premium` → `Icons.workspace_premium_rounded`).
 
-#### Verification
+#### Verification *(2025-01 — c:\Users\USER\Desktop\Personal\medRash, local mode)*
 
-- [ ] `flutter analyze` clean.
-- [ ] Visual smoke on 8 screens.
+- [x] **PASS** `flutter analyze` → No issues found (confirms every `_rounded` variant exists in the bundled Material Icons font).
+- [x] **PASS** `flutter test` → 96/96 (no test referenced an icon by exact identifier).
+- [ ] Visual smoke on 8 screens — deferred to Slice 2 per-screen rebuild (icons will be re-verified in context with new layouts).
 
 ---
 

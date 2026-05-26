@@ -146,3 +146,22 @@ class MedRashSpace {
   static const double xl = 24;
   static const double xxl = 32;
 }
+
+/// Icon sizing scale. Use these instead of bare numeric `size:` literals on
+/// `Icon` widgets so glyph rhythm tracks the design system. Theme-invariant
+/// (no light/dark variant needed).
+class MedRashIconSize {
+  const MedRashIconSize._();
+
+  /// 16 dp — inline glyph beside body text, dense chips.
+  static const double sm = 16;
+
+  /// 20 dp — default for buttons, list rows, nav rails.
+  static const double md = 20;
+
+  /// 24 dp — primary affordances, app-bar actions.
+  static const double lg = 24;
+
+  /// 32 dp — hero / empty-state glyphs, large avatars.
+  static const double xl = 32;
+}

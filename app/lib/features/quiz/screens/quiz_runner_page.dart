@@ -165,7 +165,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            const Icon(Icons.cloud_off_outlined, size: 40),
+            const Icon(Icons.cloud_off_rounded, size: 40),
             const SizedBox(height: 12),
             Text(
               'Backend offline',
@@ -192,7 +192,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
             const SizedBox(height: 20),
             ArenaButton(
               label: _retryInFlight ? 'Retrying…' : 'Retry connection',
-              icon: Icons.refresh,
+              icon: Icons.refresh_rounded,
               backgroundColor: tokens.primary,
               onPressed: _retryInFlight ? null : _retryConnection,
             ),
@@ -200,7 +200,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
               const SizedBox(height: 12),
               ArenaButton(
                 label: 'Practice offline (not recorded)',
-                icon: Icons.school_outlined,
+                icon: Icons.school_rounded,
                 backgroundColor: tokens.secondary,
                 onPressed: _retryInFlight ? null : _startOfflinePractice,
               ),
@@ -208,7 +208,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
             const SizedBox(height: 12),
             ArenaButton(
               label: 'Back To Home',
-              icon: Icons.home_outlined,
+              icon: Icons.home_rounded,
               onPressed: () => context.go('/home'),
             ),
           ],
@@ -257,7 +257,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
             return Center(
               child: ArenaButton(
                 label: 'Back To Home',
-                icon: Icons.home_outlined,
+                icon: Icons.home_rounded,
                 onPressed: () => context.go('/home'),
               ),
             );
@@ -275,7 +275,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
                     color: const Color(0xFFE6F4FF),
                     child: Row(
                       children: <Widget>[
-                        const Icon(Icons.restart_alt_outlined),
+                        const Icon(Icons.restart_alt_rounded),
                         const SizedBox(width: 8),
                         const Expanded(
                           child: Text('Resumed your attempt where you left off.'),
@@ -295,7 +295,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
                     color: Color(0xFFFFF4E0),
                     child: Row(
                       children: <Widget>[
-                        Icon(Icons.cloud_off_outlined),
+                        Icon(Icons.cloud_off_rounded),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -426,7 +426,7 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
               const SizedBox(height: 20),
               ArenaButton(
                 label: 'Submit Answer',
-                icon: Icons.arrow_forward,
+                icon: Icons.arrow_forward_rounded,
                 backgroundColor: tokens.secondary,
                 onPressed: _selectedIndex >= 0 ? _submitCurrentAnswer : null,
               ),

@@ -179,7 +179,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const Icon(Icons.error_outline),
+                    const Icon(Icons.error_rounded),
                     const SizedBox(height: 12),
                     Text(
                       snapshot.error.toString(),
@@ -188,7 +188,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                     const SizedBox(height: 20),
                     ArenaButton(
                       label: 'Back To Home',
-                      icon: Icons.home_outlined,
+                      icon: Icons.home_rounded,
                       onPressed: _goHome,
                     ),
                   ],
@@ -212,7 +212,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    const Icon(Icons.info_outline),
+                    const Icon(Icons.info_rounded),
                     const SizedBox(height: 12),
                     const Text(
                       'No completed attempt to display.',
@@ -221,7 +221,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                     const SizedBox(height: 20),
                     ArenaButton(
                       label: 'Back To Home',
-                      icon: Icons.home_outlined,
+                      icon: Icons.home_rounded,
                       onPressed: _goHome,
                     ),
                   ],
@@ -262,7 +262,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                       ),
                       const SizedBox(height: 8),                      Row(
                         children: <Widget>[
-                          const Icon(Icons.cloud_off_outlined),
+                          const Icon(Icons.cloud_off_rounded),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -282,7 +282,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                       const SizedBox(height: 12),
                       ArenaButton(
                         label: _retryInFlight ? MedRashStrings.resultRetryingLabel : MedRashStrings.resultRetryLabel,
-                        icon: Icons.refresh,
+                        icon: Icons.refresh_rounded,
                         backgroundColor: tokens.secondary,
                         onPressed: _retryInFlight ? null : _retrySync,
                       ),
@@ -314,7 +314,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                       const SizedBox(height: 8),
                       Row(
                         children: <Widget>[
-                          Icon(Icons.cloud_done_outlined, color: tokens.success),
+                          Icon(Icons.cloud_done_rounded, color: tokens.success),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -356,7 +356,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
-                            const Icon(Icons.timer_outlined),
+                            const Icon(Icons.timer_rounded),
                             const SizedBox(width: 8),
                             Text('Time: ${attempt.timeLabel} | ${attempt.modeLabel}'),
                           ],
@@ -388,8 +388,8 @@ class _QuizResultPageState extends State<QuizResultPage> {
                             children: <Widget>[
                               Icon(
                                 item.isCorrect
-                                    ? Icons.check_circle_outline
-                                    : Icons.cancel_outlined,
+                                    ? Icons.check_circle_rounded
+                                    : Icons.cancel_rounded,
                                 color: item.isCorrect ? tokens.success : tokens.error,
                               ),
                               const SizedBox(width: 12),
@@ -425,14 +425,14 @@ class _QuizResultPageState extends State<QuizResultPage> {
               ),
               ArenaButton(
                 label: 'Retry Learning',
-                icon: Icons.replay,
+                icon: Icons.replay_rounded,
                 backgroundColor: Colors.white,
                 onPressed: _goHome,
               ),
               const SizedBox(height: 16),
               ArenaButton(
                 label: 'View Leaderboard',
-                icon: Icons.bar_chart,
+                icon: Icons.bar_chart_rounded,
                 backgroundColor: tokens.secondary,
                 onPressed: () => context.go('/leaderboard'),
               ),

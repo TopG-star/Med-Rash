@@ -135,7 +135,7 @@ class _WorldRankPageState extends State<WorldRankPage> {
                         children: <Widget>[
                           Text('#${row.rank}', style: Theme.of(context).textTheme.headlineMedium),
                           const SizedBox(width: 16),
-                          const CircleAvatar(child: Icon(Icons.person)),
+                          const CircleAvatar(child: Icon(Icons.person_rounded)),
                           const SizedBox(width: 16),
                           Expanded(
                             child: Text(
@@ -223,7 +223,7 @@ class _PodiumCard extends StatelessWidget {
                 top: -10,
                 right: -4,
                 child: CircleAvatar(
-                  child: Icon(Icons.star, size: 18),
+                  child: Icon(Icons.star_rounded, size: 18),
                 ),
               ),
             Column(
@@ -231,7 +231,7 @@ class _PodiumCard extends StatelessWidget {
               children: <Widget>[
                 Text('#${row.rank}', style: Theme.of(context).textTheme.headlineLarge),
                 const SizedBox(height: 16),
-                const CircleAvatar(radius: 32, child: Icon(Icons.person)),
+                const CircleAvatar(radius: 32, child: Icon(Icons.person_rounded)),
                 const SizedBox(height: 16),
                 Text(
                   row.name,
