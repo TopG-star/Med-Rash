@@ -286,7 +286,19 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
         - [x] **PASS** `flutter test` → 108/108 (unchanged; no widget test exists for `QuizRunnerPage` and none added in this slice — repository submit/advance logic remains covered by existing repo tests).
         - [x] **PASS** Reduced-motion safety — `QuizProgressBar`, `_OptionTile` AnimatedContainer, and the flash hold-timer all collapse to `Duration.zero` when `MediaQuery.disableAnimations` is true; `PressScale` and `Haptics` already honour the same gate from Slice 1c.
         - [ ] Visual smoke on real device — deferred to bundle review after Slice 2e.
-- [ ] **2e. Result + post-quiz** — score reveal with count-up, XP bar fill, "what's next" CTAs.
+- [x] **2e. Result + post-quiz** *(complete)* — score reveal with count-up, XP bar fill, "what's next" CTAs.
+    - Hero score card: pulse-glow gradient backdrop (primary/secondary), `CountUpNumber` for score (Poppins800 displayLarge, primary) over " / total" subscript, gold `% CORRECT` pill (CountUpNumber-driven), time + mode metric chips.
+    - Headline copy adapts to ratio: Perfect Run / Outstanding / Strong Attempt / Solid Effort / GREAT EFFORT fallback.
+    - Career points bar (`_CareerPointsBar`): purple→gold gradient fill via `TweenAnimationBuilder` (reduced-motion safe), CountUpNumber "+N" trophy badge.
+    - Knowledge Check reskinned: success/danger surface badge per question, prompt in Poppins600, Wrap of "Your answer · X" / "Correct · Y" pills, primarySoft explanation tile with lightbulb icon.
+    - Pending-sync banner moved to warningSurface with onSecondary chip + PressScale-wrapped gold retry button; synced banner uses successSurface + success chip.
+    - "What's next" CTA stack: PressScale + `Haptics.submit` on gold "View Leaderboard" → `/leaderboard`; primarySoft "Back To Home" wraps preserved `_goHome` (clears cached completed snapshot).
+    - Empty/error states unified into `_CenteredCallout` with token-coloured icon + gold CTA.
+    - Behaviour preserved verbatim: `_resolveResult` finalize/cached/none branching, `AttemptSubmittedEvent` subscription + sync toast, `_retrySync`, `_goHome`, Semantics label on hero.
+    - Verification *(workspace `c:/Users/USER/Desktop/Personal/medRash`, mode local)*:
+        - [x] PASS `flutter analyze` → No issues found (9.7s).
+        - [x] PASS `flutter test` → All tests passed (108/108).
+        - [ ] Visual smoke on real device — deferred to bundle review after Slice 2h.
 - [ ] **2f. Leaderboard (World Rank)** — podium top-3 with monogram circles (gold ring on rank 1), scrollable list with stagger-in, sticky "You" row.
 - [ ] **2g. Profile** — monogram header, stats tiles, recent attempts, edit form, sign-out modal.
 - [ ] **2h. Badges & Achievements** — design-only placeholder (no schema yet); collection grid + tier rings + locked states with "Coming soon" framing on real entries.
