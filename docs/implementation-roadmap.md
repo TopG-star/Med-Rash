@@ -28,9 +28,10 @@ The delivery plan assumes the visual system is defined up front and implemented 
 - Slice 4g: admin-users team-management moved to Vibrant Pulse visual system
 - Slice 5: shared admin shell components reskinned (shell, sidebar, scope toggle, user menu)
 - Slice 6: accessibility hardening across the reskinned admin surfaces
+- Slice 7: documentation alignment, closeout artifacts, and rollout notes complete
 
 ### In progress
-- Slice 7: documentation alignment and rollout notes
+- none
 
 ### Verification baseline for completed slices
 - focused diagnostics on touched files via editor Problems API (`get_errors`)
