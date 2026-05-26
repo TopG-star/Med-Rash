@@ -363,7 +363,16 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
     - Placement: rendered above `Answer Distribution`, below the metrics row, so it's both visible on first load and easy to project full-screen by scrolling. Inherits `.host-room-dark` palette automatically.
     - PASS `npx tsc --noEmit` (0 errors).
     - PASS `npx eslint "src/app/sessions/[id]/live"` (0 errors).
-- [ ] **3c. End-of-session recap** — final standings, knowledge-gap highlights, export CTA.
+- [x] **3c. End-of-session recap** — final standings, knowledge-gap highlights, export CTA. *(complete — new `/sessions/[id]/recap` surface, CSV export, dark theatre, linked from control room.)*
+  - **Verification (Slice 3c)**
+    - Scope: Admin Next.js. Added `/sessions/[id]/recap` page + `recap-export` client. Extended `SessionLiveSnapshot.standings` (full sorted list, `top5` is now a slice). Added a "View recap" link in the host control room hero. No schema or Flutter changes.
+    - Hero: session name + quiz/host subtitle + status badge (Scheduled / Live / Ended / Open) tinted to the same green/cyan/pink palette as the control room countdown + "Open control room" link back.
+    - Metric strip (4 tiles): Participants (with scanned subtitle), Submitted (with completion %), Questions (with flagged-below count), Duration (`Xh Ym` from starts_at→ends_at, with timestamp subtitle).
+    - Final Standings: full ordered list with rank chip (gold/cyan/pink for top 3), display name, facility, raw score `score/total`, and percent. Empty state for sessions with zero finishers.
+    - Knowledge Gaps: top 5 answered questions sorted by ascending correct%, each card shows prompt, large tinted correct% (red <40, amber <70, green ≥70), correct option, and `correctCount/totalAnswers got this right`.
+    - Export CSV: client component using existing `serializeCsv` + `csvFilenameSegment`. Columns: Rank, Display Name, Facility, Score, Total Questions, Percent, Completed At, Participant ID. Downloads as `medrash-recap-<sessionName>-<joinCode>.csv` via in-memory Blob → revokeObjectURL. Disabled when standings are empty.
+    - PASS `npx tsc --noEmit` (0 errors).
+    - PASS `npx eslint "src/app/sessions/[id]" "src/lib/session-queries.ts"` (0 errors).
 - [ ] **3d. Realtime migration** — replace the 3 s poll on the host control room with Supabase Realtime (Postgres changes on `app.attempts` + `app.answers`, plus a Broadcast channel keyed by session id). Keep polling as a fallback when the Realtime subscription drops.
 - [ ] Dark theme `AppTheme.dark()` wired through (depends on Slice 1a tokens having a dark counterpart — add a Slice 3 sub-step to extend tokens for dark mode).
 

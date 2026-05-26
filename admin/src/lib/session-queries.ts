@@ -180,6 +180,12 @@ export type SessionLiveSnapshot = {
   submitted: number;
   lastActivityAt: string | null;
   top5: SessionLiveTopRow[];
+  /**
+   * Every completed attempt for this session ordered by score desc then
+   * earliest completion. `top5` is the first five rows of this list — the
+   * recap surface consumes the full list for final standings + CSV export.
+   */
+  standings: SessionLiveTopRow[];
   perQuestion: SessionLiveQuestionStat[];
 };
 
@@ -297,23 +303,8 @@ export async function getSessionLiveSnapshot(
     return ta - tb;
   });
 
-  const top5: SessionLiveTopRow[] = completed.slice(0, 5).map((a) => {
-    const rel = Array.isArray(a.users) ? a.users[0] : a.users;
-    const nickname = rel?.nickname?.trim();
-    const fullName = rel?.full_name?.trim();
-    const displayName =
-      (nickname && nickname.length > 0 ? nickname : null) ??
-      (fullName && fullName.length > 0 ? fullName : null) ??
-      "Anonymous";
-    return {
-      participantId: a.user_id,
-      displayName,
-      facility: rel?.facility ?? null,
-      score: a.score ?? 0,
-      totalQuestions: a.total_questions ?? 0,
-      completedAt: a.completed_at ?? "",
-    };
-  });
+  const top5: SessionLiveTopRow[] = completed.slice(0, 5).map(toTopRow);
+  const standings: SessionLiveTopRow[] = completed.map(toTopRow);
 
   const quizRel = Array.isArray(header.quizzes) ? header.quizzes[0] : header.quizzes;
   const nowMs = Date.now();
@@ -389,6 +380,25 @@ export async function getSessionLiveSnapshot(
     submitted,
     lastActivityAt: lastActivityMs > 0 ? new Date(lastActivityMs).toISOString() : null,
     top5,
+    standings,
     perQuestion,
+  };
+}
+
+function toTopRow(a: LiveAttemptRow): SessionLiveTopRow {
+  const rel = Array.isArray(a.users) ? a.users[0] : a.users;
+  const nickname = rel?.nickname?.trim();
+  const fullName = rel?.full_name?.trim();
+  const displayName =
+    (nickname && nickname.length > 0 ? nickname : null) ??
+    (fullName && fullName.length > 0 ? fullName : null) ??
+    "Anonymous";
+  return {
+    participantId: a.user_id,
+    displayName,
+    facility: rel?.facility ?? null,
+    score: a.score ?? 0,
+    totalQuestions: a.total_questions ?? 0,
+    completedAt: a.completed_at ?? "",
   };
 }

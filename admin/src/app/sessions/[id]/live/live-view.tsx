@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/empty-state";
@@ -144,7 +145,11 @@ export function LiveView({
 
   return (
     <div className="host-room-dark space-y-6">
-      <HeroStrip snapshot={snapshot} countdown={countdown} />
+      <HeroStrip
+        snapshot={snapshot}
+        countdown={countdown}
+        recapHref={`/sessions/${sessionId}/recap`}
+      />
 
       <section className="grid gap-5 md:grid-cols-3">
         <DarkMetric
@@ -255,9 +260,10 @@ export function LiveView({
 type HeroStripProps = {
   snapshot: SessionLiveSnapshot;
   countdown: CountdownState;
+  recapHref: string;
 };
 
-function HeroStrip({ snapshot, countdown }: HeroStripProps) {
+function HeroStrip({ snapshot, countdown, recapHref }: HeroStripProps) {
   const toneClass =
     countdown.tone === "live"
       ? "bg-[#0e3b1e] text-[#7CFFB1]"
@@ -298,6 +304,12 @@ function HeroStrip({ snapshot, countdown }: HeroStripProps) {
             {countdown.value}
           </span>
         </div>
+        <Link
+          href={recapHref}
+          className="arena-button bg-[#FFD4E7] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#1b1b1b]"
+        >
+          View recap
+        </Link>
       </div>
     </section>
   );
