@@ -113,7 +113,7 @@ export default async function IntelligencePage() {
             </div>
             {mostMissed.length === 0 ? (
               <div className="vp-empty">
-                <div className="vp-empty-icon">🔍</div>
+                <div aria-hidden="true" className="vp-empty-icon">🔍</div>
                 <h3 className="vp-empty-title">No answer data yet</h3>
                 <p className="vp-empty-helper">
                   Run a session to populate this panel.
@@ -134,7 +134,7 @@ export default async function IntelligencePage() {
                         {row.incorrectCount}/{row.attemptsCount} wrong
                       </p>
                       <div className="vp-intel-bar-row">
-                        <div className="vp-bar">
+                        <div aria-hidden="true" className="vp-bar">
                           <div
                             className={[
                               "vp-bar-fill",
@@ -160,7 +160,7 @@ export default async function IntelligencePage() {
               </div>
               {facilityPerformance.length === 0 ? (
                 <div className="vp-empty">
-                  <div className="vp-empty-icon">🏥</div>
+                  <div aria-hidden="true" className="vp-empty-icon">🏥</div>
                   <h3 className="vp-empty-title">No facility data</h3>
                   <p className="vp-empty-helper">
                     No completed attempts to rank facilities yet.
@@ -202,7 +202,7 @@ export default async function IntelligencePage() {
               </div>
               {treatmentPerception.length === 0 ? (
                 <div className="vp-empty">
-                  <div className="vp-empty-icon">💊</div>
+                  <div aria-hidden="true" className="vp-empty-icon">💊</div>
                   <h3 className="vp-empty-title">No signals yet</h3>
                   <p className="vp-empty-helper">
                     Tag questions with <code>treatment-perception</code> to

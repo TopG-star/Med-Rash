@@ -51,11 +51,23 @@ export function InviteForm() {
           {pending ? "Sending..." : "Send Invitation"}
         </button>
         {state ? (
-          <span
-            className={`vp-help-text ${state.ok ? "vp-team-note-success" : "vp-team-note-error"}`}
-          >
-            {state.message}
-          </span>
+          state.ok ? (
+            <span
+              role="status"
+              aria-live="polite"
+              className="vp-help-text vp-team-note-success"
+            >
+              {state.message}
+            </span>
+          ) : (
+            <span
+              role="alert"
+              aria-live="assertive"
+              className="vp-help-text vp-team-note-error"
+            >
+              {state.message}
+            </span>
+          )
         ) : null}
       </div>
     </form>

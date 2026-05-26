@@ -48,7 +48,7 @@ export function ScopeToggle({ current, label = "Scope" }: Props) {
       <span className="vp-toggle-label">
         {label}
       </span>
-      <div className="vp-toggle-group" aria-label={label}>
+      <div className="vp-toggle-group" role="group" aria-label={label}>
         <button
           type="button"
           onClick={() => setScope("mine")}
@@ -56,6 +56,9 @@ export function ScopeToggle({ current, label = "Scope" }: Props) {
           className={buttonClass(current === "mine")}
         >
           Mine
+          {current === "mine" ? (
+            <span className="vp-sr-only">Current scope</span>
+          ) : null}
         </button>
         <button
           type="button"
@@ -64,6 +67,9 @@ export function ScopeToggle({ current, label = "Scope" }: Props) {
           className={buttonClass(current === "all")}
         >
           All
+          {current === "all" ? (
+            <span className="vp-sr-only">Current scope</span>
+          ) : null}
         </button>
       </div>
     </div>

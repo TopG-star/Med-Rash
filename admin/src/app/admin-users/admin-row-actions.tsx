@@ -54,7 +54,7 @@ export function AdminRowActions({
 
   if (isSelf) {
     return (
-      <span className="vp-help-text">
+      <span role="status" aria-live="polite" className="vp-help-text">
         You can&rsquo;t modify your own access. Ask another Owner.
       </span>
     );
@@ -91,12 +91,12 @@ export function AdminRowActions({
         </button>
       ) : null}
       {msg ? (
-        <span className="vp-help-text vp-team-note-success">
+        <span role="status" aria-live="polite" className="vp-help-text vp-team-note-success">
           {msg}
         </span>
       ) : null}
       {err ? (
-        <span className="vp-help-text vp-team-note-error">
+        <span role="alert" aria-live="assertive" className="vp-help-text vp-team-note-error">
           {err}
         </span>
       ) : null}

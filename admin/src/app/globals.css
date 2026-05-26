@@ -1969,6 +1969,37 @@ select {
  * AdminShell, AdminSidebar, ScopeToggle, AdminUserMenu.
  * ============================================================ */
 
+.vp-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.vp-skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: -120%;
+  z-index: 60;
+  border-radius: 999px;
+  padding: 0.5rem 0.9rem;
+  background: var(--vp-primary);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.vp-skip-link:focus-visible {
+  top: 0.75rem;
+  outline: 2px solid #ffffff;
+  outline-offset: 3px;
+}
+
 .vp-shell-header {
   display: flex;
   flex-direction: column;
@@ -2109,6 +2140,11 @@ select {
   color: var(--vp-primary-strong);
 }
 
+.vp-sidebar-link:focus-visible {
+  outline: 2px solid var(--vp-primary);
+  outline-offset: 2px;
+}
+
 .vp-sidebar-link:active {
   transform: translateY(1px);
 }
@@ -2174,6 +2210,11 @@ select {
   background: var(--vp-primary);
   color: #ffffff;
   box-shadow: 0 10px 24px -16px rgba(83, 0, 183, 0.8);
+}
+
+.vp-toggle-btn:focus-visible {
+  outline: 2px solid var(--vp-primary);
+  outline-offset: 2px;
 }
 
 .vp-toggle-btn:disabled {

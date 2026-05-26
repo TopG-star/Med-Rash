@@ -65,10 +65,10 @@ export default async function AdminUsersPage() {
             <h2 className="vp-panel-title">Current Team</h2>
           </div>
           {loadError ? (
-            <p className="vp-banner vp-banner-error">{loadError}</p>
+            <p role="alert" className="vp-banner vp-banner-error">{loadError}</p>
           ) : rows.length === 0 ? (
             <div className="vp-empty">
-              <div className="vp-empty-icon">TM</div>
+              <div aria-hidden="true" className="vp-empty-icon">TM</div>
               <h3 className="vp-empty-title">No team members yet</h3>
               <p className="vp-empty-helper">
                 Run the seed script or invite someone above.
@@ -77,13 +77,16 @@ export default async function AdminUsersPage() {
           ) : (
             <div className="vp-table-wrap">
               <table className="vp-table">
+                <caption className="vp-sr-only">
+                  Team members with roles, access status, invite timestamps, and management actions.
+                </caption>
                 <thead>
                   <tr>
-                    <th>Teammate</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Invited</th>
-                    <th>Actions</th>
+                    <th scope="col">Teammate</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Invited</th>
+                    <th scope="col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

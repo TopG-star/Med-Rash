@@ -56,7 +56,7 @@ export function AdminSidebar({ user, onClose }: AdminSidebarProps) {
           </button>
         ) : null}
       </div>
-      <nav className="vp-sidebar-nav">
+      <nav className="vp-sidebar-nav" aria-label="Primary">
         {items.map((item) => {
           const active = pathname.startsWith(item.href);
 
@@ -65,6 +65,7 @@ export function AdminSidebar({ user, onClose }: AdminSidebarProps) {
               key={item.href}
               href={item.href}
               onClick={onClose}
+              aria-current={active ? "page" : undefined}
               className={`vp-sidebar-link ${active ? "is-active" : ""}`}
             >
               {item.label}

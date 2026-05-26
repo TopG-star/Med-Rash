@@ -285,7 +285,7 @@ function MostMissedTable({
   if (rows.length === 0) {
     return (
       <div className="vp-empty">
-        <div className="vp-empty-icon">🔍</div>
+        <div aria-hidden="true" className="vp-empty-icon">🔍</div>
         <h3 className="vp-empty-title">No answered questions match</h3>
         <p className="vp-empty-helper">
           Adjust the filters above, or wait for participants to submit attempts.
@@ -296,14 +296,17 @@ function MostMissedTable({
   return (
     <div className="vp-table-wrap">
       <table className="vp-table">
+        <caption className="vp-sr-only">
+          Top most-missed questions with attempt count, incorrect count, and wrong percentage.
+        </caption>
         <thead>
           <tr>
-            <th>Quiz</th>
-            <th>Prompt</th>
-            <th>Tags</th>
-            <th className="is-right">Attempts</th>
-            <th className="is-right">Incorrect</th>
-            <th className="is-right">Wrong %</th>
+            <th scope="col">Quiz</th>
+            <th scope="col">Prompt</th>
+            <th scope="col">Tags</th>
+            <th scope="col" className="is-right">Attempts</th>
+            <th scope="col" className="is-right">Incorrect</th>
+            <th scope="col" className="is-right">Wrong %</th>
           </tr>
         </thead>
         <tbody>
@@ -346,7 +349,7 @@ function FacilityTable({
   if (rows.length === 0) {
     return (
       <div className="vp-empty">
-        <div className="vp-empty-icon">🏥</div>
+        <div aria-hidden="true" className="vp-empty-icon">🏥</div>
         <h3 className="vp-empty-title">No facility data yet</h3>
         <p className="vp-empty-helper">
           Facilities appear once participants from them complete attempts.
@@ -357,13 +360,16 @@ function FacilityTable({
   return (
     <div className="vp-table-wrap">
       <table className="vp-table">
+        <caption className="vp-sr-only">
+          Facility performance summary with average score, completed attempts, ranked players, and completion percentage.
+        </caption>
         <thead>
           <tr>
-            <th>Facility</th>
-            <th className="is-right">Avg Score</th>
-            <th className="is-right">Completed</th>
-            <th className="is-right">Ranked Players</th>
-            <th className="is-right">Completion %</th>
+            <th scope="col">Facility</th>
+            <th scope="col" className="is-right">Avg Score</th>
+            <th scope="col" className="is-right">Completed</th>
+            <th scope="col" className="is-right">Ranked Players</th>
+            <th scope="col" className="is-right">Completion %</th>
           </tr>
         </thead>
         <tbody>
@@ -405,7 +411,7 @@ function TreatmentTable({
   if (rows.length === 0) {
     return (
       <div className="vp-empty">
-        <div className="vp-empty-icon">💊</div>
+        <div aria-hidden="true" className="vp-empty-icon">💊</div>
         <h3 className="vp-empty-title">No treatment-perception data</h3>
         <p className="vp-empty-helper">
           No questions tagged &lsquo;treatment-perception&rsquo; have wrong
@@ -417,13 +423,16 @@ function TreatmentTable({
   return (
     <div className="vp-table-wrap">
       <table className="vp-table">
+        <caption className="vp-sr-only">
+          Treatment perception signals with clinical area, common wrong option, wrong count, and wrong percentage.
+        </caption>
         <thead>
           <tr>
-            <th>Clinical Area</th>
-            <th>Prompt</th>
-            <th>Top Wrong Option</th>
-            <th className="is-right">Wrong Count</th>
-            <th className="is-right">Wrong %</th>
+            <th scope="col">Clinical Area</th>
+            <th scope="col">Prompt</th>
+            <th scope="col">Top Wrong Option</th>
+            <th scope="col" className="is-right">Wrong Count</th>
+            <th scope="col" className="is-right">Wrong %</th>
           </tr>
         </thead>
         <tbody>
