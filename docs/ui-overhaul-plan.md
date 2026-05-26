@@ -299,7 +299,17 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
         - [x] PASS `flutter analyze` → No issues found (9.7s).
         - [x] PASS `flutter test` → All tests passed (108/108).
         - [ ] Visual smoke on real device — deferred to bundle review after Slice 2h.
-- [ ] **2f. Leaderboard (World Rank)** — podium top-3 with monogram circles (gold ring on rank 1), scrollable list with stagger-in, sticky "You" row.
+- [x] **2f. Leaderboard (World Rank)** *(complete)* — podium top-3 with monogram circles (gold ring on rank 1), scrollable list with stagger-in, sticky "You" row.
+    - Period toggle restyled as `primarySoft` pill with `AnimatedContainer`-driven gradient selector + `PressScale` + `Haptics.selection`; selected pill `primary` with soft glow.
+    - Podium (`_Podium` / `_PodiumColumn`): 2nd left + 1st center (taller, gold `secondary` surface) + 3rd right (`tertiary`). Each column is an `ArenaCard` with rank chip, name, `CountUpNumber` score, and a `MonogramAvatar` floating from a `Positioned` ring above. Champion ring is a 3-px gold border with 18-px gold glow; `workspace_premium_rounded` icon sits above the champion avatar.
+    - Contenders list (`_LeaderRow`): `StaggerList` of `ArenaCard` rows (rank chip + `MonogramAvatar` + name + `CountUpNumber` score + `pts`); current-user row flips to `primarySoft` surface with `primary` rank chip and `YOU` eyebrow.
+    - Sticky "You" card (`_StickyYouCard`): pinned via `Positioned` at the bottom of the `Stack` when the current user exists but is not in the podium; gold-on-primary surface with shadow so it floats above the contenders list (ListView keeps a 96 px bottom inset to avoid overlap).
+    - Empty state (`_EmptyState`): trophy icon + "No rankings yet" + ranked-attempt prompt on a plain `ArenaCard`.
+    - Behaviour preserved verbatim: `LeaderboardRepository.fetchLeaderboard(period:)`, `_switchPeriod` re-fetch, `AttemptSubmittedEvent` listener that re-fetches with current period, `Semantics` rank/name/score per row.
+    - Verification *(workspace `c:/Users/USER/Desktop/Personal/medRash`, mode local)*:
+        - [x] PASS `flutter analyze` → No issues found (19.3s).
+        - [x] PASS `flutter test` → All tests passed (108/108).
+        - [ ] Visual smoke on real device — deferred to bundle review after Slice 2h.
 - [ ] **2g. Profile** — monogram header, stats tiles, recent attempts, edit form, sign-out modal.
 - [ ] **2h. Badges & Achievements** — design-only placeholder (no schema yet); collection grid + tier rings + locked states with "Coming soon" framing on real entries.
 
