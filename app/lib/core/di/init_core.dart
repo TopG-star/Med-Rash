@@ -11,6 +11,7 @@ import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_rep
 import '../../features/profile/repositories/profile_repository.dart';
 import '../../features/profile/repositories/recovery_repository.dart';
 import '../../features/profile/storage/guest_profile_prompt_store.dart';
+import '../../features/profile/storage/streak_store.dart';
 import '../../features/quiz/repositories/netlify_supabase_quiz_repository.dart';
 import '../../features/quiz/repositories/quiz_repository.dart';
 import '../../features/quiz/storage/quiz_attempt_store.dart';
@@ -70,6 +71,9 @@ Future<void> initCore() async {
   getIt.registerLazySingleton<GuestProfilePromptStore>(
     () => GuestProfilePromptStore(preferences, eventBus: getIt<EventBus>()),
   );
+  getIt.registerLazySingleton<StreakStore>(
+    () => StreakStore(preferences, eventBus: getIt<EventBus>()),
+  );
   final AuthStateManager authStateManager = AuthStateManager(
     deviceIdentityService: getIt<DeviceIdentityService>(),
   );
@@ -103,4 +107,7 @@ Future<void> initCore() async {
   // QuizResultPage on the QR-deep-link path BEFORE the participant ever
   // visits Home/Ranked (which are where the store is otherwise first read).
   getIt<GuestProfilePromptStore>();
+  // Same rationale: StreakStore must observe AttemptSubmittedEvent even when
+  // the participant hasn't opened Home yet (e.g. QR-deep-link → quiz → result).
+  getIt<StreakStore>();
 }

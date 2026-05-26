@@ -13,6 +13,25 @@ class MedRashStrings {
   // Mode-selection home (Slice 2a front door)
   static const String modeSelectionIntro =
       'Pick how you want to play. Live for hosted sessions, Ranked for the leaderboard, Learn for unlimited practice.';
+
+  // Home dashboard (Slice 2b)
+  static const String homeGreetingFallback = 'Hello, Champion';
+  static const String homeGreetingTagline =
+      'Ready to sharpen your clinical edge today?';
+  static const String homeFeaturedTagSession = 'Pick up where you left off';
+  static const String homeFeaturedTagRanked = 'Today\u2019s ranked challenge';
+  static const String homeFeaturedTitleRanked = 'Climb the World Rank';
+  static const String homeFeaturedBodyRanked =
+      'One ranked attempt per quiz. Every point counts toward your global standing.';
+  static const String homeFeaturedCtaRanked = 'Start Ranked';
+  static const String homeFeaturedCtaResume = 'Resume session';
+  static const String homeStatsHeading = 'My Stats';
+  static const String homeStatsViewAll = 'View all';
+  static const String homeStatStreak = 'Day Streak';
+  static const String homeStatPoints = 'Career Points';
+  static const String homeStatRank = 'World Rank';
+  static const String homeModesHeading = 'Choose your arena';
+
   static const String modeLiveLabel = 'Live';
   static const String modeLiveDescription =
       'Join a session in progress with a code or a QR scan.';
