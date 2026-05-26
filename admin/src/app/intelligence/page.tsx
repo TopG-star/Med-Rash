@@ -1,6 +1,4 @@
 import { AdminShell } from "@/components/admin-shell";
-import { MetricCard } from "@/components/metric-card";
-import { PanelCard } from "@/components/panel-card";
 import { requireAdminSession } from "@/lib/admin-session";
 import { getOverviewKpis } from "@/lib/overview-queries";
 import {
@@ -62,128 +60,178 @@ export default async function IntelligencePage() {
       subtitle="Deep-dive into knowledge gaps, facility performance, and treatment perception patterns surfaced by answer-level analytics."
       user={{ email: session.email, role: session.role }}
       actions={
-        <a
-          className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold"
-          href="/reports"
-        >
-          Open Reports
-        </a>
+        <span className="vp-scope">
+          <a className="vp-button vp-button-ghost vp-button-sm" href="/reports">
+            Open Reports
+          </a>
+        </span>
       }
     >
-      {loadError && (
-        <section className="arena-panel border-[var(--arena-danger)] bg-[var(--arena-danger)] p-4">
-          <p className="font-semibold">Intelligence data unavailable</p>
-          <p className="mt-2 text-sm">{loadError}</p>
-        </section>
-      )}
-      <section className="grid gap-5 xl:grid-cols-3">
-        <MetricCard
-          label="Average Score"
-          value={formatPercent(kpis.averageScorePercent)}
-          delta="Rolling 30-day window"
-          tone="primary"
-        />
-        <MetricCard
-          label="Total Users"
-          value={kpis.totalUsers.toLocaleString()}
-          delta={`${kpis.completedAttempts.toLocaleString()} completed attempts`}
-          tone="secondary"
-        />
-        <MetricCard
-          label="Top Gap Area"
-          value={topGap ? truncate(topGap.prompt, 28) : "\u2014"}
-          delta={topGap ? `${clampPercent(topGap.incorrectRate)}% error rate` : "No data yet"}
-          tone="tertiary"
-        />
-      </section>
-      <section className="grid gap-5 xl:grid-cols-[1.3fr_1fr]">
-        <PanelCard title="Most-Missed Questions">
-          {mostMissed.length === 0 ? (
-            <p className="text-sm text-[var(--arena-ink-muted)]">
-              No answer data yet. Run a session to populate this panel.
+      <div className="vp-scope vp-vstack vp-vstack-lg">
+        {loadError && (
+          <div className="vp-banner vp-banner-error">
+            <p>
+              <strong>Intelligence data unavailable.</strong> {loadError}
             </p>
-          ) : (
-            <div className="space-y-5">
-              {mostMissed.map((row) => {
-                const wrongPercent = clampPercent(row.incorrectRate);
-                return (
-                  <div key={row.questionId} className="space-y-2">
-                    <p className="font-semibold">{truncate(row.prompt, 90)}</p>
-                    <p className="text-xs text-[var(--arena-ink-muted)]">
-                      {row.quizTitle}{" \u00b7 "}{row.incorrectCount}/{row.attemptsCount} wrong
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <div className="h-4 flex-1 rounded-full bg-[var(--arena-panel)]">
-                        <div
-                          className={["h-full rounded-full bg-[var(--arena-secondary)]", widthClassFromPercent(wrongPercent)].join(" ")}
-                        />
-                      </div>
-                      <span className="w-14 text-right text-sm">{wrongPercent}%</span>
-                    </div>
-                  </div>
-                );
-              })}
+          </div>
+        )}
+
+        <section className="vp-stat-grid">
+          <div className="vp-stat-tile">
+            <span className="vp-stat-label">Average Score</span>
+            <span className="vp-stat-value">
+              {formatPercent(kpis.averageScorePercent)}
+            </span>
+            <span className="vp-stat-delta">Rolling 30-day window</span>
+          </div>
+          <div className="vp-stat-tile">
+            <span className="vp-stat-label">Total Users</span>
+            <span className="vp-stat-value">
+              {kpis.totalUsers.toLocaleString()}
+            </span>
+            <span className="vp-stat-delta">
+              {kpis.completedAttempts.toLocaleString()} completed attempts
+            </span>
+          </div>
+          <div className="vp-stat-tile">
+            <span className="vp-stat-label">Top Gap Area</span>
+            <span className="vp-stat-value">
+              {topGap ? truncate(topGap.prompt, 28) : "\u2014"}
+            </span>
+            <span className="vp-stat-delta">
+              {topGap
+                ? `${clampPercent(topGap.incorrectRate)}% error rate`
+                : "No data yet"}
+            </span>
+          </div>
+        </section>
+
+        <section className="vp-split-grid">
+          <div className="vp-panel">
+            <div className="vp-panel-head">
+              <h2 className="vp-panel-title">Most-Missed Questions</h2>
             </div>
-          )}
-        </PanelCard>
-        <div className="grid gap-5">
-          <PanelCard title="Facility Performance Heatmap">
-            {facilityPerformance.length === 0 ? (
-              <p className="text-sm text-[var(--arena-ink-muted)]">
-                No completed attempts to rank facilities yet.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {facilityPerformance.map((row) => {
-                  const avg = row.averageScore;
-                  const tone =
-                    avg === null
-                      ? "bg-[var(--arena-surface)]"
-                      : avg < 60
-                        ? "bg-[var(--arena-danger)]"
-                        : avg < 80
-                          ? "bg-[var(--arena-primary)]"
-                          : "bg-[var(--arena-surface)]";
-                  return (
-                    <div key={row.facility} className={`arena-panel ${tone} p-4`}>
-                      <p className="font-semibold">{row.facility}</p>
-                      <p className="mt-2 text-sm">
-                        {avg === null
-                          ? "No average score recorded yet."
-                          : `${Math.round(avg)}% average \u00b7 ${row.completedAttempts} attempt(s) \u00b7 ${row.rankedParticipants} ranked`}
-                      </p>
-                    </div>
-                  );
-                })}
+            {mostMissed.length === 0 ? (
+              <div className="vp-empty">
+                <div className="vp-empty-icon">🔍</div>
+                <h3 className="vp-empty-title">No answer data yet</h3>
+                <p className="vp-empty-helper">
+                  Run a session to populate this panel.
+                </p>
               </div>
-            )}
-          </PanelCard>
-          <PanelCard title="Treatment Perception Trends">
-            {treatmentPerception.length === 0 ? (
-              <p className="text-sm text-[var(--arena-ink-muted)]">
-                No treatment-perception signals yet. Tag questions with
-                {' '}<code>treatment-perception</code> to surface them here.
-              </p>
             ) : (
-              <div className="space-y-4 text-sm leading-7 text-[var(--arena-ink-muted)]">
-                {treatmentPerception.map((row, index) => {
+              <div className="vp-vstack-md">
+                {mostMissed.map((row) => {
                   const wrongPercent = clampPercent(row.incorrectRate);
                   return (
-                    <p key={`${row.prompt}-${index}`}>
-                      <span className="font-semibold text-[var(--arena-ink)]">
-                        {wrongPercent}%
-                      </span>{" "}
-                      of respondents{row.clinicalArea ? ` in ${row.clinicalArea}` : ""} picked
-                      {" "}<span className="italic">{truncate(row.mostSelectedWrongOption, 40)}</span>{" "}
-                      when asked: {truncate(row.prompt, 110)}
-                    </p>
+                    <div key={row.questionId} className="vp-intel-row">
+                      <p className="vp-preview-prompt">
+                        {truncate(row.prompt, 90)}
+                      </p>
+                      <p className="vp-preview-meta">
+                        {row.quizTitle}
+                        {" \u00b7 "}
+                        {row.incorrectCount}/{row.attemptsCount} wrong
+                      </p>
+                      <div className="vp-intel-bar-row">
+                        <div className="vp-bar">
+                          <div
+                            className={[
+                              "vp-bar-fill",
+                              widthClassFromPercent(wrongPercent),
+                            ].join(" ")}
+                          />
+                        </div>
+                        <span className="vp-intel-bar-value">
+                          {wrongPercent}%
+                        </span>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
             )}
-          </PanelCard>
-        </div>
-      </section>
+          </div>
+
+          <div className="vp-vstack vp-vstack-lg">
+            <div className="vp-panel">
+              <div className="vp-panel-head">
+                <h2 className="vp-panel-title">Facility Performance Heatmap</h2>
+              </div>
+              {facilityPerformance.length === 0 ? (
+                <div className="vp-empty">
+                  <div className="vp-empty-icon">🏥</div>
+                  <h3 className="vp-empty-title">No facility data</h3>
+                  <p className="vp-empty-helper">
+                    No completed attempts to rank facilities yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="vp-fac-list">
+                  {facilityPerformance.map((row) => {
+                    const avg = row.averageScore;
+                    const tone =
+                      avg === null
+                        ? ""
+                        : avg < 60
+                          ? "is-danger"
+                          : avg < 80
+                            ? "is-warn"
+                            : "is-success";
+                    return (
+                      <div
+                        key={row.facility}
+                        className={`vp-fac-tile ${tone}`.trim()}
+                      >
+                        <p className="vp-fac-name">{row.facility}</p>
+                        <p className="vp-fac-meta">
+                          {avg === null
+                            ? "No average score recorded yet."
+                            : `${Math.round(avg)}% average \u00b7 ${row.completedAttempts} attempt(s) \u00b7 ${row.rankedParticipants} ranked`}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="vp-panel">
+              <div className="vp-panel-head">
+                <h2 className="vp-panel-title">Treatment Perception Trends</h2>
+              </div>
+              {treatmentPerception.length === 0 ? (
+                <div className="vp-empty">
+                  <div className="vp-empty-icon">💊</div>
+                  <h3 className="vp-empty-title">No signals yet</h3>
+                  <p className="vp-empty-helper">
+                    Tag questions with <code>treatment-perception</code> to
+                    surface them here.
+                  </p>
+                </div>
+              ) : (
+                <div className="vp-trend-list">
+                  {treatmentPerception.map((row, index) => {
+                    const wrongPercent = clampPercent(row.incorrectRate);
+                    return (
+                      <p key={`${row.prompt}-${index}`}>
+                        <span className="vp-trend-stat">{wrongPercent}%</span>{" "}
+                        of respondents
+                        {row.clinicalArea ? ` in ${row.clinicalArea}` : ""}{" "}
+                        picked{" "}
+                        <span className="vp-trend-quote">
+                          {truncate(row.mostSelectedWrongOption, 40)}
+                        </span>{" "}
+                        when asked: {truncate(row.prompt, 110)}
+                      </p>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
     </AdminShell>
   );
 }

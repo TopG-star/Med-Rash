@@ -1,8 +1,6 @@
 import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
-import { EmptyState } from "@/components/empty-state";
-import { PanelCard } from "@/components/panel-card";
 import { requireAdminSession } from "@/lib/admin-session";
 import { listAdminQuizzes } from "@/lib/quiz-bank-queries";
 import {
@@ -102,160 +100,171 @@ export default async function ReportsPage({
       subtitle="Intelligence + bulk exports. All downloads stream live from Supabase via the service-role admin client."
       user={{ email: session.email, role: session.role }}
     >
-      <PanelCard title="Filters">
-        <p className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-          Filters apply to BOTH the intelligence panels below and the CSV
-          exports. Submit to refresh.
-        </p>
-        <form
-          method="GET"
-          action="/reports"
-          className="grid gap-4 md:grid-cols-3"
-        >
-          <label className="space-y-2">
-            <span className="text-sm font-semibold">Started on / after</span>
-            <input
-              type="datetime-local"
-              name="startsAt"
-              defaultValue={filters.startsAt ?? ""}
-              className="arena-panel w-full px-4 py-3"
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-semibold">Started on / before</span>
-            <input
-              type="datetime-local"
-              name="endsAt"
-              defaultValue={filters.endsAt ?? ""}
-              className="arena-panel w-full px-4 py-3"
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-semibold">Quiz</span>
-            <select
-              name="quizId"
-              defaultValue={filters.quizId ?? ""}
-              className="arena-panel w-full px-4 py-3"
-            >
-              <option value="">All quizzes</option>
-              {quizzes.map((q) => (
-                <option key={q.id} value={q.id}>
-                  {q.title}
-                </option>
-              ))}
-            </select>
-            {quizzesError ? (
-              <span className="text-xs font-semibold text-[var(--arena-danger)]">
-                {quizzesError}
-              </span>
-            ) : null}
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-semibold">Specialty (exact)</span>
-            <input
-              type="text"
-              name="specialty"
-              defaultValue={filters.specialty ?? ""}
-              placeholder="Emergency Medicine"
-              className="arena-panel w-full px-4 py-3"
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="text-sm font-semibold">Facility (exact)</span>
-            <input
-              type="text"
-              name="facility"
-              defaultValue={filters.facility ?? ""}
-              placeholder="Korle-Bu Teaching Hospital"
-              className="arena-panel w-full px-4 py-3"
-            />
-          </label>
-          <label className="space-y-2">
-            <span className="flex items-center gap-2 text-sm font-semibold">
-              Session ID (UUID)
-              <span
-                aria-label="Find the UUID at the end of the Live view URL: /sessions/<id>/live"
-                title="Find the UUID at the end of the Live view URL: /sessions/<id>/live"
-                className="grid h-5 w-5 cursor-help place-items-center rounded-full border-2 border-[var(--arena-outline)] text-[10px] font-bold"
-              >
-                i
-              </span>
-            </span>
-            <input
-              type="text"
-              name="sessionId"
-              defaultValue={filters.sessionId ?? ""}
-              placeholder="Paste session UUID"
-              className="arena-panel w-full px-4 py-3"
-            />
-          </label>
-          <div className="md:col-span-3 flex flex-wrap gap-3">
-            <button
-              type="submit"
-              className="arena-button bg-[var(--arena-primary)] px-5 py-3 font-semibold"
-            >
-              Apply Filters
-            </button>
-            <Link
-              href="/reports"
-              className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold"
-            >
-              Reset
-            </Link>
+      <div className="vp-scope vp-vstack vp-vstack-lg">
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">Filters</h2>
           </div>
-        </form>
-      </PanelCard>
+          <p className="vp-panel-helper">
+            Filters apply to BOTH the intelligence panels below and the CSV
+            exports. Submit to refresh.
+          </p>
+          <form method="GET" action="/reports" className="vp-form-grid cols-3">
+            <label className="vp-field">
+              <span className="vp-label">Started on / after</span>
+              <input
+                type="datetime-local"
+                name="startsAt"
+                defaultValue={filters.startsAt ?? ""}
+                className="vp-input"
+              />
+            </label>
+            <label className="vp-field">
+              <span className="vp-label">Started on / before</span>
+              <input
+                type="datetime-local"
+                name="endsAt"
+                defaultValue={filters.endsAt ?? ""}
+                className="vp-input"
+              />
+            </label>
+            <label className="vp-field">
+              <span className="vp-label">Quiz</span>
+              <select
+                name="quizId"
+                defaultValue={filters.quizId ?? ""}
+                className="vp-select"
+              >
+                <option value="">All quizzes</option>
+                {quizzes.map((q) => (
+                  <option key={q.id} value={q.id}>
+                    {q.title}
+                  </option>
+                ))}
+              </select>
+              {quizzesError ? (
+                <span className="vp-help-text vp-trend-stat">
+                  {quizzesError}
+                </span>
+              ) : null}
+            </label>
+            <label className="vp-field">
+              <span className="vp-label">Specialty (exact)</span>
+              <input
+                type="text"
+                name="specialty"
+                defaultValue={filters.specialty ?? ""}
+                placeholder="Emergency Medicine"
+                className="vp-input"
+              />
+            </label>
+            <label className="vp-field">
+              <span className="vp-label">Facility (exact)</span>
+              <input
+                type="text"
+                name="facility"
+                defaultValue={filters.facility ?? ""}
+                placeholder="Korle-Bu Teaching Hospital"
+                className="vp-input"
+              />
+            </label>
+            <label className="vp-field">
+              <span className="vp-label vp-label-with-hint">
+                Session ID (UUID)
+                <span
+                  aria-label="Find the UUID at the end of the Live view URL: /sessions/<id>/live"
+                  title="Find the UUID at the end of the Live view URL: /sessions/<id>/live"
+                  className="vp-info-pill"
+                >
+                  i
+                </span>
+              </span>
+              <input
+                type="text"
+                name="sessionId"
+                defaultValue={filters.sessionId ?? ""}
+                placeholder="Paste session UUID"
+                className="vp-input"
+              />
+            </label>
+            <div className="col-span-3 vp-button-row-wrap">
+              <button type="submit" className="vp-button vp-button-primary">
+                Apply Filters
+              </button>
+              <Link href="/reports" className="vp-button vp-button-ghost">
+                Reset
+              </Link>
+            </div>
+          </form>
+        </section>
 
-      <PanelCard title="Downloads (CSV)">
-        <p className="text-xs font-semibold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-          UTF-8 with BOM (Excel-friendly). PII included — handle per the data
-          governance policy.
-        </p>
-        <div className="grid gap-3 md:grid-cols-2">
-          <a
-            href={buildExportHref("attempts", filters)}
-            className="arena-button bg-[var(--arena-primary)] px-4 py-3 font-semibold"
-          >
-            Attempts CSV
-          </a>
-          <a
-            href={buildExportHref("answers", filters)}
-            className="arena-button bg-[var(--arena-primary)] px-4 py-3 font-semibold"
-          >
-            Detailed Answers CSV
-          </a>
-          <a
-            href={buildExportHref("most-missed", filters)}
-            className="arena-button bg-[var(--arena-secondary)] px-4 py-3 font-semibold"
-          >
-            Most-Missed CSV
-          </a>
-          <a
-            href={buildExportHref("facility-performance", filters)}
-            className="arena-button bg-[var(--arena-secondary)] px-4 py-3 font-semibold"
-          >
-            Facility Performance CSV
-          </a>
-          <a
-            href={buildExportHref("treatment-perception", filters)}
-            className="arena-button bg-[var(--arena-secondary)] px-4 py-3 font-semibold md:col-span-2"
-          >
-            Treatment Perception CSV
-          </a>
-        </div>
-      </PanelCard>
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">Downloads (CSV)</h2>
+          </div>
+          <p className="vp-panel-helper">
+            UTF-8 with BOM (Excel-friendly). PII included — handle per the data
+            governance policy.
+          </p>
+          <div className="vp-download-grid">
+            <a
+              href={buildExportHref("attempts", filters)}
+              className="vp-button vp-button-primary"
+            >
+              Attempts CSV
+            </a>
+            <a
+              href={buildExportHref("answers", filters)}
+              className="vp-button vp-button-primary"
+            >
+              Detailed Answers CSV
+            </a>
+            <a
+              href={buildExportHref("most-missed", filters)}
+              className="vp-button vp-button-secondary"
+            >
+              Most-Missed CSV
+            </a>
+            <a
+              href={buildExportHref("facility-performance", filters)}
+              className="vp-button vp-button-secondary"
+            >
+              Facility Performance CSV
+            </a>
+            <a
+              href={buildExportHref("treatment-perception", filters)}
+              className="vp-button vp-button-secondary vp-span-2"
+            >
+              Treatment Perception CSV
+            </a>
+          </div>
+        </section>
 
-      <PanelCard title="Most-Missed Questions (top 10)">
-        <MostMissedTable result={mostMissedResult} />
-      </PanelCard>
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">Most-Missed Questions (top 10)</h2>
+          </div>
+          <MostMissedTable result={mostMissedResult} />
+        </section>
 
-      <PanelCard title="Facility Performance (weakest first, top 15)">
-        <FacilityTable result={facilityResult} />
-      </PanelCard>
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">
+              Facility Performance (weakest first, top 15)
+            </h2>
+          </div>
+          <FacilityTable result={facilityResult} />
+        </section>
 
-      <PanelCard title="Treatment Perception Signals (top 10)">
-        <TreatmentTable result={treatmentResult} />
-      </PanelCard>
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">
+              Treatment Perception Signals (top 10)
+            </h2>
+          </div>
+          <TreatmentTable result={treatmentResult} />
+        </section>
+      </div>
     </AdminShell>
   );
 }
@@ -267,52 +276,47 @@ function MostMissedTable({
 }) {
   if (result.status === "rejected") {
     return (
-      <p className="text-sm font-semibold text-[var(--arena-danger)]">
+      <div className="vp-banner vp-banner-error">
         {(result.reason as Error)?.message ?? "Failed to load most-missed."}
-      </p>
+      </div>
     );
   }
   const rows = result.value;
   if (rows.length === 0) {
     return (
-      <EmptyState
-        icon={<span>🔍</span>}
-        title="No answered questions match"
-        helper="Adjust the filters above, or wait for participants to submit attempts."
-      />
+      <div className="vp-empty">
+        <div className="vp-empty-icon">🔍</div>
+        <h3 className="vp-empty-title">No answered questions match</h3>
+        <p className="vp-empty-helper">
+          Adjust the filters above, or wait for participants to submit attempts.
+        </p>
+      </div>
     );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
+    <div className="vp-table-wrap">
+      <table className="vp-table">
         <thead>
-          <tr className="text-left text-xs font-extrabold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-            <th className="pb-2 pr-3">Quiz</th>
-            <th className="pb-2 pr-3">Prompt</th>
-            <th className="pb-2 pr-3">Tags</th>
-            <th className="pb-2 pr-3 text-right">Attempts</th>
-            <th className="pb-2 pr-3 text-right">Incorrect</th>
-            <th className="pb-2 text-right">Wrong %</th>
+          <tr>
+            <th>Quiz</th>
+            <th>Prompt</th>
+            <th>Tags</th>
+            <th className="is-right">Attempts</th>
+            <th className="is-right">Incorrect</th>
+            <th className="is-right">Wrong %</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr
-              key={r.questionId}
-              className="border-t border-[var(--arena-outline)]"
-            >
-              <td className="py-2 pr-3 align-top">{r.quizTitle}</td>
-              <td className="py-2 pr-3 align-top">{r.prompt}</td>
-              <td className="py-2 pr-3 align-top text-xs">
+            <tr key={r.questionId}>
+              <td>{r.quizTitle}</td>
+              <td>{r.prompt}</td>
+              <td className="is-muted">
                 {r.tags.length > 0 ? r.tags.join(", ") : "—"}
               </td>
-              <td className="py-2 pr-3 align-top text-right">
-                {formatNumber(r.attemptsCount)}
-              </td>
-              <td className="py-2 pr-3 align-top text-right">
-                {formatNumber(r.incorrectCount)}
-              </td>
-              <td className="py-2 align-top text-right font-semibold">
+              <td className="is-right">{formatNumber(r.attemptsCount)}</td>
+              <td className="is-right">{formatNumber(r.incorrectCount)}</td>
+              <td className="is-right is-strong">
                 {formatPercent(r.incorrectRate)}
               </td>
             </tr>
@@ -332,51 +336,46 @@ function FacilityTable({
 }) {
   if (result.status === "rejected") {
     return (
-      <p className="text-sm font-semibold text-[var(--arena-danger)]">
+      <div className="vp-banner vp-banner-error">
         {(result.reason as Error)?.message ??
           "Failed to load facility performance."}
-      </p>
+      </div>
     );
   }
   const rows = result.value;
   if (rows.length === 0) {
     return (
-      <EmptyState
-        icon={<span>🏥</span>}
-        title="No facility data yet"
-        helper="Facilities appear once participants from them complete attempts."
-      />
+      <div className="vp-empty">
+        <div className="vp-empty-icon">🏥</div>
+        <h3 className="vp-empty-title">No facility data yet</h3>
+        <p className="vp-empty-helper">
+          Facilities appear once participants from them complete attempts.
+        </p>
+      </div>
     );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
+    <div className="vp-table-wrap">
+      <table className="vp-table">
         <thead>
-          <tr className="text-left text-xs font-extrabold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-            <th className="pb-2 pr-3">Facility</th>
-            <th className="pb-2 pr-3 text-right">Avg Score</th>
-            <th className="pb-2 pr-3 text-right">Completed</th>
-            <th className="pb-2 pr-3 text-right">Ranked Players</th>
-            <th className="pb-2 text-right">Completion %</th>
+          <tr>
+            <th>Facility</th>
+            <th className="is-right">Avg Score</th>
+            <th className="is-right">Completed</th>
+            <th className="is-right">Ranked Players</th>
+            <th className="is-right">Completion %</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr
-              key={r.facility}
-              className="border-t border-[var(--arena-outline)]"
-            >
-              <td className="py-2 pr-3 align-top">{r.facility}</td>
-              <td className="py-2 pr-3 align-top text-right">
-                {formatNumber(r.averageScore)}
-              </td>
-              <td className="py-2 pr-3 align-top text-right">
-                {formatNumber(r.completedAttempts)}
-              </td>
-              <td className="py-2 pr-3 align-top text-right">
+            <tr key={r.facility}>
+              <td>{r.facility}</td>
+              <td className="is-right">{formatNumber(r.averageScore)}</td>
+              <td className="is-right">{formatNumber(r.completedAttempts)}</td>
+              <td className="is-right">
                 {formatNumber(r.rankedParticipants)}
               </td>
-              <td className="py-2 align-top text-right font-semibold">
+              <td className="is-right is-strong">
                 {formatPercent(r.completionRate)}
               </td>
             </tr>
@@ -396,49 +395,47 @@ function TreatmentTable({
 }) {
   if (result.status === "rejected") {
     return (
-      <p className="text-sm font-semibold text-[var(--arena-danger)]">
+      <div className="vp-banner vp-banner-error">
         {(result.reason as Error)?.message ??
           "Failed to load treatment perception."}
-      </p>
+      </div>
     );
   }
   const rows = result.value;
   if (rows.length === 0) {
     return (
-      <EmptyState
-        icon={<span>💊</span>}
-        title="No treatment-perception data"
-        helper={"No questions tagged 'treatment-perception' have wrong answers in this window yet."}
-      />
+      <div className="vp-empty">
+        <div className="vp-empty-icon">💊</div>
+        <h3 className="vp-empty-title">No treatment-perception data</h3>
+        <p className="vp-empty-helper">
+          No questions tagged &lsquo;treatment-perception&rsquo; have wrong
+          answers in this window yet.
+        </p>
+      </div>
     );
   }
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-sm">
+    <div className="vp-table-wrap">
+      <table className="vp-table">
         <thead>
-          <tr className="text-left text-xs font-extrabold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-            <th className="pb-2 pr-3">Clinical Area</th>
-            <th className="pb-2 pr-3">Prompt</th>
-            <th className="pb-2 pr-3">Top Wrong Option</th>
-            <th className="pb-2 pr-3 text-right">Wrong Count</th>
-            <th className="pb-2 text-right">Wrong %</th>
+          <tr>
+            <th>Clinical Area</th>
+            <th>Prompt</th>
+            <th>Top Wrong Option</th>
+            <th className="is-right">Wrong Count</th>
+            <th className="is-right">Wrong %</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((r, idx) => (
-            <tr
-              key={`${r.prompt}-${idx}`}
-              className="border-t border-[var(--arena-outline)]"
-            >
-              <td className="py-2 pr-3 align-top">{r.clinicalArea ?? "—"}</td>
-              <td className="py-2 pr-3 align-top">{r.prompt}</td>
-              <td className="py-2 pr-3 align-top">
-                {r.mostSelectedWrongOption}
-              </td>
-              <td className="py-2 pr-3 align-top text-right">
+            <tr key={`${r.prompt}-${idx}`}>
+              <td>{r.clinicalArea ?? "—"}</td>
+              <td>{r.prompt}</td>
+              <td>{r.mostSelectedWrongOption}</td>
+              <td className="is-right">
                 {formatNumber(r.wrongSelectionCount)}
               </td>
-              <td className="py-2 align-top text-right font-semibold">
+              <td className="is-right is-strong">
                 {formatPercent(r.incorrectRate)}
               </td>
             </tr>
