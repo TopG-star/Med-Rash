@@ -382,7 +382,14 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
 
 > Desktop primary, responsive down to tablet. Lower visual playfulness than participant surfaces (denser, more functional).
 
-- [ ] **4a. Admin token foundation** — Next.js mirror of Slice 1a (CSS vars in `globals.css`, JS tokens in `lib/design-tokens.ts`).
+- [x] **4a. Admin token foundation** — Next.js mirror of Slice 1a (CSS vars in `globals.css`, JS tokens in `lib/design-tokens.ts`). *(complete — full semantic palette + scale primitives wired both ways.)*
+  - **Verification (Slice 4a)**
+    - Scope: Admin Next.js only. Expanded `admin/src/lib/design-tokens.ts` and `admin/src/app/globals.css`; no component touched. No Flutter / schema / Netlify changes.
+    - JS tokens (`lib/design-tokens.ts`): added named exports `arenaColors`, `arenaScale`, `arenaSpace`, `arenaIconSize` mirroring the Flutter `ArenaDesignTokens` aggregate. Extended `arenaColors` with `surfaceContainer`, `outlineMuted`, `primarySoft`, `secondaryStrong`, `onSecondary`, semantic `success` / `error` (foreground) alongside `successSurface` / `dangerSurface` / `warningSurface`, and `rankGold` / `rankSilver` / `rankBronze`. Added `arenaScale.{borderWidth, shadowOffset, radiusLarge, radiusMedium, radiusSmall, pageMargin}`. Added 6-step `arenaSpace` (xs/sm/md/lg/xl/xxl) and 4-step `arenaIconSize` (sm/md/lg/xl). Kept the existing `designTokens` aggregate shape (now including `colors / scale / space / iconSize` plus a back-compat `radius / shadow / spacing` shim) and the `adminNavigation` export untouched.
+    - CSS vars (`globals.css`): mirrored every JS token under the `--arena-*` namespace — `--arena-surface-container`, `--arena-outline-muted`, `--arena-primary-soft`, `--arena-secondary-strong`, `--arena-on-secondary`, `--arena-success` (now foreground green #1b9e4b), `--arena-success-surface`, `--arena-warning-surface`, `--arena-error`, `--arena-danger-surface`, `--arena-rank-gold/silver/bronze`, `--arena-border-width`, `--arena-shadow-offset`, `--arena-radius-large/medium/small`, `--arena-page-margin`, `--arena-space-xs…xxl`, `--arena-icon-sm…xl`. Kept legacy aliases `--arena-panel` (= surfaceContainer) and `--arena-danger` (#ffd8d2 surface) so existing `bg-[var(--arena-panel)]` / `text-[var(--arena-danger)]` callsites render identically.
+    - Vibrant Pulse palette preserved (yellow primary / cyan secondary / pink tertiary); only structure was mirrored from Slice 1a, not the participant purple palette.
+    - PASS `npx tsc --noEmit` (0 errors).
+    - PASS `npx eslint "src/lib/design-tokens.ts"` (0 errors).
 - [ ] **4b. Auth / login**.
 - [ ] **4c. Dashboard** — KPI strip + alerts.
 - [ ] **4d. Quiz Bank** — list, detail, create/edit.

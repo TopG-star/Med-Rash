@@ -1,21 +1,68 @@
 @import "tailwindcss";
 
 :root {
+  /* Surfaces */
   --arena-background: #f9f9f9;
   --arena-surface: #ffffff;
   --arena-surface-muted: #f3f3f3;
+  --arena-surface-container: #eeeeee;
+  /* Back-compat alias used by existing components; prefer --arena-surface-container. */
   --arena-panel: #eeeeee;
+
+  /* Ink */
   --arena-ink: #1b1b1b;
   --arena-ink-muted: #4c4735;
+
+  /* Outlines */
   --arena-outline: #111111;
   --arena-outline-muted: #d9d2bf;
+
+  /* Brand */
   --arena-primary: #ffde59;
   --arena-primary-strong: #705d00;
+  --arena-primary-soft: #fff1a8;
   --arena-secondary: #73f6fb;
+  --arena-secondary-strong: #1fd4da;
+  --arena-on-secondary: #1b1b1b;
   --arena-tertiary: #ffd4e7;
+
+  /* Semantic */
+  --arena-success: #1b9e4b;
+  --arena-success-surface: #d8ffe4;
+  --arena-warning-surface: #ffebc2;
+  --arena-error: #c81e1e;
   --arena-danger: #ffd8d2;
-  --arena-success: #d8ffe4;
+  --arena-danger-surface: #ffd8d2;
+
+  /* Effects */
   --arena-shadow: #111111;
+
+  /* Rank tints */
+  --arena-rank-gold: #ffd75e;
+  --arena-rank-silver: #c8c8c8;
+  --arena-rank-bronze: #c68a4c;
+
+  /* Scale */
+  --arena-border-width: 3px;
+  --arena-shadow-offset: 4px;
+  --arena-radius-large: 16px;
+  --arena-radius-medium: 12px;
+  --arena-radius-small: 8px;
+  --arena-page-margin: 20px;
+
+  /* Spacing scale */
+  --arena-space-xs: 4px;
+  --arena-space-sm: 8px;
+  --arena-space-md: 12px;
+  --arena-space-lg: 16px;
+  --arena-space-xl: 24px;
+  --arena-space-xxl: 32px;
+
+  /* Icon scale */
+  --arena-icon-sm: 16px;
+  --arena-icon-md: 20px;
+  --arena-icon-lg: 24px;
+  --arena-icon-xl: 32px;
 }
 
 * {
