@@ -24,27 +24,50 @@ export default async function DeniedPage({
   const detail = REASON_COPY[reason] ?? "Your account is not on the MedRash admin allowlist. Ask an Owner to invite you.";
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-5 px-6 py-12">
-      <p className="text-xs font-extrabold uppercase tracking-[0.15em] text-[var(--arena-ink-muted)]">
-        MedRash Admin
-      </p>
-      <h1 className="font-[family-name:var(--font-anybody)] text-4xl font-extrabold tracking-tight">
-        Access denied
-      </h1>
-      <p className="text-sm text-[var(--arena-ink-muted)]">{detail}</p>
-      <div className="flex flex-wrap gap-3">
-        <Link
-          href="/login"
-          className="arena-button bg-[var(--arena-primary)] px-5 py-3 font-semibold"
-        >
-          Back to sign-in
-        </Link>
-        <a
-          href="/auth/signout"
-          className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold"
-        >
-          Sign out
-        </a>
+    <main className="vp-auth">
+      <div className="vp-stack">
+        <div className="vp-hero">
+          <span aria-hidden className="vp-logo-tile">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2 4 5v6c0 5 3.5 9.4 8 11 4.5-1.6 8-6 8-11V5l-8-3Z"
+                fill="currentColor"
+                fillOpacity="0.18"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M9 9l6 6M15 9l-6 6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          </span>
+          <p className="vp-eyebrow">MedRash Admin</p>
+          <h1 className="vp-display">
+            Access <span className="vp-display-accent">denied</span>
+          </h1>
+          <p className="vp-tagline">{detail}</p>
+        </div>
+
+        <div className="vp-card">
+          <div className="vp-button-row">
+            <Link href="/login" className="vp-button vp-button-primary">
+              Back to sign-in
+            </Link>
+            <a href="/auth/signout" className="vp-button vp-button-secondary">
+              Sign out
+            </a>
+          </div>
+        </div>
       </div>
     </main>
   );

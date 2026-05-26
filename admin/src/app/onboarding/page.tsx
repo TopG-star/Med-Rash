@@ -41,25 +41,50 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center gap-6 px-6 py-12">
-      <header className="space-y-2">
-        <p className="text-xs font-extrabold uppercase tracking-[0.15em] text-[var(--arena-ink-muted)]">
-          MedRash Admin
-        </p>
-        <h1 className="font-[family-name:var(--font-anybody)] text-4xl font-extrabold tracking-tight">
-          Finish your profile
-        </h1>
-        <p className="text-sm text-[var(--arena-ink-muted)]">
-          Tell us who you are. You only do this once — afterwards you go
-          straight to the dashboard.
-        </p>
-      </header>
-      <OnboardingForm
-        email={session.email}
-        defaultFullName={typeof data.full_name === "string" ? data.full_name : ""}
-        defaultCompany={typeof data.company === "string" ? data.company : ""}
-        defaultJobRole={asJobRole(data.job_role)}
-      />
+    <main className="vp-auth">
+      <div className="vp-stack">
+        <div className="vp-hero">
+          <span aria-hidden className="vp-logo-tile">
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M12 2 4 5v6c0 5 3.5 9.4 8 11 4.5-1.6 8-6 8-11V5l-8-3Z"
+                fill="currentColor"
+                fillOpacity="0.18"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
+              <path
+                d="m8.5 12 2.5 2.5L15.5 10"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <p className="vp-eyebrow">MedRash Admin</p>
+          <h1 className="vp-display">
+            Finish your <span className="vp-display-accent">profile</span>
+          </h1>
+          <p className="vp-tagline">
+            Tell us who you are. You only do this once — afterwards you go
+            straight to the dashboard.
+          </p>
+        </div>
+        <OnboardingForm
+          email={session.email}
+          defaultFullName={typeof data.full_name === "string" ? data.full_name : ""}
+          defaultCompany={typeof data.company === "string" ? data.company : ""}
+          defaultJobRole={asJobRole(data.job_role)}
+        />
+      </div>
     </main>
   );
 }

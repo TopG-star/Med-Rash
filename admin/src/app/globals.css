@@ -142,3 +142,379 @@ select {
   box-shadow: 4px 4px 0 0 var(--arena-outline-muted);
   color: var(--arena-ink);
 }
+
+/* ============================================================
+ * Vibrant Pulse — auth surfaces (Slice 4b)
+ *
+ * Scoped purple/gold aesthetic applied to /login, /denied,
+ * /onboarding via the .vp-auth wrapper. The wrapper carries its
+ * own local CSS vars so the rest of the admin chrome (which still
+ * uses .arena-panel / .arena-button on yellow neo-brutalist
+ * tokens) is untouched. Same scoping pattern as .host-room-dark.
+ * ============================================================ */
+
+.vp-auth {
+  --vp-primary: #5300b7;
+  --vp-primary-strong: #6d28d9;
+  --vp-primary-soft: #ebddff;
+  --vp-secondary: #ffc329;
+  --vp-on-secondary: #261a00;
+  --vp-ink: #191c1e;
+  --vp-ink-muted: #4a4455;
+  --vp-surface: #ffffff;
+  --vp-surface-muted: #f2f4f6;
+  --vp-outline-soft: #ccc3d7;
+  --vp-shadow-soft: rgba(83, 0, 183, 0.10);
+  --vp-shadow-press: rgba(83, 0, 183, 0.20);
+  --vp-danger-surface: #fee2e2;
+  --vp-danger-ink: #93000a;
+  --vp-success-surface: #d1fae5;
+  --vp-success-ink: #054932;
+
+  min-height: 100vh;
+  background-color: var(--vp-surface-muted);
+  background-image:
+    radial-gradient(circle at 0% 0%, rgba(83, 0, 183, 0.07) 0%, transparent 38%),
+    radial-gradient(circle at 100% 100%, rgba(255, 195, 41, 0.09) 0%, transparent 32%);
+  color: var(--vp-ink);
+}
+
+.vp-stack {
+  margin-inline: auto;
+  display: flex;
+  width: 100%;
+  max-width: 28rem;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 3rem 1.5rem;
+  min-height: 100vh;
+  justify-content: center;
+}
+
+.vp-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.vp-logo-tile {
+  display: inline-flex;
+  height: 64px;
+  width: 64px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--vp-primary), var(--vp-primary-strong));
+  color: #ffffff;
+  box-shadow: 0 14px 32px -10px var(--vp-shadow-press);
+  transform: rotate(-3deg);
+}
+
+.vp-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--vp-primary-strong);
+}
+
+.vp-display {
+  font-family: var(--font-anybody), system-ui, sans-serif;
+  font-size: 2.4rem;
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--vp-ink);
+  margin: 0;
+}
+
+.vp-display-accent {
+  color: var(--vp-primary);
+}
+
+.vp-tagline {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--vp-ink-muted);
+  margin: 0;
+}
+
+.vp-card {
+  background: var(--vp-surface);
+  border-radius: 24px;
+  padding: 1.75rem;
+  box-shadow: 0 22px 44px -18px var(--vp-shadow-soft), 0 4px 12px -6px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.vp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.vp-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vp-ink);
+}
+
+.vp-legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vp-ink);
+  padding: 0;
+}
+
+.vp-input {
+  width: 100%;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: var(--vp-surface-muted);
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--vp-ink);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.vp-input::placeholder {
+  color: var(--vp-ink-muted);
+  opacity: 0.55;
+}
+
+.vp-input:focus,
+.vp-input:focus-visible {
+  outline: none;
+  border-color: var(--vp-primary);
+  background: var(--vp-surface);
+  box-shadow: 0 0 0 4px rgba(83, 0, 183, 0.14);
+}
+
+.vp-input-code {
+  text-align: center;
+  font-family: var(--font-anybody), system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  padding-inline-start: 1.4rem;
+}
+
+.vp-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: none;
+  border-radius: 16px;
+  padding: 0.95rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 150ms ease, background-color 150ms ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.vp-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.vp-button:focus-visible {
+  outline: 2px solid var(--vp-primary);
+  outline-offset: 3px;
+}
+
+.vp-button-primary {
+  background: var(--vp-primary);
+  color: #ffffff;
+  box-shadow: 0 14px 28px -10px var(--vp-shadow-press);
+}
+
+.vp-button-primary:not(:disabled):hover {
+  background: var(--vp-primary-strong);
+}
+
+.vp-button-primary:not(:disabled):active {
+  transform: scale(0.97);
+  box-shadow: 0 6px 16px -6px var(--vp-shadow-press);
+}
+
+.vp-button-secondary {
+  background: var(--vp-surface);
+  color: var(--vp-ink);
+  border: 1.5px solid var(--vp-outline-soft);
+}
+
+.vp-button-secondary:not(:disabled):hover {
+  border-color: var(--vp-primary);
+  color: var(--vp-primary);
+}
+
+.vp-button-secondary:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.vp-button-ghost {
+  background: transparent;
+  color: var(--vp-primary);
+  padding: 0.55rem 0.9rem;
+  border-radius: 12px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1.5px solid transparent;
+}
+
+.vp-button-ghost:not(:disabled):hover {
+  background: var(--vp-primary-soft);
+}
+
+.vp-button-ghost:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+.vp-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.vp-banner {
+  border-radius: 16px;
+  padding: 0.85rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.vp-banner-info {
+  background: var(--vp-primary-soft);
+  color: var(--vp-primary-strong);
+}
+
+.vp-banner-error {
+  background: var(--vp-danger-surface);
+  color: var(--vp-danger-ink);
+}
+
+.vp-banner-success {
+  background: var(--vp-success-surface);
+  color: var(--vp-success-ink);
+}
+
+.vp-fineprint {
+  font-size: 0.75rem;
+  color: var(--vp-ink-muted);
+  text-align: center;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.vp-fineprint a,
+.vp-link {
+  color: var(--vp-primary);
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.vp-resend-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.vp-resend-row p {
+  font-size: 0.75rem;
+  color: var(--vp-ink-muted);
+  flex: 1 1 9rem;
+  min-width: 0;
+  margin: 0;
+}
+
+.vp-signed-in {
+  border-radius: 16px;
+  background: var(--vp-primary-soft);
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.vp-signed-in-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--vp-primary-strong);
+}
+
+.vp-signed-in-email {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--vp-ink);
+  word-break: break-all;
+}
+
+.vp-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.vp-role-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 16px;
+  background: var(--vp-surface-muted);
+  border: 2px solid transparent;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease, transform 120ms ease, color 150ms ease;
+}
+
+.vp-role-option:hover {
+  background: var(--vp-primary-soft);
+}
+
+.vp-role-option:has(input:checked) {
+  border-color: var(--vp-primary);
+  background: var(--vp-primary-soft);
+  color: var(--vp-primary-strong);
+}
+
+.vp-role-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vp-button,
+  .vp-input,
+  .vp-role-option {
+    transition: none;
+  }
+  .vp-button-primary:not(:disabled):active,
+  .vp-button-secondary:not(:disabled):active,
+  .vp-button-ghost:not(:disabled):active {
+    transform: none;
+  }
+}

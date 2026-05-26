@@ -39,10 +39,10 @@ export function LoginForm({ next }: { next: string }) {
 
   if (!onStep2) {
     return (
-      <form action={requestAction} className="space-y-4">
+      <form action={requestAction} className="vp-card">
         <input type="hidden" name="next" value={next} />
-        <label className="block space-y-2">
-          <span className="text-sm font-semibold">Work email</span>
+        <label className="vp-field">
+          <span className="vp-label">Work email</span>
           <input
             type="email"
             name="email"
@@ -50,20 +50,18 @@ export function LoginForm({ next }: { next: string }) {
             autoComplete="email"
             defaultValue={knownEmail}
             placeholder="you@medrash.com"
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
           />
         </label>
         <button
           type="submit"
           disabled={requestPending}
-          className="arena-button w-full bg-[var(--arena-primary)] px-5 py-3 font-semibold disabled:opacity-60"
+          className="vp-button vp-button-primary"
         >
           {requestPending ? "Sending..." : "Send sign-in code"}
         </button>
         {errorMessage ? (
-          <p className="rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-danger)] px-4 py-3 text-sm font-medium">
-            {errorMessage}
-          </p>
+          <p className="vp-banner vp-banner-error">{errorMessage}</p>
         ) : null}
       </form>
     );
@@ -124,17 +122,17 @@ function CodeStep({
   }, [resendAt]);
 
   return (
-    <div className="space-y-5">
-      <form action={verifyAction} className="space-y-4">
+    <div className="vp-card">
+      <form action={verifyAction} className="flex flex-col gap-4">
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="email" value={email} />
-        <p className="text-sm text-[var(--arena-ink-muted)]">
+        <p className="text-sm text-[var(--vp-ink-muted)]">
           We sent a 6-digit code to{" "}
-          <span className="font-semibold text-[var(--arena-ink)]">{email}</span>
-          . The code expires in 1 hour.
+          <span className="font-semibold text-[var(--vp-ink)]">{email}</span>.
+          The code expires in 1 hour.
         </p>
-        <label className="block space-y-2">
-          <span className="text-sm font-semibold">6-digit code</span>
+        <label className="vp-field">
+          <span className="vp-label">6-digit code</span>
           <input
             type="text"
             name="token"
@@ -144,40 +142,34 @@ function CodeStep({
             pattern="\d{6}"
             maxLength={6}
             placeholder="123456"
-            className="arena-panel w-full px-4 py-3 tracking-[0.4em]"
+            className="vp-input vp-input-code"
             autoFocus
           />
         </label>
         <button
           type="submit"
           disabled={verifyPending}
-          className="arena-button w-full bg-[var(--arena-primary)] px-5 py-3 font-semibold disabled:opacity-60"
+          className="vp-button vp-button-primary"
         >
           {verifyPending ? "Verifying..." : "Verify and sign in"}
         </button>
       </form>
 
       {sentMessage ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-surface)] px-4 py-3 text-sm font-medium">
-          {sentMessage}
-        </p>
+        <p className="vp-banner vp-banner-info">{sentMessage}</p>
       ) : null}
       {errorMessage ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-danger)] px-4 py-3 text-sm font-medium">
-          {errorMessage}
-        </p>
+        <p className="vp-banner vp-banner-error">{errorMessage}</p>
       ) : null}
 
-      <form action={requestAction} className="flex items-center justify-between gap-3">
+      <form action={requestAction} className="vp-resend-row">
         <input type="hidden" name="next" value={next} />
         <input type="hidden" name="email" value={email} />
-        <p className="text-xs text-[var(--arena-ink-muted)]">
-          Didn&apos;t get it? Check spam or resend below.
-        </p>
+        <p>Didn&apos;t get it? Check spam or resend below.</p>
         <button
           type="submit"
           disabled={requestPending || secondsLeft > 0}
-          className="arena-button bg-[var(--arena-surface)] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.05em] disabled:opacity-60"
+          className="vp-button vp-button-ghost"
         >
           {secondsLeft > 0 ? `Resend in ${secondsLeft}s` : "Resend code"}
         </button>

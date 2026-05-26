@@ -28,16 +28,14 @@ export function OnboardingForm({
   );
 
   return (
-    <form action={formAction} className="space-y-5">
-      <div className="arena-panel space-y-1 px-4 py-3">
-        <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-[var(--arena-ink-muted)]">
-          Signed in as
-        </p>
-        <p className="text-sm font-semibold">{email}</p>
+    <form action={formAction} className="vp-card">
+      <div className="vp-signed-in">
+        <p className="vp-signed-in-label">Signed in as</p>
+        <p className="vp-signed-in-email">{email}</p>
       </div>
 
-      <label className="block space-y-2">
-        <span className="text-sm font-semibold">Full name</span>
+      <label className="vp-field">
+        <span className="vp-label">Full name</span>
         <input
           type="text"
           name="full_name"
@@ -47,12 +45,12 @@ export function OnboardingForm({
           autoComplete="name"
           defaultValue={defaultFullName}
           placeholder="Dr. Priya Sharma"
-          className="arena-panel w-full px-4 py-3"
+          className="vp-input"
         />
       </label>
 
-      <label className="block space-y-2">
-        <span className="text-sm font-semibold">Company / Hospital</span>
+      <label className="vp-field">
+        <span className="vp-label">Company / Hospital</span>
         <input
           type="text"
           name="company"
@@ -62,18 +60,15 @@ export function OnboardingForm({
           autoComplete="organization"
           defaultValue={defaultCompany}
           placeholder="Acme Pharma"
-          className="arena-panel w-full px-4 py-3"
+          className="vp-input"
         />
       </label>
 
-      <fieldset className="space-y-2">
-        <legend className="text-sm font-semibold">Job role</legend>
-        <div className="flex gap-3">
+      <fieldset className="vp-field">
+        <legend className="vp-legend">Job role</legend>
+        <div className="vp-role-grid">
           {JOB_ROLES.map((role) => (
-            <label
-              key={role}
-              className="arena-panel flex flex-1 cursor-pointer items-center gap-2 px-4 py-3 text-sm font-semibold"
-            >
+            <label key={role} className="vp-role-option">
               <input
                 type="radio"
                 name="job_role"
@@ -90,15 +85,13 @@ export function OnboardingForm({
       <button
         type="submit"
         disabled={pending}
-        className="arena-button w-full bg-[var(--arena-primary)] px-5 py-3 font-semibold disabled:opacity-60"
+        className="vp-button vp-button-primary"
       >
         {pending ? "Saving..." : "Finish setup"}
       </button>
 
       {state.status === "error" ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-danger)] px-4 py-3 text-sm font-medium">
-          {state.message}
-        </p>
+        <p className="vp-banner vp-banner-error">{state.message}</p>
       ) : null}
     </form>
   );
