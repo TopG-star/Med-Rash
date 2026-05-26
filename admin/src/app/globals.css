@@ -1876,6 +1876,94 @@ select {
   color: var(--vp-ink);
 }
 
+/* ============================================================
+ * Vibrant Pulse - admin users (Slice 4g)
+ * /admin-users invite workflow + team management table/actions.
+ * ============================================================ */
+
+.vp-status-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.24rem 0.68rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.vp-status-pill.is-invited {
+  background: rgba(255, 195, 41, 0.22);
+  color: #7a5400;
+}
+
+.vp-status-pill.is-verified {
+  background: rgba(67, 171, 255, 0.2);
+  color: #124d89;
+}
+
+.vp-status-pill.is-active {
+  background: rgba(20, 176, 116, 0.17);
+  color: #0b6b45;
+}
+
+.vp-status-pill.is-deactivated {
+  background: rgba(124, 108, 149, 0.2);
+  color: #5b4f6f;
+}
+
+.vp-team-user-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.vp-team-self-pill {
+  background: rgba(255, 195, 41, 0.22);
+  color: #7a5400;
+}
+
+.vp-team-profile {
+  margin-top: 0.2rem;
+  font-size: 0.78rem;
+  color: var(--vp-ink-muted);
+}
+
+.vp-team-role {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vp-ink);
+}
+
+.vp-team-actions-cell {
+  min-width: 16.5rem;
+}
+
+.vp-team-actions-wrap {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.vp-team-note-success,
+.vp-team-note-error {
+  flex-basis: 100%;
+  margin-top: 0;
+  font-weight: 700;
+}
+
+.vp-team-note-success {
+  color: var(--vp-primary-strong);
+}
+
+.vp-team-note-error {
+  color: var(--vp-danger-ink);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .vp-button,
   .vp-input,

@@ -54,7 +54,7 @@ export function AdminRowActions({
 
   if (isSelf) {
     return (
-      <span className="text-xs italic text-[var(--arena-ink-muted)]">
+      <span className="vp-help-text">
         You can&rsquo;t modify your own access. Ask another Owner.
       </span>
     );
@@ -63,12 +63,12 @@ export function AdminRowActions({
   const showReinvite = status === "invited" || status === "verified";
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="vp-team-actions-wrap">
       <button
         type="button"
         disabled={pending}
         onClick={toggleRole}
-        className="arena-button bg-[var(--arena-surface)] px-3 py-1 text-xs font-bold uppercase tracking-[0.05em] disabled:opacity-60"
+        className={`vp-button vp-button-secondary vp-btn-sm ${pending ? "vp-disabled-soft" : ""}`}
       >
         {role === "host" ? "Promote to Owner" : "Demote to Host"}
       </button>
@@ -76,9 +76,7 @@ export function AdminRowActions({
         type="button"
         disabled={pending}
         onClick={toggleActive}
-        className={`arena-button px-3 py-1 text-xs font-bold uppercase tracking-[0.05em] disabled:opacity-60 ${
-          isActive ? "bg-[var(--arena-danger)]" : "bg-[var(--arena-primary)]"
-        }`}
+        className={`vp-button ${isActive ? "vp-button-danger" : "vp-button-primary"} vp-btn-sm ${pending ? "vp-disabled-soft" : ""}`}
       >
         {isActive ? "Deactivate" : "Reactivate"}
       </button>
@@ -87,18 +85,18 @@ export function AdminRowActions({
           type="button"
           disabled={pending}
           onClick={reinvite}
-          className="arena-button bg-[var(--arena-secondary)] px-3 py-1 text-xs font-bold uppercase tracking-[0.05em] disabled:opacity-60"
+          className={`vp-button vp-button-ghost vp-btn-sm ${pending ? "vp-disabled-soft" : ""}`}
         >
           Re-invite
         </button>
       ) : null}
       {msg ? (
-        <span className="text-xs font-semibold text-[var(--arena-ink)]">
+        <span className="vp-help-text vp-team-note-success">
           {msg}
         </span>
       ) : null}
       {err ? (
-        <span className="text-xs font-semibold text-[var(--arena-danger)]">
+        <span className="vp-help-text vp-team-note-error">
           {err}
         </span>
       ) : null}

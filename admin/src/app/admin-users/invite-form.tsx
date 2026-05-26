@@ -20,9 +20,9 @@ export function InviteForm() {
   const [state, action, pending] = useActionState(submit, INITIAL);
 
   return (
-    <form action={action} className="flex flex-col gap-3 md:flex-row md:items-end">
-      <label className="flex flex-1 flex-col gap-1">
-        <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--arena-ink-muted)]">
+    <form action={action} className="vp-form-grid cols-3">
+      <label className="vp-field col-span-2">
+        <span className="vp-label">
           Email
         </span>
         <input
@@ -30,36 +30,34 @@ export function InviteForm() {
           type="email"
           required
           placeholder="name@hospital.gh"
-          className="arena-panel w-full px-4 py-3"
+          className="vp-input"
         />
       </label>
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--arena-ink-muted)]">
+      <label className="vp-field">
+        <span className="vp-label">
           Role
         </span>
-        <select name="role" defaultValue="host" className="arena-panel px-4 py-3">
+        <select name="role" defaultValue="host" className="vp-select">
           <option value="host">Host</option>
           <option value="owner">Owner</option>
         </select>
       </label>
-      <button
-        type="submit"
-        disabled={pending}
-        className="arena-button bg-[var(--arena-primary)] px-5 py-3 font-semibold disabled:opacity-60"
-      >
-        {pending ? "Sending…" : "Send Invitation"}
-      </button>
-      {state ? (
-        <span
-          className={
-            state.ok
-              ? "text-sm font-semibold text-[var(--arena-ink)]"
-              : "text-sm font-semibold text-[var(--arena-danger)]"
-          }
+      <div className="col-span-3 vp-button-row-wrap">
+        <button
+          type="submit"
+          disabled={pending}
+          className={`vp-button vp-button-primary ${pending ? "vp-disabled-soft" : ""}`}
         >
-          {state.message}
-        </span>
-      ) : null}
+          {pending ? "Sending..." : "Send Invitation"}
+        </button>
+        {state ? (
+          <span
+            className={`vp-help-text ${state.ok ? "vp-team-note-success" : "vp-team-note-error"}`}
+          >
+            {state.message}
+          </span>
+        ) : null}
+      </div>
     </form>
   );
 }
