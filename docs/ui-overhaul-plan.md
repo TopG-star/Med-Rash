@@ -272,7 +272,20 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
         - [x] **PASS** `flutter test` → 108/108 (unchanged; no widget test exists for `SessionJoinPage` and none was added in this slice — behaviour is exercised by upstream repository/event tests).
         - [x] **PASS** Reduced-motion safety — `PressScale` and `Haptics` already honour `MediaQuery.disableAnimations` / `MissingPluginException` paths from Slice 1c. Hero glow is a static gradient; no new motion introduced.
         - [ ] Visual smoke on real device — deferred to bundle review after Slice 2d.
-- [ ] **2d. Quiz Runner** — top gradient progress, category chip, letter-badge option cards, press-scale + haptics, correct/wrong flash.
+- [x] **2d. Quiz Runner** *(complete)* — Vibrant Pulse reskin of `QuizRunnerPage`. Behaviour preserved end-to-end (`_prepareAttempt`, `_retryConnection`, `_startOfflinePractice`, `_restartAttempt`, `selectAnswer` → `submitCurrentAnswer` → `/result` navigation, `_PreparationOutcome` branching, resumed-attempt + offline-practice banner triggers).
+    - `QuizProgressBar` upgraded to a purple→gold linear-gradient fill animated via `TweenAnimationBuilder` (360ms easeOutCubic); honours `MediaQuery.disableAnimations` by snapping instantly.
+    - Mode chip in the question-counter row swapped for `ArenaChip` (Ranked → gold `secondary`, Learning → `primarySoft`) so it shares the lobby vocabulary.
+    - Category chip recoloured to `primarySoft` and the prompt block sits inside a white `ArenaCard` with Poppins800 `headlineSmall` (replacing the grey `0xFFF8F8F8` surface).
+    - Option tiles rebuilt as `_OptionTile`: 40×40 rounded letter badge (primarySoft / primaryStrong default → primary / white when selected → success / white when correct → error / white when wrong), `AnimatedContainer` border + surface (220ms easeOutCubic, reduced-motion safe), trailing `check_circle_rounded` / `cancel_rounded` indicator during flash, wrapped in `PressScale` + `Haptics.selection` on tap.
+    - Submit CTA wrapped in `PressScale` and gated by `_selectedIndex >= 0 && _flash == null`; during the flash window it morphs into a "Correct!" (success) or "Keep going" (error) pill while the next question is held back.
+    - Correct/wrong flash: `_submitCurrentAnswer` captures the active `Question`, calls `selectAnswer` + `submitCurrentAnswer`, fires `Haptics.celebrate` on correct or `Haptics.submit` on wrong, then holds the captured question on screen for 700ms (0ms under reduced motion) before either navigating to `/result` (last question) or clearing `_flash` + `_selectedIndex` to reveal the next prompt. Repository state advances immediately; only the UI delay is timer-driven.
+    - Resumed-attempt banner now uses a `primarySoft` `ArenaCard` with a `Restart` `TextButton`, and the offline-practice banner uses `warningSurface` with `onSecondary` text — both replace the hard-coded `0xFFE6F4FF` / `0xFFFFF4E0` literals.
+    - Offline interstitial reskinned: token-backed copy, `PressScale`-wrapped Retry (gold pill) and Practice-offline (primarySoft pill) buttons, `surfaceMuted` detail card.
+    - **Verification** *(workspace: `c:\Users\USER\Desktop\Personal\medRash`, mode: local)*:
+        - [x] **PASS** `flutter analyze` → No issues found (ran in 10.5s).
+        - [x] **PASS** `flutter test` → 108/108 (unchanged; no widget test exists for `QuizRunnerPage` and none added in this slice — repository submit/advance logic remains covered by existing repo tests).
+        - [x] **PASS** Reduced-motion safety — `QuizProgressBar`, `_OptionTile` AnimatedContainer, and the flash hold-timer all collapse to `Duration.zero` when `MediaQuery.disableAnimations` is true; `PressScale` and `Haptics` already honour the same gate from Slice 1c.
+        - [ ] Visual smoke on real device — deferred to bundle review after Slice 2e.
 - [ ] **2e. Result + post-quiz** — score reveal with count-up, XP bar fill, "what's next" CTAs.
 - [ ] **2f. Leaderboard (World Rank)** — podium top-3 with monogram circles (gold ring on rank 1), scrollable list with stagger-in, sticky "You" row.
 - [ ] **2g. Profile** — monogram header, stats tiles, recent attempts, edit form, sign-out modal.
