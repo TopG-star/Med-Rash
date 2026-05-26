@@ -133,12 +133,11 @@ Minimum participant components:
 Minimum admin components:
 - AdminShell
 - AdminSidebar
-- MetricCard
-- InsightPanel
-- ExportPanel
-- SessionCard
-- QuizAccordion
-- AdminDataTable
+- AdminUserMenu
+- ScopeToggle
+- PanelCard (legacy compatibility wrapper)
+- EmptyState (legacy compatibility wrapper)
+- vp-scoped primitives for panels, KPI tiles, tables, form controls, banners, and row actions
 
 ## Client App Core Modules
 ### Core DI

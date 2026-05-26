@@ -1,6 +1,6 @@
 # Admin Surfaces — Foundation Spec
 
-Status: **Living document.** Last updated 2026-05-18.
+Status: **Living document.** Last updated 2026-05-26.
 
 This spec defines the contract, data flow, and security model for all three
 admin surfaces (Quiz Bank, Sessions, Reports) so future work plugs in
@@ -19,10 +19,10 @@ access is server-side:
 - **Writes** — **Server Actions** (`"use server"`) mutate via the same
   server-only Supabase client. Form components are Client Components that
   invoke the actions.
-- **Auth** — see §5. For pilot, admin app must be deployed behind a Netlify
-  Identity / Basic Auth / single-secret cookie gate before being made
-  internet-reachable. Right now the app is **unauthenticated** (acceptable
-  only for local dev or a private preview deploy).
+- **Auth** — see §6. Supabase session auth is enforced in middleware and route-level
+  guards. Middleware redirects unauthenticated traffic to `/login`, and
+  Server Components / Server Actions call `requireAdminSession` or
+  `requireOwner` to enforce active allow-list membership in `app.admin_users`.
 
 Why not reuse the Netlify functions in `admin/netlify/functions/`?
 
@@ -41,7 +41,7 @@ Why not reuse the Netlify functions in `admin/netlify/functions/`?
 | Module | Path | Purpose |
 | --- | --- | --- |
 | Server Supabase client | `admin/src/lib/supabase-server.ts` | Lazy-singleton service-role client. Never import from a Client Component. |
-| Admin auth gate (TODO) | `admin/src/lib/admin-auth.ts` | Single entry-point for every page/server-action to require admin session. Currently a TODO stub. |
+| Admin auth/session guard | `admin/src/lib/admin-session.ts` | Canonical session resolver + role guard helpers (`getAdminSession`, `requireAdminSession`, `requireOwner`). |
 | Result helpers | `admin/src/lib/result.ts` (TBD) | Discriminated-union response shape for server actions: `{ ok: true, data } | { ok: false, code, message }`. |
 
 ---
@@ -49,7 +49,7 @@ Why not reuse the Netlify functions in `admin/netlify/functions/`?
 ## 3. Surface 1 — Quiz Bank
 
 ### 3.1 Page route
-`admin/src/app/quiz-bank/page.tsx` (list) — implemented in this commit.
+`admin/src/app/quiz-bank/page.tsx` (list) — implemented.
 
 Future:
 - `admin/src/app/quiz-bank/new/page.tsx` — create quiz.
@@ -291,8 +291,8 @@ All in `admin/src/lib/reports-queries.ts` (server-only):
 ### 5.5 Risks / future hooks
 - **PII:** attempts + answers exports include `users.full_name`,
   `nickname`, `facility`, `specialty`, `profession` for stakeholder
-  reporting. Surface 3 must sit behind §6.2's auth gate before any
-  internet-exposed deploy.
+  reporting. Keep access owner-gated and avoid exposing export routes outside
+  the authenticated admin portal.
 - **Memory:** current exports load the full result set into memory before
   CSV-serializing. Cap (50 000 attempts / 100 000 answers) keeps this
   bounded for the pilot; switch to streaming once we exceed it.
@@ -303,44 +303,48 @@ All in `admin/src/lib/reports-queries.ts` (server-only):
 
 ## 6. Security model
 
-### 6.1 Today (pilot scaffolding)
-- Admin app is **unauthenticated**. Acceptable only for local dev and
-  private preview deploys. Do not point a production DNS at it without §6.2.
-- Service-role key is held in `SUPABASE_SERVICE_ROLE_KEY` and used only by
-  Server Components / Server Actions. Never imported from a Client
-  Component.
+### 6.1 Current production model
+- Middleware (`admin/src/middleware.ts`) refreshes/checks Supabase auth
+  session cookies and redirects unauthenticated requests to
+  `/login?next=<path>`.
+- Route-level guards (`requireAdminSession` / `requireOwner`) enforce
+  allow-list membership and role restrictions from `app.admin_users`.
+- Service-role key remains server-only (`SUPABASE_SERVICE_ROLE_KEY`) and is
+  never bundled client-side.
 
-### 6.2 Before any internet-exposed deploy (blocker)
-Pick one and ship it before exposing the admin app:
-- **Netlify Identity / Basic Auth** at the edge.
-- **Single-secret cookie gate** — admin enters a shared password once,
-  signed cookie via `iron-session`, every page + server action calls
-  `requireAdminSession()`.
-- **Supabase Auth (preferred long-term)** — magic-link or OAuth, with an
-  `app.admin_users` allow-list table.
-
-The chosen gate lives behind `admin/src/lib/admin-auth.ts` so the rest of
-the codebase doesn't change when we upgrade the model.
+### 6.2 Operational guardrails
+- Keep owner-only routes owner-only at the server boundary, not just hidden in
+  nav links.
+- Keep export endpoints scoped to authenticated admin sessions.
+- Keep participant-facing Netlify gate endpoints and admin server-side flows
+  separated (no shared auth assumptions).
 
 ### 6.3 Env var contract
 
 | Var | Required by | Notes |
 | --- | --- | --- |
-| `SUPABASE_URL` | server | Public-safe but only injected server-side here. |
+| `SUPABASE_URL` | server | Required by service-role and SSR clients. |
+| `SUPABASE_ANON_KEY` | server/middleware | Used by SSR + middleware Supabase clients. |
 | `SUPABASE_SERVICE_ROLE_KEY` | server | **NEVER** expose to client bundle. |
-| `MEDRASH_ADMIN_SESSION_SECRET` | server (future) | 32-byte secret for iron-session cookies. |
-| `NEXT_PUBLIC_APP_DEEP_LINK_BASE` | client | Used to build session shareUrl. |
+| `MEDRASH_APP_PUBLIC_BASE_URL` | server | Base URL used to generate participant join links for sessions. |
+| `MEDRASH_ADMIN_PORTAL_BASE_URL` | server | Preferred base for auth callback/invite redirect URLs. |
+| `NEXT_PUBLIC_SITE_URL` | server fallback | Fallback origin when `MEDRASH_ADMIN_PORTAL_BASE_URL` is unset. |
+| `MEDRASH_ADMIN_WRITE_KEY` | netlify functions | Shared secret for `session-create` / `quiz-bank-write` admin-write endpoints. |
 
 ---
 
-## 7. Implementation order (recommended)
+## 7. Implementation status
 
-1. **Quiz Bank** — list, then create/edit, then delete. List shipped in
-   this commit. Mutation flows in follow-up commits.
-2. **Sessions** — create + join-code + QR, then list with KPIs, then
-   export.
-3. **Reports** — wire the four analytics RPCs to on-screen panels first,
-   then add the export pipeline.
+1. **Quiz Bank** — complete for pilot scope (list/create/edit/deactivate,
+   question management, CSV import).
+2. **Sessions** — complete for pilot scope (create/list/QR/join-link actions,
+   owner/host scope handling, live view route).
+3. **Reports + Intelligence** — complete for pilot scope (filters,
+   analytics panels, CSV exports).
+4. **Admin Users** — complete for pilot scope (invite, role/status updates,
+   reinvite lifecycle).
+5. **Shared UI + accessibility hardening** — complete for current rollout
+   wave (Vibrant Pulse shared shell + Slice 6 keyboard/screen-reader pass).
 
-Each surface should ship behind a small smoke test (Playwright or
-component-level) before its commits merge.
+Recommended next step: add focused Playwright smoke coverage for the admin
+auth/login flow and one owner-only route guard path.

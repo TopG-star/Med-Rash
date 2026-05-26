@@ -14,6 +14,15 @@ This is the system that should define the MVP visual baseline for both the parti
 ### Secondary Theme
 The dark cyber-brutalist system should be treated as a supported brand variant for later rollout, theme switching, campaigns, or premium seasonal events. It should not be the default MVP theme unless the product deliberately ships a dual-theme experience.
 
+### Current Pilot UI Mode (May 2026 lock)
+For the active pilot rollout, admin surfaces are using the **Option A visual lift** direction (Vibrant Pulse) while preserving MedRash information architecture and clinical copy.
+
+Locked constraints for this mode:
+- keep participant-facing privacy model unchanged (nickname-only in public contexts)
+- keep existing IA and route structure; no broad navigation reshuffle
+- treat this as a visual + interaction uplift, not a product-scope rewrite
+- preserve intentional exceptions (for example, the host control room dark visual language)
+
 ## Brand Expression
 MedRash should feel like:
 - a medical learning arena, not a hospital record system

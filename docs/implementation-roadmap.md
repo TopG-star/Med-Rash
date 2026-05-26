@@ -18,6 +18,26 @@ The delivery plan assumes the visual system is defined up front and implemented 
 - capture answer-level analytics from day one
 - build architecture once so future modes do not require rewrites
 
+## Delivery Status Snapshot (Updated 2026-05-26)
+### Completed in current rollout wave
+- Slice 4b: admin auth and role-gated access model (host/owner) live
+- Slice 4c: dashboard moved to Vibrant Pulse visual system
+- Slice 4d: quiz-bank moved to Vibrant Pulse visual system
+- Slice 4e: sessions moved to Vibrant Pulse visual system
+- Slice 4f: reports and intelligence moved to Vibrant Pulse visual system
+- Slice 4g: admin-users team-management moved to Vibrant Pulse visual system
+- Slice 5: shared admin shell components reskinned (shell, sidebar, scope toggle, user menu)
+- Slice 6: accessibility hardening across the reskinned admin surfaces
+
+### In progress
+- Slice 7: documentation alignment and rollout notes
+
+### Verification baseline for completed slices
+- focused diagnostics on touched files via editor Problems API (`get_errors`)
+- `npx eslint` scoped to touched admin routes/components
+- `npm run typecheck` in `admin/`
+- targeted drift checks (for example, no `arena-` classes in reskinned surfaces)
+
 ## Phase 0: Project Setup And Decision Lock
 ### Outcomes
 - architecture decisions are frozen for pilot

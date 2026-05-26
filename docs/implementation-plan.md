@@ -1,5 +1,10 @@
 # MedRash Foundations Implementation Plan
 
+Status note (2026-05-26): this file is the original foundation bootstrap plan.
+For current rollout status and shipped-slice tracking, use:
+- `docs/implementation-roadmap.md`
+- `docs/admin-surfaces.md`
+
 **Goal:** Establish MedRash’s design-token system, scaffold the participant and admin application shells, and add the first production-grade Supabase schema and reporting queries.
 
 **Architecture:** The participant app uses Flutter with an Achieve-style structure: Model -> Repository -> Screen -> Route, plus shared infrastructure for DI, events, overlay, and page lifecycle. The admin panel uses Next.js on Netlify with a shared token system and a stable shell layout. The data layer uses Supabase Postgres with server-enforced ranked-attempt rules and analytics-ready answer capture.
