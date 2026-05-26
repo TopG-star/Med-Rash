@@ -94,45 +94,39 @@ export function CsvImportPanel({ quizId, quizSlug }: Props) {
   const rowErrors = parseResult?.errors ?? [];
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
-          {CSV_FORMAT_HINT}
-        </p>
-        <p className="text-xs text-[var(--arena-ink-muted)]">
+    <div className="vp-vstack vp-vstack-md">
+      <div className="vp-vstack vp-vstack-sm">
+        <p className="vp-csv-hint">{CSV_FORMAT_HINT}</p>
+        <p className="vp-csv-hint vp-csv-hint-tight">
           Required: <code>{CSV_REQUIRED_COLUMNS.join(", ")}</code>. Optional:{" "}
           <code>{CSV_OPTIONAL_COLUMNS.join(", ")}</code>.
         </p>
       </div>
 
-      <label className="block space-y-1 text-xs font-semibold uppercase tracking-wide text-[var(--arena-ink-muted)]">
-        <span>CSV File</span>
+      <label className="vp-field">
+        <span className="vp-label">CSV File</span>
         <input
           ref={inputRef}
           type="file"
           accept=".csv,text/csv"
           onChange={handleFile}
           aria-label="CSV file to import"
-          className="block w-full text-sm font-semibold normal-case tracking-normal"
+          className="vp-file-input"
         />
       </label>
 
       {fileName ? (
-        <p className="text-xs font-semibold text-[var(--arena-ink-muted)]">
-          File: {fileName}
-        </p>
+        <p className="vp-q-meta">File: {fileName}</p>
       ) : null}
 
       {headerError ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-danger)] bg-[var(--arena-surface)] px-4 py-3 text-sm font-semibold">
-          {headerError}
-        </p>
+        <p className="vp-banner vp-banner-error">{headerError}</p>
       ) : null}
 
       {parseResult ? (
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm font-semibold">
+        <div className="vp-vstack">
+          <div className="vp-row-tight">
+            <p className="vp-q-meta vp-row-label-strong">
               {drafts.length} valid row{drafts.length === 1 ? "" : "s"} ·{" "}
               {rowErrors.length} error{rowErrors.length === 1 ? "" : "s"}
             </p>
@@ -140,7 +134,7 @@ export function CsvImportPanel({ quizId, quizSlug }: Props) {
               type="button"
               onClick={handleImport}
               disabled={isPending || drafts.length === 0}
-              className="arena-button bg-[var(--arena-primary)] px-5 py-2 text-sm font-semibold disabled:opacity-60"
+              className="vp-button vp-button-primary vp-button-sm"
             >
               {isPending
                 ? "Importing…"
@@ -149,11 +143,11 @@ export function CsvImportPanel({ quizId, quizSlug }: Props) {
           </div>
 
           {rowErrors.length > 0 ? (
-            <details className="rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-surface)] px-4 py-3 text-sm">
-              <summary className="cursor-pointer font-semibold">
+            <details className="vp-details">
+              <summary>
                 {rowErrors.length} row(s) will be skipped
               </summary>
-              <ul className="mt-2 space-y-1 text-xs">
+              <ul>
                 {rowErrors.map((err) => (
                   <li key={`${err.rowNumber}-${err.message}`}>
                     Row {err.rowNumber}: {err.message}
@@ -164,15 +158,17 @@ export function CsvImportPanel({ quizId, quizSlug }: Props) {
           ) : null}
 
           {drafts.length > 0 ? (
-            <details className="rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-surface)] px-4 py-3 text-sm">
-              <summary className="cursor-pointer font-semibold">
+            <details className="vp-details">
+              <summary>
                 Preview ({Math.min(drafts.length, 5)} of {drafts.length})
               </summary>
-              <ol className="mt-2 space-y-2 text-xs">
+              <ol className="vp-list-bare">
                 {drafts.slice(0, 5).map((d, idx) => (
-                  <li key={idx} className="border-l-2 border-[var(--arena-outline)] pl-2">
-                    <p className="font-semibold">{d.prompt}</p>
-                    <p className="text-[var(--arena-ink-muted)]">
+                  <li key={idx} className="vp-preview-row">
+                    <p className="vp-preview-prompt">
+                      {d.prompt}
+                    </p>
+                    <p className="vp-preview-meta">
                       Correct: {d.options[d.correctIndex]} · tags:{" "}
                       {d.tags.length > 0 ? d.tags.join(", ") : "—"}
                     </p>
@@ -185,23 +181,21 @@ export function CsvImportPanel({ quizId, quizSlug }: Props) {
       ) : null}
 
       {submitError ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-danger)] bg-[var(--arena-surface)] px-4 py-3 text-sm font-semibold">
-          {submitError}
-        </p>
+        <p className="vp-banner vp-banner-error">{submitError}</p>
       ) : null}
 
       {summary ? (
-        <div className="space-y-2 rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-surface)] px-4 py-3 text-sm">
-          <p className="font-semibold">
+        <div className="vp-summary-banner">
+          <p>
             Imported {summary.createdCount} question
             {summary.createdCount === 1 ? "" : "s"}.
           </p>
           {summary.failures.length > 0 ? (
-            <details>
-              <summary className="cursor-pointer font-semibold">
+            <details className="vp-details vp-mt-3">
+              <summary>
                 {summary.failures.length} row(s) failed to insert
               </summary>
-              <ul className="mt-2 space-y-1 text-xs">
+              <ul>
                 {summary.failures.map((f) => (
                   <li key={`${f.index}-${f.message}`}>
                     Draft #{f.index + 1}: {f.message}

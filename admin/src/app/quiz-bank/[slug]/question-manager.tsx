@@ -159,17 +159,17 @@ export function QuestionManager({ quizId, quizSlug, questions }: Props) {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-[var(--arena-ink-muted)]">
-          {questions.length} question{questions.length === 1 ? "" : "s"} · pilot fixed at{" "}
-          {OPTION_COUNT} options each
+    <div className="vp-vstack vp-vstack-md">
+      <div className="vp-row">
+        <p className="vp-q-meta">
+          {questions.length} question{questions.length === 1 ? "" : "s"} · pilot
+          fixed at {OPTION_COUNT} options each
         </p>
         {editingId === null ? (
           <button
             type="button"
             onClick={startNew}
-            className="arena-button bg-[var(--arena-primary)] px-4 py-2 text-sm font-semibold"
+            className="vp-button vp-button-primary"
           >
             Add Question
           </button>
@@ -189,28 +189,23 @@ export function QuestionManager({ quizId, quizSlug, questions }: Props) {
         />
       ) : null}
 
-      <ol className="space-y-3">
+      <ol className="vp-q-list">
         {questions.map((q, idx) => (
-          <li
-            key={q.id}
-            className="rounded-[16px] border-[3px] border-[var(--arena-outline)] bg-[var(--arena-surface)] px-4 py-4"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div className="space-y-1">
-                <p className="text-xs font-extrabold uppercase tracking-[0.05em] text-[var(--arena-ink-muted)]">
-                  Q{idx + 1} · pos {q.position} · {q.isActive ? "active" : "inactive"}
+          <li key={q.id} className="vp-q-row">
+            <div className="vp-q-row-head">
+              <div className="vp-min-w-0">
+                <p className="vp-q-pos">
+                  Q{idx + 1} · pos {q.position} ·{" "}
+                  {q.isActive ? "active" : "inactive"}
                 </p>
-                <p className="font-semibold">{q.prompt}</p>
-                <p className="text-xs text-[var(--arena-ink-muted)]">
+                <p className="vp-q-prompt">{q.prompt}</p>
+                <p className="vp-q-meta">
                   Correct: {q.options[q.correctIndex] ?? "—"}
                 </p>
                 {q.tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1 pt-1">
+                  <div className="vp-q-tags">
                     {q.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="rounded-full border-[2px] border-[var(--arena-outline)] bg-[var(--arena-secondary)] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.05em]"
-                      >
+                      <span key={t} className="vp-tag">
                         {t}
                       </span>
                     ))}
@@ -218,11 +213,11 @@ export function QuestionManager({ quizId, quizSlug, questions }: Props) {
                 ) : null}
               </div>
               {editingId === null ? (
-                <div className="flex flex-col gap-2">
+                <div className="vp-q-actions">
                   <button
                     type="button"
                     onClick={() => startEdit(q)}
-                    className="arena-button bg-[var(--arena-surface)] px-3 py-1.5 text-xs font-semibold"
+                    className="vp-button vp-button-secondary vp-btn-sm"
                   >
                     Edit
                   </button>
@@ -230,7 +225,7 @@ export function QuestionManager({ quizId, quizSlug, questions }: Props) {
                     <button
                       type="button"
                       onClick={() => deactivate(q)}
-                      className="arena-button bg-[var(--arena-danger)] px-3 py-1.5 text-xs font-semibold"
+                      className="vp-button vp-button-danger vp-btn-sm"
                     >
                       Deactivate
                     </button>
@@ -267,33 +262,34 @@ function DraftEditor({
   error,
 }: EditorProps) {
   return (
-    <div className="space-y-4 rounded-[16px] border-[3px] border-[var(--arena-outline)] bg-[var(--arena-surface)] p-4">
-      <h3 className="font-[family-name:var(--font-anybody)] text-lg font-extrabold uppercase tracking-tight">
+    <div className="vp-editor">
+      <h3 className="vp-editor-title">
         {isNew ? "New Question" : "Edit Question"}
       </h3>
 
-      <label className="block space-y-2">
-        <span className="text-sm font-semibold">Prompt</span>
+      <label className="vp-field">
+        <span className="vp-label">Prompt</span>
         <textarea
           required
           rows={3}
           maxLength={1200}
           value={draft.prompt}
           onChange={(e) => setDraft({ ...draft, prompt: e.target.value })}
-          className="arena-panel w-full px-4 py-3"
+          className="vp-textarea"
         />
       </label>
 
-      <div className="space-y-2">
-        <span className="text-sm font-semibold">
+      <div className="vp-field">
+        <span className="vp-label">
           Options (exactly {OPTION_COUNT}) — select the correct one
         </span>
-        <div className="space-y-2">
+        <div className="vp-option-list">
           {draft.options.map((opt, idx) => (
-            <div key={idx} className="flex items-center gap-3">
+            <div key={idx} className="vp-option-row">
               <input
                 type="radio"
                 name="correctIndex"
+                aria-label={`Mark option ${idx + 1} correct`}
                 checked={draft.correctIndex === idx}
                 onChange={() => setDraft({ ...draft, correctIndex: idx })}
               />
@@ -307,15 +303,15 @@ function DraftEditor({
                   next[idx] = e.target.value;
                   setDraft({ ...draft, options: next });
                 }}
-                className="arena-panel w-full px-3 py-2"
+                className="vp-input"
               />
             </div>
           ))}
         </div>
       </div>
 
-      <label className="block space-y-2">
-        <span className="text-sm font-semibold">
+      <label className="vp-field">
+        <span className="vp-label">
           Explanation (shown after the game, or intelligently after repeated misses)
         </span>
         <textarea
@@ -324,36 +320,36 @@ function DraftEditor({
           maxLength={1200}
           value={draft.explanation}
           onChange={(e) => setDraft({ ...draft, explanation: e.target.value })}
-          className="arena-panel w-full px-4 py-3"
+          className="vp-textarea"
         />
       </label>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Clinical area (optional)</span>
+      <div className="vp-form-grid cols-2">
+        <label className="vp-field">
+          <span className="vp-label">Clinical area (optional)</span>
           <input
             value={draft.clinicalArea}
             maxLength={120}
             onChange={(e) => setDraft({ ...draft, clinicalArea: e.target.value })}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
             placeholder="Cardiology"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Tags (comma-separated)</span>
+        <label className="vp-field">
+          <span className="vp-label">Tags (comma-separated)</span>
           <input
             value={draft.tagsInput}
             onChange={(e) => setDraft({ ...draft, tagsInput: e.target.value })}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
             placeholder="guideline, product"
           />
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="vp-row-chips">
             {SUGGESTED_TAGS.map((tag) => (
               <button
                 key={tag}
                 type="button"
                 onClick={() => onTagChip(tag)}
-                className="rounded-full border-[2px] border-[var(--arena-outline)] bg-[var(--arena-surface)] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.05em]"
+                className="vp-tag-add"
               >
                 + {tag}
               </button>
@@ -362,7 +358,7 @@ function DraftEditor({
         </label>
       </div>
 
-      <label className="inline-flex items-center gap-2 text-sm font-semibold">
+      <label className="vp-checkbox-row">
         <input
           type="checkbox"
           checked={draft.isActive}
@@ -371,18 +367,14 @@ function DraftEditor({
         Active
       </label>
 
-      {error ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-danger)] bg-[var(--arena-surface)] px-4 py-3 text-sm font-semibold">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="vp-banner vp-banner-error">{error}</p> : null}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="vp-button-row">
         <button
           type="button"
           disabled={isPending}
           onClick={onSubmit}
-          className="arena-button bg-[var(--arena-primary)] px-6 py-3 font-semibold disabled:opacity-60"
+          className="vp-button vp-button-primary"
         >
           {isPending ? "Saving…" : isNew ? "Create Question" : "Save Changes"}
         </button>
@@ -390,7 +382,7 @@ function DraftEditor({
           type="button"
           disabled={isPending}
           onClick={onCancel}
-          className="arena-button bg-[var(--arena-surface)] px-6 py-3 font-semibold disabled:opacity-60"
+          className="vp-button vp-button-secondary"
         >
           Cancel
         </button>

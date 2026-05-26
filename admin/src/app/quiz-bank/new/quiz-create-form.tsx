@@ -47,21 +47,21 @@ export function QuizCreateForm() {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="md:col-span-2 space-y-2">
-          <span className="text-sm font-semibold">Title</span>
+    <form action={handleSubmit} className="vp-vstack vp-vstack-lg">
+      <div className="vp-form-grid cols-2">
+        <label className="vp-field col-span-2">
+          <span className="vp-label">Title</span>
           <input
             name="title"
             required
             maxLength={160}
             onChange={handleTitleChange}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
             placeholder="Clexane Indications Refresher"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Slug</span>
+        <label className="vp-field">
+          <span className="vp-label">Slug</span>
           <input
             name="slug"
             required
@@ -71,33 +71,33 @@ export function QuizCreateForm() {
               setSlug(slugify(e.target.value));
               setSlugTouched(true);
             }}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
             placeholder="clexane-indications"
             pattern="[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?"
             title="lowercase alphanumeric with optional dashes"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Category</span>
+        <label className="vp-field">
+          <span className="vp-label">Category</span>
           <input
             name="category"
             required
             maxLength={80}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
             placeholder="Anticoagulation"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Product (optional)</span>
+        <label className="vp-field">
+          <span className="vp-label">Product (optional)</span>
           <input
             name="product"
             maxLength={80}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
             placeholder="Clexane"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Default Question Count</span>
+        <label className="vp-field">
+          <span className="vp-label">Default Question Count</span>
           <input
             name="questionCountDefault"
             type="number"
@@ -105,38 +105,36 @@ export function QuizCreateForm() {
             max={50}
             defaultValue={10}
             required
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
           />
         </label>
-        <label className="md:col-span-2 space-y-2">
-          <span className="text-sm font-semibold">Summary</span>
+        <label className="vp-field col-span-2">
+          <span className="vp-label">Summary</span>
           <textarea
             name="summary"
             required
             maxLength={600}
             rows={3}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-textarea"
             placeholder="Short description shown to participants."
           />
         </label>
-        <label className="md:col-span-2 inline-flex items-center gap-2 text-sm font-semibold">
+        <label className="vp-checkbox-row col-span-2">
           <input type="checkbox" name="isActive" defaultChecked /> Active
         </label>
       </div>
 
-      {error ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-danger)] bg-[var(--arena-surface)] px-4 py-3 text-sm font-semibold">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className="vp-banner vp-banner-error">{error}</p> : null}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="arena-button bg-[var(--arena-primary)] px-6 py-3 font-semibold disabled:opacity-60"
-      >
-        {isPending ? "Creating…" : "Create Quiz"}
-      </button>
+      <div className="vp-button-row">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="vp-button vp-button-primary"
+        >
+          {isPending ? "Creating…" : "Create Quiz"}
+        </button>
+      </div>
     </form>
   );
 }

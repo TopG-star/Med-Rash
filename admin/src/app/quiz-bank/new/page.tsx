@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { AdminShell } from "@/components/admin-shell";
-import { PanelCard } from "@/components/panel-card";
 import { requireAdminSession } from "@/lib/admin-session";
 
 import { QuizCreateForm } from "./quiz-create-form";
@@ -18,17 +17,18 @@ export default async function NewQuizPage() {
       subtitle="Define a new quiz container. Questions are added on the next screen."
       user={{ email: session.email, role: session.role }}
       actions={
-        <Link
-          href="/quiz-bank"
-          className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold"
-        >
-          Back to Quiz Bank
-        </Link>
+        <span className="vp-scope">
+          <Link href="/quiz-bank" className="vp-button vp-button-secondary">
+            Back to Quiz Bank
+          </Link>
+        </span>
       }
     >
-      <PanelCard className="space-y-4">
-        <QuizCreateForm />
-      </PanelCard>
+      <div className="vp-scope">
+        <div className="vp-card">
+          <QuizCreateForm />
+        </div>
+      </div>
     </AdminShell>
   );
 }

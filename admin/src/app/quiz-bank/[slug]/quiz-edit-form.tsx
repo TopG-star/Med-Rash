@@ -59,39 +59,39 @@ export function QuizEditForm({ quiz }: Props) {
   }
 
   return (
-    <form action={handleSubmit} className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="md:col-span-2 space-y-2">
-          <span className="text-sm font-semibold">Title</span>
+    <form action={handleSubmit} className="vp-vstack vp-vstack-lg">
+      <div className="vp-form-grid cols-2">
+        <label className="vp-field col-span-2">
+          <span className="vp-label">Title</span>
           <input
             name="title"
             required
             maxLength={160}
             defaultValue={quiz.title}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Category</span>
+        <label className="vp-field">
+          <span className="vp-label">Category</span>
           <input
             name="category"
             required
             maxLength={80}
             defaultValue={quiz.category}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Product (optional)</span>
+        <label className="vp-field">
+          <span className="vp-label">Product (optional)</span>
           <input
             name="product"
             maxLength={80}
             defaultValue={quiz.product ?? ""}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
           />
         </label>
-        <label className="space-y-2">
-          <span className="text-sm font-semibold">Default Question Count</span>
+        <label className="vp-field">
+          <span className="vp-label">Default Question Count</span>
           <input
             name="questionCountDefault"
             type="number"
@@ -99,41 +99,33 @@ export function QuizEditForm({ quiz }: Props) {
             max={50}
             defaultValue={quiz.questionCountDefault}
             required
-            className="arena-panel w-full px-4 py-3"
+            className="vp-input"
           />
         </label>
-        <label className="md:col-span-2 space-y-2">
-          <span className="text-sm font-semibold">Summary</span>
+        <label className="vp-field col-span-2">
+          <span className="vp-label">Summary</span>
           <textarea
             name="summary"
             required
             maxLength={600}
             rows={3}
             defaultValue={quiz.summary}
-            className="arena-panel w-full px-4 py-3"
+            className="vp-textarea"
           />
         </label>
-        <label className="md:col-span-2 inline-flex items-center gap-2 text-sm font-semibold">
+        <label className="vp-checkbox-row col-span-2">
           <input type="checkbox" name="isActive" defaultChecked={quiz.isActive} /> Active
         </label>
       </div>
 
-      {error ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-danger)] bg-[var(--arena-surface)] px-4 py-3 text-sm font-semibold">
-          {error}
-        </p>
-      ) : null}
-      {info ? (
-        <p className="rounded-[12px] border-[2px] border-[var(--arena-outline)] bg-[var(--arena-surface)] px-4 py-3 text-sm font-semibold">
-          {info}
-        </p>
-      ) : null}
+      {error ? <p className="vp-banner vp-banner-error">{error}</p> : null}
+      {info ? <p className="vp-banner vp-banner-success">{info}</p> : null}
 
-      <div className="flex flex-wrap gap-3">
+      <div className="vp-button-row">
         <button
           type="submit"
           disabled={isSaving}
-          className="arena-button bg-[var(--arena-primary)] px-6 py-3 font-semibold disabled:opacity-60"
+          className="vp-button vp-button-primary"
         >
           {isSaving ? "Saving…" : "Save Changes"}
         </button>
@@ -142,7 +134,7 @@ export function QuizEditForm({ quiz }: Props) {
             type="button"
             onClick={handleDeactivate}
             disabled={isDeactivating}
-            className="arena-button bg-[var(--arena-danger)] px-6 py-3 font-semibold disabled:opacity-60"
+            className="vp-button vp-button-danger"
           >
             {isDeactivating ? "Deactivating…" : "Deactivate Quiz"}
           </button>

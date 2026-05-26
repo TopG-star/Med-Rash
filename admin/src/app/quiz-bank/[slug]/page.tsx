@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 import { AdminShell } from "@/components/admin-shell";
-import { PanelCard } from "@/components/panel-card";
 import { requireAdminSession } from "@/lib/admin-session";
 import { getAdminQuizDetailBySlug, getQuizOwnerBySlug } from "@/lib/quiz-detail-queries";
 
@@ -31,6 +30,13 @@ export default async function QuizDetailPage({ params }: PageProps) {
   }
 
   const user = { email: session.email, role: session.role };
+  const backAction = (
+    <span className="vp-scope">
+      <Link href="/quiz-bank" className="vp-button vp-button-secondary">
+        Back to Quiz Bank
+      </Link>
+    </span>
+  );
 
   let detail;
   try {
@@ -41,23 +47,16 @@ export default async function QuizDetailPage({ params }: PageProps) {
         title="Quiz Detail"
         subtitle="Edit metadata and manage questions."
         user={user}
-        actions={
-          <Link
-            href="/quiz-bank"
-            className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold"
-          >
-            Back to Quiz Bank
-          </Link>
-        }
+        actions={backAction}
       >
-        <PanelCard className="space-y-2">
-          <h2 className="font-[family-name:var(--font-anybody)] text-xl font-extrabold uppercase tracking-tight">
-            Unable to load quiz
-          </h2>
-          <p className="text-sm font-medium text-[var(--arena-ink-muted)]">
-            {err instanceof Error ? err.message : "Unknown error."}
-          </p>
-        </PanelCard>
+        <div className="vp-scope">
+          <div className="vp-card">
+            <h2 className="vp-quiz-title">Unable to load quiz</h2>
+            <p className="vp-quiz-summary">
+              {err instanceof Error ? err.message : "Unknown error."}
+            </p>
+          </div>
+        </div>
       </AdminShell>
     );
   }
@@ -73,36 +72,29 @@ export default async function QuizDetailPage({ params }: PageProps) {
       title={quiz.title}
       subtitle={`Slug: ${quiz.slug} · ${quiz.isActive ? "Active" : "Inactive"} · ${questions.length} question${questions.length === 1 ? "" : "s"}`}
       user={user}
-      actions={
-        <Link
-          href="/quiz-bank"
-          className="arena-button bg-[var(--arena-surface)] px-5 py-3 font-semibold"
-        >
-          Back to Quiz Bank
-        </Link>
-      }
+      actions={backAction}
     >
-      <div className="space-y-5">
-        <PanelCard className="space-y-4">
-          <h2 className="font-[family-name:var(--font-anybody)] text-xl font-extrabold uppercase tracking-tight">
-            Quiz Metadata
-          </h2>
+      <div className="vp-scope vp-vstack vp-vstack-lg">
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">Quiz Metadata</h2>
+          </div>
           <QuizEditForm quiz={quiz} />
-        </PanelCard>
+        </section>
 
-        <PanelCard className="space-y-4">
-          <h2 className="font-[family-name:var(--font-anybody)] text-xl font-extrabold uppercase tracking-tight">
-            Questions
-          </h2>
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">Questions</h2>
+          </div>
           <QuestionManager quizId={quiz.id} quizSlug={quiz.slug} questions={questions} />
-        </PanelCard>
+        </section>
 
-        <PanelCard className="space-y-4">
-          <h2 className="font-[family-name:var(--font-anybody)] text-xl font-extrabold uppercase tracking-tight">
-            CSV Bulk Import
-          </h2>
+        <section className="vp-panel">
+          <div className="vp-panel-head">
+            <h2 className="vp-panel-title">CSV Bulk Import</h2>
+          </div>
           <CsvImportPanel quizId={quiz.id} quizSlug={quiz.slug} />
-        </PanelCard>
+        </section>
       </div>
     </AdminShell>
   );
