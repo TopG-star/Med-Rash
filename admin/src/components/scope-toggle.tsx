@@ -33,34 +33,35 @@ export function ScopeToggle({ current, label = "Scope" }: Props) {
     });
   }
 
-  const baseBtn =
-    "arena-button px-3 py-2 text-xs font-extrabold uppercase tracking-[0.05em]";
-  const active = "bg-[var(--arena-primary)]";
-  const inactive = "bg-[var(--arena-surface)]";
+  function buttonClass(isActive: boolean): string {
+    return [
+      "vp-toggle-btn",
+      isActive ? "is-active" : "",
+      pending ? "vp-disabled-soft" : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
 
   return (
-    <div className="flex flex-col gap-1">
-      <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--arena-ink-muted)]">
+    <div className="vp-scope vp-toggle">
+      <span className="vp-toggle-label">
         {label}
       </span>
-      <div className="flex gap-2" role="radiogroup" aria-label={label}>
+      <div className="vp-toggle-group" aria-label={label}>
         <button
           type="button"
-          role="radio"
-          aria-checked={current === "mine"}
           onClick={() => setScope("mine")}
           disabled={pending}
-          className={`${baseBtn} ${current === "mine" ? active : inactive}`}
+          className={buttonClass(current === "mine")}
         >
           Mine
         </button>
         <button
           type="button"
-          role="radio"
-          aria-checked={current === "all"}
           onClick={() => setScope("all")}
           disabled={pending}
-          className={`${baseBtn} ${current === "all" ? active : inactive}`}
+          className={buttonClass(current === "all")}
         >
           All
         </button>
