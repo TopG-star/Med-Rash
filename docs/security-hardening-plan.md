@@ -89,17 +89,35 @@ Block C  (pre-scale / second customer / hospital RFP) ── ongoing
 
 **Sub-tasks**
 
-- [ ] Define token shape: HMAC-SHA256(`MEDRASH_DEVICE_TOKEN_SECRET`, `${deviceInstallId}.${participantId ?? ""}.${issuedAt}.${nonce}`) → base64url. TTL: 24h sliding.
-- [ ] New shared module `admin/netlify/functions/_shared/device-token.ts` — `mint()`, `verify()`, `rotate()`.
-- [ ] New endpoint `admin/netlify/functions/device-token.ts` — accepts `{ deviceInstallId }`, optionally `participantId`, gated by Turnstile/hCaptcha challenge (or, transitional, legacy gate key for one release). Returns `{ token, expiresAt }`.
-- [ ] Update Flutter `app/lib/core/auth` (or equivalent) to mint a device token on first launch, persist, refresh ~1h before expiry, attach as `Authorization: Bearer <token>` on every participant request.
-- [ ] Update all 8 participant Netlify functions to require the bearer token via `_shared/device-token.ts` instead of `_shared/gate.ts`. Keep `gate.ts` as a transitional fallback for one release window flagged by env `MEDRASH_GATE_KEY_FALLBACK=true`.
+_Phase 1 — backend dual-path (this commit):_
+
+- [x] Define token shape. Implemented as `${base64url(payloadJsonString)}.${base64url(HMAC-SHA256(secret, payloadB64))}` — same HMAC inputs as spec, but a structured payload (`{ v, did, pid, iat, exp, n }`) so verify can return parsed claims directly. TTL: 24h sliding; refresh window opens 1h before expiry.
+- [x] New shared module `admin/netlify/functions/_shared/device-token.ts` — exports `mintDeviceToken()`, `verifyDeviceToken()`, `extractBearerToken()`, plus typed verify-error codes.
+- [x] New endpoint `admin/netlify/functions/device-token.ts` — accepts `{ deviceInstallId, participantId? }`, gated (transitional) by the legacy gate key, returns `{ token, issuedAt, expiresAt, refreshAfter }`.
+- [x] New shared wrapper `admin/netlify/functions/_shared/participant-auth.ts` — `requireParticipantAuth()` accepts `Authorization: Bearer <token>` first; if absent, falls back to the legacy gate key when `MEDRASH_GATE_KEY_FALLBACK !== "false"` (default on during Phase 1+2).
+- [x] All 8 participant Netlify functions migrated to `requireParticipantAuth` (`profile-sync`, `quiz-list`, `leaderboard`, `ranked-eligibility`, `attempt-submit`, `recover-request`, `recover-verify`, `session-resolve`). A1 rate-limit logic on `recover-*` preserved.
+
+_Phase 2 — Flutter switchover (next commit, requires user go-ahead):_
+
+- [ ] Update Flutter `app/lib/core/infra/medrash_http_client.dart` + `app_config.dart` + `init_core.dart` to mint a device token on first launch, persist alongside `deviceInstallId`, refresh once `now ≥ refreshAfter`, attach as `Authorization: Bearer <token>` on every participant request. Keep `_gateApiKey` only for the bootstrap call to `/device-token`.
 - [ ] Document rotation procedure in `docs/admin-surfaces.md` §6.
-- [ ] Remove fallback path + delete `_shared/gate.ts` + `MEDRASH_GATE_API_KEY` in a follow-up commit after one successful pilot session.
 
-**Files touched:** `admin/netlify/functions/_shared/device-token.ts` (new), `admin/netlify/functions/device-token.ts` (new), all 8 participant function files, `app/lib/core/...` (auth wiring), `docs/admin-surfaces.md`.
+_Phase 3 — kill-switch (follow-up commit after one successful pilot session):_
 
-**Verification:** typecheck PASS · vitest PASS (token mint/verify/expiry/tamper tests) · `flutter analyze` PASS · `flutter test` PASS · manual: forged token returns 401; valid token allows attempt-submit; expired token forces re-mint.
+- [ ] Set `MEDRASH_GATE_KEY_FALLBACK=false` in Netlify env to verify no legacy traffic remains.
+- [ ] Delete `_shared/gate.ts`, drop `MEDRASH_GATE_API_KEY`, replace gate-key bootstrap on `/device-token` with Turnstile/hCaptcha or attestation challenge.
+
+**Files touched:** `admin/netlify/functions/_shared/device-token.ts` (new), `admin/netlify/functions/_shared/device-token.test.ts` (new), `admin/netlify/functions/_shared/participant-auth.ts` (new), `admin/netlify/functions/_shared/participant-auth.test.ts` (new), `admin/netlify/functions/device-token.ts` (new), 8 participant function files (1-line import + 3-line call-site swap each). Phase 2/3 will additionally touch `app/lib/core/...` and `docs/admin-surfaces.md`.
+
+**Verification (Phase 1 — 2025-01, workspace `c:\Users\USER\Desktop\Personal\medRash\admin`):**
+
+- typecheck — `npx tsc --noEmit` → exit 0. **PASS**
+- vitest — `npx vitest run` → 5 files / 48 tests pass (rate-limit 7, device-token 11, callback-handler 15, participant-auth 6, admin-user-session 9). **PASS**
+- forged-token 401 — covered by `device-token.test.ts` (tampered payload + tampered signature both return `DEVICE_TOKEN_BAD_SIGNATURE` 401) and `participant-auth.test.ts` (invalid bearer rejected without falling back). **PASS**
+- expired-token re-mint — covered by `device-token.test.ts` ("rejects an expired token" → `DEVICE_TOKEN_EXPIRED`). **PASS**
+- legacy-fallback opt-out — covered by `participant-auth.test.ts` (`MEDRASH_GATE_KEY_FALLBACK=false` makes a gate-key-only request return 401). **PASS**
+- Flutter `flutter analyze` / `flutter test` — **SKIP (Phase 2).** No Dart code touched in Phase 1.
+- Hosted smoke (`/device-token` returns valid token; existing Flutter build still passes via gate-key fallback) — **PENDING user deploy.**
 
 **Standards:** ISO 27002 §5.16, 5.17, 8.2, 8.5 · OWASP ASVS V3.5, V6.2 · NIST CSF PR.AA-1, PR.AA-2.
 
@@ -338,6 +356,7 @@ Before marking Block A complete:
 
 > Append-only. Newest entry on top.
 
+- **2025-01 — Slice A2 phase 1 shape.** Token wire format chosen as `${base64url(payloadJsonString)}.${base64url(sig)}` instead of the spec's `${did}.${pid}.${iat}.${nonce}` string. Same HMAC inputs (sig = HMAC-SHA256(secret, payloadB64)), but a structured JSON payload lets `verifyDeviceToken()` return parsed claims directly without a second parser. `MEDRASH_GATE_KEY_FALLBACK` defaults to **enabled** (opt-out via `false`/`0`/`off`/`no`), inverting the spec's "flagged by env" wording — required because Phase 1 ships the backend before Flutter is updated, so a missing env var must not lock live participants out. Bearer-then-fallback ordering is strict: a present-but-invalid bearer returns 401 immediately rather than silently retrying the legacy gate key, so client bugs surface instead of being masked by a stale shared secret. A2 split into three phases (backend dual-path → Flutter switchover → kill-switch) so the rollout cannot brick existing builds.
 - **2025-01 — Slice A1 shape.** Single shared module lives at `admin/src/lib/rate-limit.ts` (not `admin/netlify/functions/_shared/`) because Netlify functions in this repo already import from `../../src/lib/` (e.g. `session-create.ts`, `quiz-bank-write.ts`) and the Next.js server action at `admin/src/app/login/actions.ts` cannot reach a path under `netlify/functions/`. Identifiers are SHA-256 hashed before storage so `app.auth_rate_limit` never holds raw emails or IPs — pre-pays Slice A5's privacy discipline. Atomicity is enforced inside a plpgsql function (`enforce_rate_limit`) using `select … for update`, so concurrent verifies on the same key serialize cleanly. Lockout equals window (15 min) so a tripped limit resolves on the next window roll-over without a separate decay job.
 
 ---

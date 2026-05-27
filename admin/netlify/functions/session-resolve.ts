@@ -1,6 +1,6 @@
 import { getSupabaseAdminClient } from './_shared/supabase';
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from './_shared/http';
-import { requireGateAuthorization } from './_shared/gate';
+import { requireParticipantAuth } from './_shared/participant-auth';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 30;
@@ -163,9 +163,9 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     return methodResponse;
   }
 
-  const gateResponse = requireGateAuthorization(event);
-  if (gateResponse) {
-    return gateResponse;
+  const auth = requireParticipantAuth(event);
+  if (!auth.ok) {
+    return auth.response;
   }
 
   const startedAtMs = Date.now();

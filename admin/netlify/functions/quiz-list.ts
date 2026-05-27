@@ -1,6 +1,6 @@
 import { getSupabaseAdminClient } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, requirePost, toV2Handler } from "./_shared/http";
-import { requireGateAuthorization } from "./_shared/gate";
+import { requireParticipantAuth } from "./_shared/participant-auth";
 
 type QuestionRow = {
   id: string;
@@ -29,8 +29,8 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
   const methodError = requirePost(event);
   if (methodError) return methodError;
 
-  const gateError = requireGateAuthorization(event);
-  if (gateError) return gateError;
+  const auth = requireParticipantAuth(event);
+  if (!auth.ok) return auth.response;
 
   try {
     const supabase = getSupabaseAdminClient();

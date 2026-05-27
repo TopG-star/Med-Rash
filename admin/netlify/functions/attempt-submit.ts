@@ -2,7 +2,7 @@ import { PostgrestError } from "@supabase/supabase-js";
 
 import { EmailTakenError, getSupabaseAdminClient, isUniqueViolation, parseIdentityInput, resolveOrCreateUserId, resolveQuiz } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
-import { requireGateAuthorization } from "./_shared/gate";
+import { requireParticipantAuth } from "./_shared/participant-auth";
 
 type Mode = "learning" | "ranked";
 type Origin = "qr_session" | "open_access";
@@ -100,9 +100,9 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     return methodResponse;
   }
 
-  const gateResponse = requireGateAuthorization(event);
-  if (gateResponse) {
-    return gateResponse;
+  const auth = requireParticipantAuth(event);
+  if (!auth.ok) {
+    return auth.response;
   }
 
   try {
