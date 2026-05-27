@@ -83,3 +83,22 @@ class ProfilePointsUpdatedEvent extends MedRashEvent {
 
   final int totalPoints;
 }
+
+/// Emitted by [RankedBestScoreStore] when a ranked attempt crosses into a
+/// higher completion tier than the device has previously recorded for that
+/// quiz (e.g. first-time bronze, bronze → silver, silver → gold).
+///
+/// Carries the tier names as primitive strings to keep this file free of
+/// feature-layer imports. Values are one of `'bronze'`, `'silver'`, `'gold'`
+/// for [tier], plus `'none'` for [previousTier] when this is the first medal.
+class RankedBadgeUnlockedEvent extends MedRashEvent {
+  const RankedBadgeUnlockedEvent({
+    required this.quizId,
+    required this.tier,
+    required this.previousTier,
+  });
+
+  final String quizId;
+  final String tier;
+  final String previousTier;
+}

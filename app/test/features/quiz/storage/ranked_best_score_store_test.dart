@@ -97,5 +97,39 @@ void main() {
 
       await store.dispose();
     });
+
+    test('recordRanked emits RankedBadgeUnlockedEvent on tier upgrade', () async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final EventBus bus = EventBus();
+      final RankedBestScoreStore store = RankedBestScoreStore(prefs, eventBus: bus);
+      final List<RankedBadgeUnlockedEvent> events = <RankedBadgeUnlockedEvent>[];
+      final sub = bus.on<RankedBadgeUnlockedEvent>().listen(events.add);
+
+      // First medal: none -> bronze.
+      await store.recordRanked('quiz-a', 5, 10); // 50% bronze
+      // Upgrade: bronze -> gold.
+      await store.recordRanked('quiz-a', 10, 10); // 100% gold
+      // No upgrade (same gold tier, lower percent ignored).
+      await store.recordRanked('quiz-a', 9, 10); // 90% gold, but not higher
+      await Future<void>.delayed(Duration.zero);
+
+      expect(events, hasLength(2));
+      expect(events[0].quizId, 'quiz-a');
+      expect(events[0].previousTier, 'none');
+      expect(events[0].tier, 'bronze');
+      expect(events[1].previousTier, 'bronze');
+      expect(events[1].tier, 'gold');
+
+      await sub.cancel();
+      await store.dispose();
+    });
+
+    test('recordRanked does not emit badge event when no eventBus is provided', () async {
+      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final RankedBestScoreStore store = RankedBestScoreStore(prefs);
+      // Should not throw; nothing to assert beyond completion.
+      await store.recordRanked('quiz-a', 10, 10);
+      expect(store.bestPercentFor('quiz-a'), 100);
+    });
   });
 }

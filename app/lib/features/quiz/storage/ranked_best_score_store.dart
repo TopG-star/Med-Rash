@@ -23,7 +23,8 @@ RankedTier rankedTierFromPercent(int percent) {
 /// `mode == 'ranked'` and cleared on [IdentityResetEvent] so a handed-over
 /// device doesn't keep flashing the previous user's medals.
 class RankedBestScoreStore {
-  RankedBestScoreStore(this._preferences, {EventBus? eventBus}) {
+  RankedBestScoreStore(this._preferences, {EventBus? eventBus})
+      : _eventBus = eventBus {
     if (eventBus != null) {
       _attemptSub = eventBus
           .on<AttemptSubmittedEvent>()
@@ -36,6 +37,7 @@ class RankedBestScoreStore {
   static const String _keyPrefix = 'medrash.rankedBest.';
 
   final SharedPreferences _preferences;
+  final EventBus? _eventBus;
   StreamSubscription<AttemptSubmittedEvent>? _attemptSub;
   StreamSubscription<IdentityResetEvent>? _identitySub;
   final StreamController<void> _changes = StreamController<void>.broadcast();
@@ -71,6 +73,16 @@ class RankedBestScoreStore {
     if (existing != null && existing >= percent) return false;
     await _preferences.setInt(key, percent);
     if (!_changes.isClosed) _changes.add(null);
+    final RankedTier previousTier =
+        existing == null ? RankedTier.none : rankedTierFromPercent(existing);
+    final RankedTier newTier = rankedTierFromPercent(percent);
+    if (newTier != RankedTier.none && newTier.index > previousTier.index) {
+      _eventBus?.emit(RankedBadgeUnlockedEvent(
+        quizId: trimmed,
+        tier: newTier.name,
+        previousTier: previousTier.name,
+      ));
+    }
     return true;
   }
 
