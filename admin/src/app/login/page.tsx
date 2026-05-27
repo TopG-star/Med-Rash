@@ -61,8 +61,7 @@ export default async function LoginPage({
         </Suspense>
 
         <p className="vp-fineprint">
-          Need access? Ask your MedRash admin owner to add your email to the
-          allowlist.
+          Need access? Ask your MedRash admin to add you as a Host.
         </p>
       </div>
     </main>
