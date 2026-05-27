@@ -1,0 +1,369 @@
+# MedRash Security Hardening — Implementation Plan & Status
+
+> **Single source of truth** for security work kicked off May 2026 following the MECE security review.
+> Update the checkboxes as work lands. Add new decisions to the **Decisions Log** at the bottom.
+> Companion to [docs/ui-overhaul-plan.md](ui-overhaul-plan.md) — same checkbox + verification discipline.
+
+---
+
+## 0. Direction (LOCKED)
+
+**Posture:** treat MedRash as a hosted, multi-org, internationally-deployed medical CME platform.
+**Benchmarks** every item maps to: **ISO/IEC 27001:2022 + 27002:2022**, **NIST CSF 2.0**, **OWASP ASVS 4.0.3**, **OWASP Top 10 (2021)**, **GDPR Art. 5/13/14/15/17/20/25/30/32/33/34/35/37**, **SOC 2 Common Criteria**, **HIPAA Security Rule §164.308–312** (medical-data adjacent).
+**Discipline:** surgical commits, per-item verification report (workspace + mode + PASS/SKIP/FAIL), no `--no-verify`, no `-f` pushes.
+
+### MECE security pillars (locked)
+
+```
+MedRash Security
+├── 1. Identity & Access Management   (who is the requester, what may they do)
+├── 2. Data Protection                (confidentiality of data at rest, in transit, in use)
+├── 3. Application Surface            (input validation, output encoding, business-logic integrity)
+├── 4. Network & Transport            (TLS, CORS, security headers, edge controls)
+├── 5. Operational Security           (secrets, supply chain, build/CI, change mgmt)
+├── 6. Observability & Audit          (logging, monitoring, alerting, forensics)
+├── 7. Resilience & Abuse Prevention  (rate-limiting, bot defense, DoS, backup/restore)
+└── 8. Governance & Compliance        (policies, threat model, GDPR/ISO/HIPAA, IR, vendor mgmt)
+```
+
+> Anything outside these 8 pillars (physical site security, contributor laptop hygiene, payroll IT) is out of scope for the application security plan and belongs to organisational IT policy.
+
+---
+
+## 1. Severity & status conventions
+
+- 🔴 **Critical** — concrete attack path or compliance blocker; ship before next external pilot or any EU traffic.
+- 🟡 **Moderate** — closes a gap auditors will flag; ship before SOC 2 / ISO 27001 readiness exercise.
+- 🟢 **Minor** — defence-in-depth or polish; ship pre-scale.
+
+Status flags per item: `[ ]` not started · `[~]` in progress · `[x]` complete · `[!]` blocked · `[-]` deferred (record why in Decisions Log).
+
+Each item, once complete, MUST carry a **Verification block** with:
+
+- Workspace path (e.g. `c:\Users\USER\Desktop\Personal\medRash`).
+- Command mode (`local` / `hosted` / `auto`).
+- One PASS/SKIP/FAIL line per executed check (typecheck, tests, lint, manual smoke, migration `db push`).
+- Linked file paths edited.
+
+---
+
+## 2. Roadmap blocks (sequenced)
+
+Three blocks. Items inside a block can be parallelised; blocks themselves are sequential because later blocks assume earlier primitives.
+
+```
+Block A  (pre-international-pilot must-haves)        ── ~1–2 wk focused work
+Block B  (pre-SOC2 / ISO readiness must-haves)        ── ~4–8 wk
+Block C  (pre-scale / second customer / hospital RFP) ── ongoing
+```
+
+---
+
+## 3. Block A — pre-international-pilot must-haves
+
+> Goal: remove every concrete day-one attack path a pen-tester would hit. Nothing in this block is optional before a second customer or EU traffic.
+
+### Slice A1 🔴 — Persist OTP + per-IP rate limit in Postgres *(Pillars 1 & 7)*
+
+**Problem solved:** in-memory per-function-instance lockout is bypassed by horizontal scale (different cold starts).
+
+**Sub-tasks**
+
+- [ ] New migration `supabase/migrations/0NN_auth_rate_limit.sql` creating `app.auth_rate_limit` (key text pk, window_started_at timestamptz, attempt_count int, locked_until timestamptz nullable). Index on `(key, window_started_at)`. RLS service-role only.
+- [ ] New shared module `admin/netlify/functions/_shared/rate-limit.ts` exporting `enforceLimit({ scope, key, limit, windowSeconds, lockoutSeconds })` backed by the table; pure SQL upsert so it's safe across instances.
+- [ ] Wire into `admin/src/app/login/actions.ts` (`requestOtpAction`, `verifyOtpAction`) — replace in-memory map.
+- [ ] Wire into `admin/netlify/functions/recover-request.ts` and `recover-verify.ts`.
+- [ ] Add unit tests for `_shared/rate-limit.ts` (first hit allowed, Nth hit denied, lockout window respected, window reset).
+
+**Files touched:** `supabase/migrations/`, `admin/netlify/functions/_shared/rate-limit.ts` (new), `admin/src/app/login/actions.ts`, `admin/netlify/functions/recover-*.ts`, `admin/vitest.config.ts` (if needed).
+
+**Verification:** typecheck PASS · vitest PASS (new suite) · `supabase db push` PASS · manual: 6th wrong OTP within 15 min returns 429 across a fresh function instance (test by curling twice with `?_warm=1&_warm=2`).
+
+**Standards:** ISO 27002 §5.15, 5.17, 8.5 · OWASP ASVS V2.2 · NIST CSF PR.AA-3.
+
+---
+
+### Slice A2 🔴 — Replace static gate key with per-device signed tokens *(Pillar 1)*
+
+**Problem solved:** `x-medrash-gate-key` is a static shared bearer; leak from any participant build = full access to every participant endpoint.
+
+**Sub-tasks**
+
+- [ ] Define token shape: HMAC-SHA256(`MEDRASH_DEVICE_TOKEN_SECRET`, `${deviceInstallId}.${participantId ?? ""}.${issuedAt}.${nonce}`) → base64url. TTL: 24h sliding.
+- [ ] New shared module `admin/netlify/functions/_shared/device-token.ts` — `mint()`, `verify()`, `rotate()`.
+- [ ] New endpoint `admin/netlify/functions/device-token.ts` — accepts `{ deviceInstallId }`, optionally `participantId`, gated by Turnstile/hCaptcha challenge (or, transitional, legacy gate key for one release). Returns `{ token, expiresAt }`.
+- [ ] Update Flutter `app/lib/core/auth` (or equivalent) to mint a device token on first launch, persist, refresh ~1h before expiry, attach as `Authorization: Bearer <token>` on every participant request.
+- [ ] Update all 8 participant Netlify functions to require the bearer token via `_shared/device-token.ts` instead of `_shared/gate.ts`. Keep `gate.ts` as a transitional fallback for one release window flagged by env `MEDRASH_GATE_KEY_FALLBACK=true`.
+- [ ] Document rotation procedure in `docs/admin-surfaces.md` §6.
+- [ ] Remove fallback path + delete `_shared/gate.ts` + `MEDRASH_GATE_API_KEY` in a follow-up commit after one successful pilot session.
+
+**Files touched:** `admin/netlify/functions/_shared/device-token.ts` (new), `admin/netlify/functions/device-token.ts` (new), all 8 participant function files, `app/lib/core/...` (auth wiring), `docs/admin-surfaces.md`.
+
+**Verification:** typecheck PASS · vitest PASS (token mint/verify/expiry/tamper tests) · `flutter analyze` PASS · `flutter test` PASS · manual: forged token returns 401; valid token allows attempt-submit; expired token forces re-mint.
+
+**Standards:** ISO 27002 §5.16, 5.17, 8.2, 8.5 · OWASP ASVS V3.5, V6.2 · NIST CSF PR.AA-1, PR.AA-2.
+
+---
+
+### Slice A3 🔴 — Tighten RLS + view security_invoker *(Pillar 2)*
+
+**Problem solved:** `app.sessions` is fully public-readable via anon key; `app.admin_users` has no RLS; leaderboard views inherit creator privileges.
+
+**Sub-tasks**
+
+- [ ] New migration adding `with (security_invoker = true)` to `app.ranked_attempt_totals_all_time` and `app.ranked_attempt_totals_monthly` (already pending as `013_security_invoker_views.sql`).
+- [ ] New migration adding RLS policies for `app.admin_users`:
+  - `admin_users_service_role_all` (service_role).
+  - `admin_users_self_select` (`auth.uid() = user_id`).
+  - Deny everything else.
+- [ ] New migration tightening `app.sessions` RLS:
+  - Drop `sessions_public_select` (`using (true)`).
+  - Add `sessions_anon_join_lookup` allowing read only of `(id, quiz_id, name, join_code, status, starts_at, ends_at, host_name)` when `status in ('open','live')` and now within `[starts_at, ends_at)`.
+  - Service-role keeps full access.
+- [ ] Add `with (security_invoker = true)` as a **convention** to all future views; add a CONTRIBUTING note + lint-style grep check in CI (Block B Slice B6).
+- [ ] Verify Flutter participant join flow + admin host page still resolve sessions correctly under the new policy.
+
+**Files touched:** `supabase/migrations/0NN_*.sql` (2–3 files), `docs/admin-surfaces.md` §6 (RLS table refresh).
+
+**Verification:** `supabase db push` PASS · Supabase advisor lints re-run = 0 view findings, 0 missing-RLS findings · manual: participant join still works; admin live page still works; anon role can no longer `select * from app.sessions` without filters.
+
+**Standards:** ISO 27002 §5.15, 8.3, 8.12 · OWASP ASVS V8.3 · GDPR Art. 25, 32 · NIST CSF PR.DS-5.
+
+---
+
+### Slice A4 🔴 — Edge security headers *(Pillar 4)*
+
+**Problem solved:** no CSP / HSTS / X-Frame-Options means any XSS escalates to data exfiltration; admin can be clickjacked.
+
+**Sub-tasks**
+
+- [ ] Define CSP for admin: `default-src 'self'; script-src 'self' 'unsafe-inline'` (tighten away from `unsafe-inline` once we audit inline scripts) `; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`.
+- [ ] Define CSP for participant Flutter web: same baseline + `worker-src 'self' blob:` + `connect-src` allowing Netlify functions origin.
+- [ ] Add headers to `netlify.toml` (root + `admin/netlify.toml` + `app/netlify.toml`) AND to `admin/next.config.ts` `async headers()` (defence-in-depth: Netlify edge + Next.js framework).
+- [ ] Headers to ship: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=()` (camera scoped to participant origin only for QR scanner).
+- [ ] Run [securityheaders.com](https://securityheaders.com) against both deployed origins post-rollout; target grade **A** minimum.
+
+**Files touched:** root `netlify.toml`, `admin/next.config.ts`, `app/netlify.toml` (if separate), `docs/hosted-deploy.md` (record final header set).
+
+**Verification:** typecheck PASS · admin local dev still loads (no CSP violations in DevTools console) · Flutter web build serves with headers intact · securityheaders.com grade A on both origins.
+
+**Standards:** ISO 27002 §8.20, 8.21, 8.22, 8.23 · OWASP ASVS V14.4, V14.5 · OWASP Secure Headers Project · NIST CSF PR.IR-1.
+
+---
+
+### Slice A5 🔴 — Auth + admin-action audit logs *(Pillar 6)*
+
+**Problem solved:** no persistent record of who logged in, who failed, who edited what — fails ISO 27002 §8.15 and breach-investigation needs.
+
+**Sub-tasks**
+
+- [ ] New migration creating:
+  - `app.auth_events` (id uuid pk, occurred_at timestamptz default now(), event_type text check in `('otp_request','otp_verify_success','otp_verify_fail','allowlist_deny','session_refresh','recover_request','recover_verify_success','recover_verify_fail','signout')`, user_id uuid nullable fk auth.users, email_hash text nullable (sha256), ip_hash text nullable, user_agent_hash text nullable, result text, metadata jsonb default '{}'::jsonb).
+  - `app.admin_audit` (id uuid pk, occurred_at, actor_user_id uuid fk, actor_role text, action text, target_type text, target_id text nullable, payload_hash text nullable, metadata jsonb).
+  - Indexes on `occurred_at desc` for both, plus `(event_type, occurred_at desc)` and `(actor_user_id, occurred_at desc)`.
+  - RLS: service-role only.
+- [ ] New shared module `admin/netlify/functions/_shared/audit.ts` and `admin/src/lib/audit.ts` exporting `logAuthEvent(...)` and `logAdminAction(...)` — both fire-and-forget with try/catch so audit failures never block the request.
+- [ ] Wire `logAuthEvent` into: `requestOtpAction`, `verifyOtpAction`, `signOutAction`, `recover-request`, `recover-verify`, middleware allowlist deny path.
+- [ ] Wire `logAdminAction` into: `quiz-bank-write` (every op), `session-create`, future quiz/user mutations.
+- [ ] PII discipline: store SHA-256 hashes of email/IP/UA, never raw — supports investigation without growing PII surface.
+- [ ] Add retention column `expire_at` (default `occurred_at + interval '730 days'`) + nightly cleanup job (Postgres `pg_cron` or scheduled Netlify function). 2-year retention satisfies SOC 2 + GDPR minimisation.
+
+**Files touched:** `supabase/migrations/0NN_audit_tables.sql` (new), `admin/netlify/functions/_shared/audit.ts` (new), `admin/src/lib/audit.ts` (new), `admin/src/app/login/actions.ts`, `admin/src/middleware.ts`, `admin/netlify/functions/recover-*.ts`, `admin/netlify/functions/quiz-bank-write.ts`, `admin/netlify/functions/session-create.ts`.
+
+**Verification:** typecheck PASS · vitest PASS · `supabase db push` PASS · manual: trigger one of each event type, query `select event_type, count(*) from app.auth_events group by 1` and `select action, count(*) from app.admin_audit group by 1`, both non-zero where expected.
+
+**Standards:** ISO 27002 §8.15, 8.16, 8.17 · OWASP ASVS V7 · NIST CSF DE.AE-1..8, DE.CM-1 · SOC 2 CC7.2, CC7.3 · GDPR Art. 5(1)(f), 32(1)(b).
+
+---
+
+### Slice A6 🔴 — Centralized rate limiting on all 9 unprotected endpoints *(Pillar 7)*
+
+**Problem solved:** 9 of 11 Netlify functions have zero rate limiting; gate-key holder (or its leak) can drain Supabase + Netlify spend.
+
+**Sub-tasks**
+
+- [ ] Extend `_shared/rate-limit.ts` from A1 with `scope` enum: `auth_otp`, `auth_verify`, `recover_otp`, `profile_sync`, `attempt_submit`, `ranked_eligibility`, `quiz_list`, `leaderboard`, `quiz_bank_write`, `session_create`.
+- [ ] Per-scope defaults (tunable via env):
+  - `attempt_submit`: 60 / 60s per participant_id, 600 / 60s per IP.
+  - `profile_sync`: 30 / 60s per device.
+  - `ranked_eligibility`: 120 / 60s per device.
+  - `leaderboard` / `quiz_list`: 60 / 60s per IP.
+  - `quiz_bank_write` / `session_create`: 30 / 60s per admin user_id.
+- [ ] Wire into all 9 endpoints at the top of the handler, before any DB call.
+- [ ] Standard 429 response: `{ error: 'rate_limited', retryAfterMs }` + `Retry-After` header.
+- [ ] Emit `auth_events`-style log to a new `app.rate_limit_events` table (or reuse `app.auth_events` with a `'rate_limited'` event type — decide in implementation; default to reuse to avoid table sprawl).
+
+**Files touched:** `admin/netlify/functions/_shared/rate-limit.ts` (extend), every participant + admin Netlify function under `admin/netlify/functions/`.
+
+**Verification:** typecheck PASS · vitest PASS (per-scope limits hit & reset) · manual: hammer one endpoint past its cap, observe 429 with `Retry-After`; observe entries in audit table.
+
+**Standards:** ISO 27002 §5.30, 8.6, 8.14 · OWASP ASVS V11.1 · NIST CSF PR.IR-2 · OWASP Top 10 A04 (Insecure Design).
+
+---
+
+### Slice A7 🔴 — Adopt zod for all Netlify function + server-action inputs *(Pillar 3)*
+
+**Problem solved:** handwritten validators drift; new endpoints reinvent trim/length/enum checks; no single source of truth for input shapes.
+
+**Sub-tasks**
+
+- [ ] Add `zod` to `admin/package.json` dependencies (it has no transitive heavy deps and is already a Next.js norm).
+- [ ] New folder `admin/src/lib/schemas/` (Next.js + functions can both import from here since Netlify functions transpile from the admin tree).
+- [ ] One schema file per resource: `identity.ts`, `attempt.ts`, `session.ts`, `quiz.ts`, `recover.ts`, `leaderboard.ts`.
+- [ ] Replace handwritten `parseIdentityInput`, `parseCreateSessionInput`, etc. with `Schema.safeParse(payload)`; surface field-level errors in 400 responses with `{ error: 'invalid_input', issues: [{ path, message }] }`.
+- [ ] Keep server-side score recomputation in `attempt-submit.ts` intact — zod only validates shape, not business invariants.
+- [ ] Generate TypeScript types via `z.infer<>` and remove duplicate hand-typed input interfaces.
+
+**Files touched:** `admin/package.json` + `package-lock.json`, `admin/src/lib/schemas/*` (new), every Netlify function that takes a body, server actions in `admin/src/app/**/actions.ts`.
+
+**Verification:** typecheck PASS · existing vitest PASS unchanged · new vitest PASS for each schema (happy path + 3 rejection paths per schema) · manual: post malformed JSON to `/attempt-submit`, see structured 400.
+
+**Standards:** ISO 27002 §8.28 · OWASP ASVS V1.5, V5.1 · OWASP Top 10 A03 (Injection), A04 (Insecure Design).
+
+---
+
+### Block A close-out gate
+
+Before marking Block A complete:
+
+- [ ] All 7 slices verified PASS.
+- [ ] `npm run typecheck`, `npm run test`, `npm run lint` PASS in `admin/`.
+- [ ] `flutter analyze` and `flutter test` PASS in `app/`.
+- [ ] Supabase Advisor lints: **0 critical, 0 SECURITY DEFINER view findings, 0 missing-RLS findings**.
+- [ ] One end-to-end pilot dry-run: admin login → create session → participant scan QR → attempt → leaderboard, with audit + rate-limit + token-bound headers all observed.
+- [ ] Decisions Log updated with one entry per slice noting any deviations.
+
+---
+
+## 4. Block B — pre-SOC2 / ISO 27001 readiness must-haves
+
+> Goal: close every finding an auditor will flag during a SOC 2 Type I or ISO 27001 Stage 1 readiness exercise. Ship over 4–8 weeks after Block A.
+
+### Slice B1 🟡 — TOTP MFA for `owner` role + session timeout policy *(Pillar 1)*
+- [ ] Enable Supabase Auth TOTP factor; require enrollment on first `owner` login; deny privileged routes when factor missing.
+- [ ] Document idle (30 min) + absolute (8 h) session timeout, enforced in middleware.
+- [ ] Audit-log MFA enroll / use / disable.
+- **Standards:** ISO 27002 §5.17, 8.5 · OWASP ASVS V2.7 · SOC 2 CC6.1.
+
+### Slice B2 🟡 — pgcrypto column encryption for high-sensitivity PII *(Pillar 2)*
+- [ ] Encrypt `app.users.email`, `app.users.full_name`, `app.admin_users.email` with Supabase Vault or pgcrypto (`pgp_sym_encrypt`).
+- [ ] Keep a deterministic SHA-256 hash column for lookup-by-email (case-insensitive lower-hash) so unique constraints and recovery flow still work.
+- [ ] Document key-management procedure + rotation cadence.
+- **Standards:** ISO 27002 §5.12, 8.24 · GDPR Art. 32(1)(a) · HIPAA §164.312(a)(2)(iv).
+
+### Slice B3 🟡 — GDPR data-subject endpoints *(Pillars 2 & 8)*
+- [ ] `POST /api/me/export` (participant + admin) — returns full subject data as JSON + CSV in a signed download URL.
+- [ ] `POST /api/me/delete` — soft-delete + queued hard-delete after 30-day grace, with audit log entry.
+- [ ] Publish public privacy policy + Data Processing Agreement template under `docs/legal/`.
+- **Standards:** GDPR Art. 17, 20, 28 · ISO 27002 §5.34.
+
+### Slice B4 🟡 — CI hardening *(Pillar 5)*
+- [ ] Extend `.github/workflows/` with a `ci.yml` running on PR + push: `npm run typecheck`, `npm run test`, `npm run lint` for admin; `flutter analyze`, `flutter test` for app.
+- [ ] Add `security.yml`: `npm audit --omit=dev`, `osv-scanner`, `gitleaks`, GitHub secret scanning (free), Dependabot for npm + pub.
+- [ ] Generate SBOM (`cyclonedx-npm`, `cyclonedx-flutter`) on release tag; attach to GitHub Release.
+- **Standards:** ISO 27002 §8.8, 8.25, 8.28, 8.30 · NIST SSDF · SOC 2 CC8.1.
+
+### Slice B5 🟡 — Threat model + incident response plan + vendor register *(Pillar 8)*
+- [ ] 1-page STRIDE per surface in `docs/security/threat-model/` (admin-auth, participant-runner, host-live, recovery, leaderboard).
+- [ ] Incident response runbook in `docs/security/incident-response.md` (severities, on-call, GDPR 72h breach template).
+- [ ] Vendor register in `docs/security/vendor-register.md` (Supabase, Netlify, GitHub, font providers — risk, DPA on file, criticality).
+- **Standards:** ISO 27001 §6.1.2, §16 · ISO 27002 §5.7, 5.19–5.30 · NIST CSF GV, RS · GDPR Art. 30, 33, 34, 35.
+
+### Slice B6 🟡 — Backup/restore drill + DR runbook *(Pillar 7)*
+- [ ] Confirm Supabase PITR cadence on current plan; document in `docs/security/dr-runbook.md`.
+- [ ] Perform one quarterly restore-to-staging drill; record outcome.
+- [ ] Document domain hijack + Netlify-org-lock + Supabase-project-suspend recovery paths.
+- **Standards:** ISO 27002 §8.13, 8.14 · SOC 2 A1.2, A1.3.
+
+### Slice B7 🟡 — Client-side telemetry *(Pillar 6)*
+- [ ] Add Sentry (or equivalent) to admin Next.js and Flutter participant. PII scrubber on by default; bind release SHA.
+- [ ] Define alerting thresholds (error-rate spike, auth-fail spike).
+- **Standards:** ISO 27002 §8.15, 8.16 · NIST CSF DE.CM-1.
+
+### Slice B8 🟡 — Frontend XSS smoke tests *(Pillar 3)*
+- [ ] Playwright suite on admin: store `<script>alert(1)</script>` in nickname, host_name, quiz title, question prompt → assert rendered as text everywhere.
+- [ ] Flutter integration test mirror.
+- **Standards:** OWASP ASVS V5.3 · OWASP Top 10 A03.
+
+---
+
+## 5. Block C — pre-scale (≥ 10k users, second org, hospital RFP)
+
+### Slice C1 🟢 — Multi-tenant isolation *(Pillar 2)*
+- [ ] Add `tenant_id uuid not null` to every `app.*` table; backfill pilot tenant; tenant-scoped RLS.
+- [ ] Tenant-aware admin sessions + audit + leaderboards.
+- **Standards:** ISO 27002 §8.31 · SOC 2 CC6.6.
+
+### Slice C2 🟢 — SIEM / centralized log shipping *(Pillar 6)*
+- [ ] Ship Netlify + Supabase + Sentry logs to a SIEM (Logflare, Datadog, Elastic).
+- **Standards:** ISO 27002 §8.15, 8.16.
+
+### Slice C3 🟢 — Formal ISO 27001 ISMS kickoff *(Pillar 8)*
+- [ ] Policies, Statement of Applicability, internal audit, management review cycle.
+- **Standards:** ISO 27001 §4–10.
+
+### Slice C4 🟢 — External penetration test *(Pillar 8)*
+- [ ] Engage a CREST-accredited (or equivalent) testing firm; remediate findings before public launch.
+- **Standards:** ISO 27002 §8.8 · SOC 2 CC4.1.
+
+---
+
+## 6. Standards traceability matrix
+
+| Pillar | ISO 27002 controls | OWASP ASVS chapters | NIST CSF subcategories | GDPR articles | SOC 2 CC |
+|---|---|---|---|---|---|
+| 1. IAM | 5.15, 5.16, 5.17, 5.18, 8.2, 8.5 | V2, V3 | PR.AA-1..6 | 32 | CC6.1, CC6.2, CC6.3 |
+| 2. Data Protection | 5.12, 5.13, 5.14, 5.33, 5.34, 8.10, 8.11, 8.12, 8.24 | V6, V8, V9 | PR.DS-1..5 | 5, 17, 20, 25, 32 | CC6.5, CC6.7 |
+| 3. App Surface | 8.25, 8.26, 8.27, 8.28 | V1, V4, V5, V11, V13 | PR.PS-1..6 | 25, 32 | CC7.1 |
+| 4. Network/Transport | 8.20, 8.21, 8.22, 8.23 | V12, V14 | PR.IR-1 | 32 | CC6.7 |
+| 5. OpSec / Supply Chain | 5.20–5.23, 8.4, 8.8, 8.19, 8.25, 8.30 | V14 | PR.PS-1..6, SC-7 | 28, 32 | CC7.1, CC8.1 |
+| 6. Observability | 8.15, 8.16, 8.17 | V7 | DE.AE, DE.CM | 5(1)(f), 33, 34 | CC7.2, CC7.3, CC7.4 |
+| 7. Resilience | 5.29, 5.30, 8.6, 8.13, 8.14 | V11 | PR.IR-2..3, RC.RP | 32(1)(c) | A1.2, A1.3 |
+| 8. Governance | 5.1, 5.2, 5.7, 5.19–5.30 | — | GV, RS | 5, 13–15, 17, 20, 25, 30, 32–35, 37 | CC1–CC5, CC9 |
+
+---
+
+## 7. Working agreements
+
+- **One slice per branch**, branch name `fix/sec-AN-<short-slug>` or `feat/sec-BN-<short-slug>`.
+- **One migration per slice** when DB is touched; never re-edit a landed migration — add a new numbered one.
+- **No `--no-verify`, no `git push --force`, no `git reset --hard` on shared branches.**
+- **Verification block** posted in PR description AND appended under the slice in this file.
+- **Decisions Log** updated whenever scope, defaults, or sequencing deviates from this plan.
+- **Surgical edits only** — no opportunistic refactors inside security slices.
+
+---
+
+## 8. Decisions Log
+
+> Append-only. Newest entry on top.
+
+- _(no entries yet — first one will land with Slice A1 kick-off.)_
+
+---
+
+## 9. Out of scope (this plan)
+
+- Organisational IT hygiene (laptop disk encryption, MDM, employee onboarding/offboarding).
+- Payroll / financial security.
+- Physical security of any office or data centre (covered by Supabase + Netlify's own certifications).
+- Mobile app store account security (Apple Developer / Google Play org).
+- Marketing site security (handled separately if/when it exists).
+
+---
+
+## 10. Definition of Done — for each slice
+
+A slice is Done when **all** of:
+
+1. Code committed to a feature branch with surgical scope.
+2. Verification block populated with PASS evidence for every required check.
+3. PR opened with verification block in the description.
+4. Reviewer (or self-review with a written justification) signs off.
+5. Merged to `main`, deployed to hosted Supabase + Netlify.
+6. Post-deploy smoke check executed against hosted environment, PASS noted in this file.
+7. Checkbox flipped from `[~]` to `[x]` in this file in the same PR or an immediate follow-up.
+
+---
+
+_End of plan. Next action: kick off **Slice A1 — Persist OTP + per-IP rate limit in Postgres**._
