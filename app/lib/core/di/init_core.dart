@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import '../infra/auth_state_manager.dart';
 import '../infra/device_identity_service.dart';
+import '../infra/device_token_store.dart';
 import '../infra/event_bus.dart';
 import '../infra/medrash_http_client.dart';
 import '../infra/overlay_manager.dart';
@@ -26,14 +27,23 @@ Future<void> initCore() async {
 
   getIt.registerLazySingleton<EventBus>(EventBus.new);
   getIt.registerLazySingleton<OverlayController>(OverlayController.new);
+  getIt.registerLazySingleton<DeviceIdentityService>(
+    () => DeviceIdentityService(preferences),
+  );
+  getIt.registerLazySingleton<DeviceTokenStore>(
+    () => DeviceTokenStore(
+      preferences: preferences,
+      functionsBaseUrl: AppConfig.functionsBaseUrl,
+      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
+      deviceIdentityService: getIt<DeviceIdentityService>(),
+    ),
+  );
   getIt.registerLazySingleton<MedRashHttpClient>(
     () => MedRashHttpClient(
       functionsBaseUrl: AppConfig.functionsBaseUrl,
       gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
+      tokenProvider: () => getIt<DeviceTokenStore>().currentToken(),
     ),
-  );
-  getIt.registerLazySingleton<DeviceIdentityService>(
-    () => DeviceIdentityService(preferences),
   );
   getIt.registerLazySingleton<ProfileRepository>(
     () => LocalProfileRepository(

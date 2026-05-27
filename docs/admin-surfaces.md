@@ -330,6 +330,20 @@ All in `admin/src/lib/reports-queries.ts` (server-only):
 | `MEDRASH_ADMIN_PORTAL_BASE_URL` | server | Preferred base for auth callback/invite redirect URLs. |
 | `NEXT_PUBLIC_SITE_URL` | server fallback | Fallback origin when `MEDRASH_ADMIN_PORTAL_BASE_URL` is unset. |
 | `MEDRASH_ADMIN_WRITE_KEY` | netlify functions | Shared secret for `session-create` / `quiz-bank-write` admin-write endpoints. |
+| `MEDRASH_DEVICE_TOKEN_SECRET` | netlify functions | **Required.** ≥32-char random string. HMAC-SHA256 key for the per-device bearer tokens minted at `POST /device-token` and verified by every participant-facing endpoint (Slice A2). Rotation = generate a new secret, update the Netlify env, redeploy. All in-flight tokens immediately fail `DEVICE_TOKEN_BAD_SIGNATURE`; Flutter clients re-mint on the next request. **Do not rotate during a live pilot session** — the next request from every participant will see one 401 and re-mint, which is fine, but it's still avoidable noise. |
+| `MEDRASH_GATE_API_KEY` | netlify functions | **Transitional.** Static shared bearer historically required on every participant request. Now used for two things only: (1) the bootstrap call to `POST /device-token` so Flutter can mint its first bearer; (2) the legacy fallback inside `_shared/participant-auth.ts` when a request arrives without an `Authorization: Bearer` header. Will be deleted in Phase 3. |
+| `MEDRASH_GATE_KEY_FALLBACK` | netlify functions | Optional kill-switch. Set to `false` / `0` / `off` / `no` in Netlify env to disable the legacy gate-key fallback in `_shared/participant-auth.ts`. Default is **enabled** so live Flutter builds that haven't been updated to send bearer tokens keep working. Flip to `false` once every pilot device is on a build that calls `/device-token`. |
+
+### 6.4 Device-token rotation procedure (Slice A2)
+
+The `MEDRASH_DEVICE_TOKEN_SECRET` env var is the only secret that needs a documented rotation playbook beyond "regenerate and redeploy". Tokens are HMAC-signed, not encrypted, so rotation does not require client coordination — clients self-recover by re-minting on the first 401.
+
+1. **Generate a new secret** of ≥32 chars (e.g. `openssl rand -base64 48`).
+2. **Outside of a live pilot session**, update `MEDRASH_DEVICE_TOKEN_SECRET` in the Netlify environment for the production site.
+3. **Trigger a deploy** (or wait for the next one) so the new value reaches every function instance.
+4. **Verify** by hitting `POST /.netlify/functions/device-token` with the legacy gate key — the response body should include a new `token` whose signature differs from any cached one on a participant device.
+5. **No client action is required.** Every existing token will fail with `DEVICE_TOKEN_BAD_SIGNATURE` on its next use; `MedRashHttpClient` falls through to the legacy gate-key path (still attached on every request during Phase 2) and `DeviceTokenStore` re-mints on the request after that. End-user impact is one extra round-trip per device.
+6. **Audit:** there is no rotation log table yet — record the rotation date and reason in the Decisions Log of `docs/security-hardening-plan.md`.
 
 ---
 
