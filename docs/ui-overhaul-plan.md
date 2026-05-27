@@ -403,31 +403,31 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
 
 > Applies across the app. Some sub-tasks ship inside the screens that need them (Slice 2/3); others are app-wide primitives.
 
-- [ ] **5a. Press feedback** — wrap all primary buttons + option cards via `PressScale` (from 1c).
-- [ ] **5b. Page transitions** — route the participant router through `SharedAxisPage` (from 1c).
-- [ ] **5c. Celebration moments** — score count-up (2e), XP gain animation (2e), badge unlock toast (2h).
-- [ ] **5d. Skeleton + shimmer loading** — extend existing `MedRashSkeletonCard/List` with a purple-tinted shimmer sweep; replace remaining `CircularProgressIndicator` callsites.
-- [ ] **5e. Empty-state illustrations & micro-copy** — at minimum for first-pilot-session leaderboard, ranked list, profile history.
-- [ ] **5f. Haptics** — wire `Haptics.*` (from 1c) into option-tap, submit, unlock, sign-in success.
+- [x] **5a. Press feedback** — wrap all primary buttons + option cards via `PressScale` (from 1c).
+- [x] **5b. Page transitions** — route the participant router through `SharedAxisPage` (from 1c).
+- [x] **5c. Celebration moments** — score count-up (2e), XP gain animation (2e), badge unlock toast (2h).
+- [x] **5d. Skeleton + shimmer loading** — extend existing `MedRashSkeletonCard/List` with a purple-tinted shimmer sweep; replace remaining `CircularProgressIndicator` callsites.
+- [x] **5e. Empty-state illustrations & micro-copy** — at minimum for first-pilot-session leaderboard, ranked list, profile history.
+- [x] **5f. Haptics** — wire `Haptics.*` (from 1c) into option-tap, submit, unlock, sign-in success.
 
 ---
 
 ## 7. Accessibility & responsiveness QA — Slice 6
 
-- [ ] **6a. Contrast audit** — automated check on the new palette across all token pairings.
-- [ ] **6b. Tap-target audit** — every interactive element ≥ 44pt.
-- [ ] **6c. Reduced-motion parity** — every `Slice 1c` primitive verified to honor the OS setting.
-- [ ] **6d. Breakpoint smoke** — phone (390px), tablet (820px), laptop (1280px), widescreen (1920px) for participant + admin + host surfaces.
-- [ ] **6e. Semantics labels** — wrap unlabeled interactive elements with `Semantics(label: ...)`.
+- [x] **6a. Contrast audit** — automated check on the new palette across all token pairings.
+- [x] **6b. Tap-target audit** — every interactive element ≥ 44pt.
+- [x] **6c. Reduced-motion parity** — every `Slice 1c` primitive verified to honor the OS setting.
+- [x] **6d. Breakpoint smoke** — phone (390px), tablet (820px), laptop (1280px), widescreen (1920px) for participant + admin + host surfaces.
+- [x] **6e. Semantics labels** — wrap unlabeled interactive elements with `Semantics(label: ...)`.
 
 ---
 
 ## 8. Docs & governance — Slice 7
 
-- [ ] **7a. Update `docs/design-architecture.md`** — replace the "Light Neo-Medical Academy MVP default" section with the Vibrant Pulse contract.
-- [ ] **7b. Update `docs/prd.md`** — soften the "neo-brutalist" direction; reaffirm the nickname-only privacy rule + future avatar-pack note.
-- [ ] **7c. Component catalog** — minimal widgetbook (Flutter) + Storybook-lite (admin) for the new primitives.
-- [ ] **7d. Keep this file (`docs/ui-overhaul-plan.md`) current** as work lands.
+- [x] **7a. Update `docs/design-architecture.md`** — replace the "Light Neo-Medical Academy MVP default" section with the Vibrant Pulse contract.
+- [x] **7b. Update `docs/prd.md`** — soften the "neo-brutalist" direction; reaffirm the nickname-only privacy rule + future avatar-pack note.
+- [x] **7c. Component catalog** — minimal widgetbook (Flutter) + Storybook-lite (admin) for the new primitives.
+- [x] **7d. Keep this file (`docs/ui-overhaul-plan.md`) current** as work lands.
 
 ---
 
@@ -441,6 +441,9 @@ app/assets/fonts/Inter-SemiBold.ttf                    (NEW asset, w600)
 | 2026-05-25 | Font delivery: bundle Poppins + Inter `.ttf` in `pubspec.yaml` | Offline-safe for Ghana field clinicians; zero render-blocking on first paint. |
 | 2026-05-25 | Font roles: Poppins → headlines / buttons / score counters / nav; Inter → body / achievement copy | Explicit user instruction; replaces earlier Montserrat plan. |
 | 2026-05-25 | Poppins reserved for **UI emphasis only**; never for long medical paragraphs or analytics tables (Inter scales better there). Quiz question body + admin tables explicitly use Inter. | Explicit user instruction; reading-density wins over brand emphasis on long-form clinical copy. |
+| 2026-05-27 | Slice 6a: nudge light `success` `#16A34A` → `#128A3E`; audit success-glyph / error-glyph on tinted surfaces against WCAG **AA-large (3:1)** rather than AA-body. | Real usage is border + badge fill + icon glyph, not body text (WCAG SC 1.4.11 / 1.4.3). Final result: 30/30 contrast tests pass. |
+| 2026-05-27 | Slice 7a/b: retire "Neo-Medical Academy" as the default direction; promote Vibrant Pulse (light + first-class dark) in `design-architecture.md` + `prd.md`. | Aligns canonical docs with the shipped token contract and Slice 1–6 code; eliminates drift between PRD copy and reality. |
+| 2026-05-27 | Slice 7c: dev-only catalog at Flutter `/dev/catalog` (gated by `!kReleaseMode`) + admin `/dev/components` (gated by `process.env.NODE_ENV !== 'production'`). No `widgetbook` / Storybook dependency. | User directive “surgical implementations”; in-app gallery pages cover the showcase need with zero new dep surface and zero risk of leaking dev routes into pilot builds. |
 
 ---
 
