@@ -3,7 +3,7 @@
 ## Product Summary
 MedRash is a lightweight, mobile-first gamified medical learning and engagement platform for healthcare professionals in Ghana. It is designed for use during medical presentations, detailing sessions, and CME activities through QR-based access, while also supporting open access outside live sessions. The pilot focuses on short quiz-based interactions that improve attention and recall while generating actionable field intelligence on product awareness, knowledge gaps, and treatment understanding.
 
-The design direction for the pilot is a bold, neo-brutalist mobile experience that deliberately avoids generic clinical software patterns. The default visual system is the light Neo-Medical Academy theme, with the darker cyber-brutalist style treated as a future or optional theme variant rather than the primary MVP baseline.
+The design direction for the pilot is **Vibrant Pulse** — a light, purple-led visual system that deliberately avoids generic clinical software patterns while staying readable under real clinic conditions. The default visual system ships in both light and dark variants (selected by OS preference). The earlier neo-brutalist "Neo-Medical Academy" direction is retired as the default and preserved only as historical context for the pre-May-2026 reference set.
 
 ## Problem Statement
 Most medical presentation sessions are passive. Speakers present slides, participants listen, and engagement is difficult to measure. As a result:
@@ -74,7 +74,8 @@ Separate web admin users, including:
 - no physical prizes are awarded
 - only in-game recognition and points are used
 - full names are stored privately
-- public leaderboard displays nickname only
+- public leaderboard displays nickname only — this is a hard contract; no surface (admin, host, exports, intelligence views) may render a full name in any public or shared context
+- profile photos are not collected during the pilot; a curated avatar-pack (no user uploads) is on the future parking lot to give users self-expression without introducing photo-PII or moderation surface
 - nickname is auto-generated at join and editable later
 - facility and specialty are mandatory
 - content must be approved externally before admin upload
@@ -206,13 +207,14 @@ As an admin or manager, I want analytics by session, facility, and specialty so 
 - deployable on Netlify for pilot operations
 
 ## Design Requirements
-- the default participant and admin theme is the light neo-brutalist Neo-Medical Academy system
-- the UI must use thick borders, hard shadows, strong card surfaces, and clear tap targets
-- the background should use a subtle dot-grid pattern in the default theme to reinforce the academy worksheet aesthetic
-- yellow indicates primary action and top achievement, cyan indicates secondary emphasis and categories, and pink indicates tertiary emphasis or alerts
+- the default participant and admin theme is the Vibrant Pulse light system, with a first-class Vibrant Pulse dark companion that flips on by OS preference
+- the UI must use soft 1px outlines, low-opacity elevation, generous radii (20dp cards, 999dp pills), and ≥ 44pt tap targets — no thick borders, no hard offset shadows
+- the canvas is an off-white tinted background (`#F9F9FB`) with no decorative dot-grid pattern
+- brand purple (`#5300B7`) signals primary action and identity; amber gold (`#FFC329`) signals celebration and top-rank emphasis; success green and danger red are used as borders + badge fills on their tinted surfaces (never as small body text)
 - the participant experience must feel competitive and polished without becoming visually noisy or toy-like
 - the admin experience must inherit the same brand system while prioritizing operational clarity over playfulness
-- the dark cyber-brutalist theme is documented as an optional future theme and should not block MVP delivery
+- the dark Vibrant Pulse companion is a supported first-class mode — not an experimental campaign theme — and must keep contrast ≥ WCAG AA across every token pairing
+- full token contract, motion primitives, and accessibility test references live in `docs/design-architecture.md`
 
 ## UX Principles
 - 1 to 3 minute interaction target

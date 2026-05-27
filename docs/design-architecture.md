@@ -7,21 +7,21 @@ The design direction is not generic healthcare SaaS. It intentionally combines e
 
 ## Design System Decision
 ### Default Theme
-The default product theme is the light neo-brutalist system referred to in the reference files as Neo-Medical Academy.
+The default product theme is **Vibrant Pulse** — a light, purple-led system tuned for clinical reading density and competitive energy. It is the MVP visual baseline for the participant app and the admin panel.
 
-This is the system that should define the MVP visual baseline for both the participant app and the admin panel because it best matches the attached screen set and the intended pilot experience.
+The earlier "Neo-Medical Academy" light brutalist direction is retired as the default; it is preserved only as historical context for the pre-May-2026 reference screens.
 
 ### Secondary Theme
-The dark cyber-brutalist system should be treated as a supported brand variant for later rollout, theme switching, campaigns, or premium seasonal events. It should not be the default MVP theme unless the product deliberately ships a dual-theme experience.
+A dark companion mode (same token contract, brightness-flipped accents) ships alongside the light default and is selected by the OS preference. It is not an experimental campaign theme — it is a first-class supported mode.
 
 ### Current Pilot UI Mode (May 2026 lock)
-For the active pilot rollout, admin surfaces are using the **Option A visual lift** direction (Vibrant Pulse) while preserving MedRash information architecture and clinical copy.
+For the active pilot rollout, every participant + admin surface uses the Vibrant Pulse contract end-to-end while preserving MedRash information architecture and clinical copy.
 
 Locked constraints for this mode:
 - keep participant-facing privacy model unchanged (nickname-only in public contexts)
 - keep existing IA and route structure; no broad navigation reshuffle
 - treat this as a visual + interaction uplift, not a product-scope rewrite
-- preserve intentional exceptions (for example, the host control room dark visual language)
+- preserve intentional exceptions (for example, the host control-room dark visual language)
 
 ## Brand Expression
 MedRash should feel like:
@@ -33,63 +33,71 @@ MedRash should feel like:
 The UI should communicate speed, clarity, and reward. The visual identity should make participants feel they are entering a meaningful challenge while keeping the experience short and usable under real work pressure.
 
 ## Core Visual Principles
-- high-contrast hierarchy over subtle polish
-- mobile-first composition with large tap targets
-- thick borders and hard shadows instead of soft depth
-- strong color semantics for rank, action, and category
+- high-contrast hierarchy via type weight + a single saturated accent, not heavy chrome
+- mobile-first composition with tap targets ≥ 44pt (WCAG 2.5.5)
+- soft 1px outlines + low-opacity elevation instead of hard offset shadows
+- 16dp / 20dp radii for cards and inputs; 999dp pills for chips and progress
+- strong color semantics: purple = identity / primary action, gold = celebration / secondary, green = correct, red = wrong, neutral text on tinted surfaces
 - minimal cognitive load with one dominant action per screen
 - consistent card-based surfaces across participant and admin flows
-- playful competition without losing scientific credibility
+- playful competition without losing scientific credibility — Vibrant Pulse motion is short, spring-eased, and honors `prefers-reduced-motion`
 
 ## Theme Foundations
-### Light Theme: Neo-Medical Academy
-Use this as the primary production theme.
+### Light Theme: Vibrant Pulse (default)
+The primary production theme. Encoded as `ArenaDesignTokens.light` in [app/lib/core/theme/design_tokens.dart](../app/lib/core/theme/design_tokens.dart) and mirrored as CSS variables in the admin panel.
 
 Characteristics:
-- off-white background with subtle dot-grid pattern
-- black structural borders and hard shadow offsets
-- yellow for primary action and first-place emphasis
-- cyan for secondary emphasis, category chips, and supporting actions
-- pink for tertiary emphasis, alerts, and third-place states
-- bold editorial headlines with clean readable body text
+- off-white canvas (`#F9F9FB`) on pure white card surfaces (`#FFFFFF`)
+- soft tinted muted surface (`#F5F3FA`) for grouped containers
+- saturated brand purple (`#5300B7`) as the dominant action / identity accent
+- darker purple (`#3D0085`) for press, focus, and high-emphasis fills against light text
+- lilac (`#EBDDFF`) for selected-state surfaces and badge backgrounds
+- amber gold (`#FFC329`) for celebration, top-rank emphasis, and the secondary CTA fill
+- success green (`#128A3E`) and danger red (`#DC2626`) used as borders + badge fills on tinted success / danger surfaces, never as small body text on those surfaces
+- text primary `#1E1A2E`, text secondary `#5C5470` — Poppins for emphasis, Inter for body
 
-### Dark Theme: Cyber-Clinical Brutalism
-Use this as an optional future theme variant.
+### Dark Theme: Vibrant Pulse Night
+First-class companion. Same token contract, brightness-aware accents.
 
 Characteristics:
-- charcoal and near-black surfaces
-- electric violet as primary brand energy
-- cyber green and neon cyan for system states and technical accents
-- sharper, more experimental command-center feel
+- deep neutral surfaces with lifted primary tinting for elevation
+- light lilac primary (`#DDB7FF`) for icon glyphs and accent text
+- dark purple (`#3D2B5C`) for filled actions paired with white foreground — this is the dark-mode equivalent of the light-mode `primaryStrong` fill (the contract is encoded as `brightness == dark ? primarySoft : primaryStrong` in toast + empty-state CTA code)
+- gold secondary keeps its identity, paired with `onSecondary` (`#261A00`) for body text
+- success / danger surfaces are deep saturated tints (`#153D24`, `#3D1515`) with their light accent counterparts for icon glyphs
 
 ## Design Tokens
 ### Color Roles
 #### Participant And Admin Shared Roles
-- primary action and high-achievement: yellow
-- secondary action and topical tags: cyan
-- tertiary ranking and alerts: pink
-- structural border and hard shadow: black in light mode, dark outline in dark mode
-- background canvas: off-white with dot grid in light mode, charcoal with dot grid in dark mode
+- primary action and identity: brand purple (`primary` / `primaryStrong` for press)
+- selected-state surface + badge background: lilac (`primarySoft`)
+- secondary action, celebration, top-rank emphasis: amber gold (`secondary`, paired with `onSecondary` for text)
+- correctness signaling: success green as border + badge fill on `successSurface`
+- error / alert signaling: danger red as border + badge fill on `dangerSurface`
+- structural outline: 1px hairline (`outline`) — replaces the previous 3px black border
+- elevation: low-opacity drop shadow + outline; pressed state collapses via `PressScale` (scale 0.97) not by erasing a hard shadow
+- background canvas: off-white in light mode (`#F9F9FB`), deep neutral in dark mode
 
 #### Rank Semantics
-- rank 1: yellow
-- rank 2: cyan
-- rank 3: pink
-- current user highlight: yellow by default in light theme, violet/lilac in dark theme
+- rank 1: amber gold
+- rank 2: lilac / brand purple
+- rank 3: muted bronze (derived from `secondary` desaturated)
+- current user highlight: filled purple row in both light and dark modes
 
 ### Typography
-#### Light Theme
-- display and headline: Anybody
-- body and labels: Hanken Grotesk
+Both themes share the same family contract — Poppins for UI emphasis and Inter for reading-dense content. Bundled offline as `.ttf` weights in `app/pubspec.yaml` so first paint never blocks on the network (critical for Ghanaian field clinics with patchy connectivity).
 
-#### Dark Theme
-- display and headline: Space Grotesk
-- body: Inter
-- meta labels and timers: Space Mono
+#### Roles
+- display and headline: **Poppins** (weights 600 / 700 / 800)
+- buttons, score counters, navigation labels: **Poppins**
+- body, quiz question stem, medical explanations, admin tables: **Inter** (variable font)
+- meta labels, timers, leaderboard ranks: Poppins 700
+
+Poppins is reserved for UI emphasis only. Long-form clinical paragraphs and analytics tables explicitly use Inter — reading-density wins over brand emphasis on long-form copy.
 
 #### Typographic Rules
-- use uppercase for major headers, score titles, and leaderboard headings
-- use bold, condensed visual weight for ranks and primary calls to action
+- use uppercase for major screen titles and leaderboard headers
+- use Poppins 800 for ranks and primary CTAs
 - keep body copy readable and uncompressed for medical explanations
 - keep labels short and scannable
 
@@ -99,13 +107,12 @@ Characteristics:
 - stack spacing: 8px, 16px, and 24px tiers
 - desktop should preserve the same rhythm while moving into wider multi-column layouts
 
-### Borders, Radius, And Shadows
-- default border width: 3px
-- default hard shadow offset: 4px in light mode MVP
-- shared surface radius: 16px for primary cards and inputs in the light theme
-- chips and smaller controls: 12px radius
-- avatars: circular with visible border
-- pressed state: element moves into its shadow rather than fading opacity only
+### Borders, Radius, And Elevation
+- default border width: 1px hairline (`outline`)
+- elevation: 8–16dp soft shadow at 8–12% opacity; never a hard offset block
+- shared surface radius: 20dp for primary cards, 16dp for inputs, 999dp for pills + chips
+- avatars: circular with `outline` hairline ring
+- pressed state: `PressScale` collapses the element to 0.97 with spring ease (honors `disableAnimations`); no shadow toggling
 
 ## Shared Component Architecture
 ### App Bar
@@ -120,10 +127,11 @@ Characteristics:
 - one dominant content purpose per card
 
 ### Buttons
-- primary button uses yellow in the light theme
-- secondary button uses white or cyan depending on priority
-- destructive or alert actions should use pink or red only when meaningfully needed
-- pressed states should collapse the hard shadow
+- primary button (`ArenaButton`) uses brand purple in light mode and dark purple (`primarySoft`) in dark mode, both with white foreground (`Colors.white`)
+- secondary button uses amber gold with `onSecondary` text
+- ghost / tertiary action uses an outlined pill on the canvas
+- destructive actions use the danger red palette and only when destructive intent is real
+- pressed state: `PressScale` (0.97 spring) — never a shadow-collapse
 
 ### Inputs
 - large bordered text fields
@@ -136,9 +144,9 @@ Characteristics:
 - used for specialties, quiz categories, difficulty labels, and session labels
 
 ### Progress Bar
-- thick outlined track
-- flat fill color
-- no gradients
+- outlined pill track (`surface` fill, 1px `outline`)
+- gradient fill: brand purple → amber gold, left-to-right
+- tween settles in 360ms cubic-out (zero duration under `MediaQuery.disableAnimations`)
 - rank or quiz state should be understood at a glance
 
 ### Avatar Pattern
@@ -268,7 +276,7 @@ Recommended tabs:
 - academy or modules
 - profile
 
-The active item should use filled color and hard-shadow emphasis.
+The active item should use a filled purple pill background with white foreground; inactive items use `textSecondary` glyphs on the canvas — no hard-shadow emphasis.
 
 ## Admin Experience Design Architecture
 The admin interface should share MedRash brand DNA but shift from gameplay emphasis to operational clarity.
@@ -334,16 +342,19 @@ The admin interface should share MedRash brand DNA but shift from gameplay empha
 
 ## Motion And Interaction
 - keep motion short and purposeful
-- preferred interaction pattern is physical press simulation via shadow collapse and position shift
+- the canonical press feedback is `PressScale` (scale 0.97, spring ease) — never a shadow-collapse
+- screen transitions use `sharedAxisPage`; lists fade-in via `StaggerList`; numbers tick up via `CountUpNumber`; skeletons shimmer via `MedRashSkeleton`
+- every motion primitive honors `MediaQuery.disableAnimations` (covered by [reduced_motion_parity_test.dart](../app/test/core/ui/reduced_motion_parity_test.dart))
 - avoid decorative animation that slows quiz flow
-- reserve animated emphasis for state change moments such as rank reveal, score reveal, or CTA confirmation
+- reserve animated emphasis for state-change moments: rank reveal, score reveal, badge unlock, CTA confirmation
 
 ## Accessibility And Usability
-- maintain strong text contrast in both themes
-- support large tap targets for busy healthcare users
-- do not rely on color alone to communicate correctness, rank, or urgency
+- WCAG AA contrast verified across every token pairing in both themes by [design_tokens_contrast_test.dart](../app/test/core/theme/design_tokens_contrast_test.dart) (4.5:1 body text, 3.0:1 large text / non-text)
+- tap targets ≥ 44pt guarded by [tap_target_test.dart](../app/test/core/a11y/tap_target_test.dart) (theme leaves `MaterialTapTargetSize.padded`)
+- icon-only controls expose a `tooltip` (e.g. `ArenaScaffold` back / close) so screen readers announce their purpose — covered by [semantics_labels_test.dart](../app/test/core/a11y/semantics_labels_test.dart)
+- never rely on color alone to communicate correctness, rank, or urgency — pair every signal with text, icon, or position
 - ensure all leaderboard and KPI information is text-readable in addition to color-coded
-- preserve readability for longer medical explanations and facility names
+- preserve readability for longer medical explanations and facility names — Inter handles density; Poppins is never used for paragraphs
 
 ## Implementation Guidance
 ### Flutter Participant App
