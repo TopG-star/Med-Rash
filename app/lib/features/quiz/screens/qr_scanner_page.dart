@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
+import '../../../core/motion/press_scale.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_button.dart';
@@ -109,6 +110,7 @@ class _QrScannerPageState extends State<QrScannerPage> {
                                 ),
                               ),
                               IconButton(
+                                tooltip: 'Dismiss error',
                                 icon: const Icon(Icons.close_rounded),
                                 onPressed: _dismissError,
                               ),
@@ -122,11 +124,14 @@ class _QrScannerPageState extends State<QrScannerPage> {
             ),
           ),
           const SizedBox(height: 16),
-          ArenaButton(
-            label: MedRashStrings.liveScanQrCancel,
-            icon: Icons.keyboard_rounded,
-            backgroundColor: Colors.white,
-            onPressed: () => Navigator.of(context).pop<String>(null),
+          PressScale(
+            onTap: () => Navigator.of(context).pop<String>(null),
+            child: ArenaButton(
+              label: MedRashStrings.liveScanQrCancel,
+              icon: Icons.keyboard_rounded,
+              backgroundColor: Colors.white,
+              onPressed: () => Navigator.of(context).pop<String>(null),
+            ),
           ),
         ],
       ),

@@ -48,6 +48,7 @@ enum _ResultSource { freshFinalize, cachedSynced, cachedPending, none }
 class _QuizResultPageState extends State<QuizResultPage> {
   late final QuizRepository _quizRepository;
   StreamSubscription<AttemptSubmittedEvent>? _attemptSubscription;
+  StreamSubscription<RankedBadgeUnlockedEvent>? _badgeSubscription;
   Future<_ResultPayload>? _futureResult;
   bool _retryInFlight = false;
 
@@ -56,8 +57,8 @@ class _QuizResultPageState extends State<QuizResultPage> {
     super.initState();
     _quizRepository = getIt<QuizRepository>();
     _futureResult = _resolveResult();
-    _attemptSubscription =
-        getIt<EventBus>().on<AttemptSubmittedEvent>().listen((_) {
+    final EventBus bus = getIt<EventBus>();
+    _attemptSubscription = bus.on<AttemptSubmittedEvent>().listen((_) {
       if (!mounted) return;
       // A background sync succeeded — swap the pending banner for the synced
       // state and show a positive confirmation.
@@ -68,12 +69,63 @@ class _QuizResultPageState extends State<QuizResultPage> {
         const SnackBar(content: Text('Result synced to server.')),
       );
     });
+    _badgeSubscription =
+        bus.on<RankedBadgeUnlockedEvent>().listen(_onBadgeUnlocked);
   }
 
   @override
   void dispose() {
     _attemptSubscription?.cancel();
+    _badgeSubscription?.cancel();
     super.dispose();
+  }
+
+  void _onBadgeUnlocked(RankedBadgeUnlockedEvent event) {
+    if (!mounted) return;
+    Haptics.celebrate();
+    final tokens = context.arenaTokens;
+    // In light mode primaryStrong is a deep purple (great with white text).
+    // In dark mode primaryStrong is a *light* lilac — pair white with the dark
+    // primarySoft surface instead so the badge toast stays WCAG AA legible.
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color toastBackground =
+        isDark ? tokens.primarySoft : tokens.primaryStrong;
+    final String tierLabel = event.tier.isEmpty
+        ? 'Medal'
+        : '${event.tier[0].toUpperCase()}${event.tier.substring(1)}';
+    final bool firstMedal = event.previousTier == 'none';
+    final String message = firstMedal
+        ? '$tierLabel badge unlocked!'
+        : '$tierLabel badge unlocked — new personal best!';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: toastBackground,
+          duration: const Duration(seconds: 4),
+          content: Row(
+            children: <Widget>[
+              const Icon(
+                Icons.emoji_events_rounded,
+                color: Colors.white,
+                size: MedRashIconSize.md,
+              ),
+              const SizedBox(width: MedRashSpace.sm),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
   }
 
   Future<_ResultPayload> _resolveResult() async {

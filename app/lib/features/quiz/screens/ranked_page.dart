@@ -10,6 +10,7 @@ import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../../core/ui/widgets/empty_state.dart';
 import '../models/quiz.dart';
 import '../repositories/quiz_repository.dart';
 import '../storage/ranked_best_score_store.dart';
@@ -68,6 +69,13 @@ class _RankedPageState extends State<RankedPage> {
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
               const SizedBox(height: 24),
+              if (quizzes.isEmpty)
+                const MedRashEmptyState(
+                  icon: Icons.medical_information_rounded,
+                  title: 'No ranked quizzes yet',
+                  body:
+                      'Your facility hasn\u2019t published a ranked challenge for this pilot. Check back soon \u2014 new sets drop every week.',
+                ),
               ...quizzes.map((Quiz quiz) {
                 final int? best = _bestScoreStore.bestPercentFor(quiz.id);
                 final RankedTier tier =

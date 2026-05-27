@@ -8,6 +8,8 @@ import '../../../core/di/get_it.dart';
 import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/auth_state_manager.dart';
 import '../../../core/infra/event_bus.dart';
+import '../../../core/motion/haptics.dart';
+import '../../../core/motion/press_scale.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/operation_runner_state.dart';
 import '../../../core/ui/responsive.dart';
@@ -125,9 +127,12 @@ class _RecoveryPageState extends State<RecoveryPage>
               style: TextStyle(color: tokens.textSecondary, height: 1.4),
             ),
             const SizedBox(height: 20),
-            ArenaButton(
-              label: 'Back',
-              onPressed: _handleBack,
+            PressScale(
+              onTap: _handleBack,
+              child: ArenaButton(
+                label: 'Back',
+                onPressed: _handleBack,
+              ),
             ),
           ],
         ),
@@ -172,9 +177,12 @@ class _RecoveryPageState extends State<RecoveryPage>
           Text(_emailError!, style: TextStyle(color: tokens.error, fontSize: 13)),
         ],
         const SizedBox(height: 28),
-        ArenaButton(
-          label: 'Send recovery code',
-          onPressed: _submitEmail,
+        PressScale(
+          onTap: _submitEmail,
+          child: ArenaButton(
+            label: 'Send recovery code',
+            onPressed: _submitEmail,
+          ),
         ),
       ],
     );
@@ -220,9 +228,12 @@ class _RecoveryPageState extends State<RecoveryPage>
           Text(_codeError!, style: TextStyle(color: tokens.error, fontSize: 13)),
         ],
         const SizedBox(height: 24),
-        ArenaButton(
-          label: 'Verify and recover',
-          onPressed: _submitCode,
+        PressScale(
+          onTap: _submitCode,
+          child: ArenaButton(
+            label: 'Verify and recover',
+            onPressed: _submitCode,
+          ),
         ),
         const SizedBox(height: 16),
         Center(
@@ -268,6 +279,7 @@ class _RecoveryPageState extends State<RecoveryPage>
       try {
         await _recoveryRepository.requestOtp(email: raw);
         if (!mounted) return;
+        Haptics.submit();
         setState(() {
           _step = _RecoveryStep.verifyCode;
           _normalizedEmail = raw;
@@ -316,6 +328,7 @@ class _RecoveryPageState extends State<RecoveryPage>
         _eventBus.emit(const IdentityResetEvent(keptDeviceId: true));
 
         if (!mounted) return;
+        Haptics.celebrate();
         _showRecoveredSnack(persisted);
         context.go('/home');
       } on RecoveryException catch (error) {
@@ -337,6 +350,7 @@ class _RecoveryPageState extends State<RecoveryPage>
       try {
         await _recoveryRepository.requestOtp(email: _normalizedEmail);
         if (!mounted) return;
+        Haptics.submit();
         setState(() {
           _banner = 'We sent a fresh code to $_normalizedEmail.';
           _bannerKind = 'success';

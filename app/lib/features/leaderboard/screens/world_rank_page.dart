@@ -17,6 +17,7 @@ import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../../core/ui/widgets/empty_state.dart';
 import '../../../core/ui/widgets/monogram_avatar.dart';
 import '../models/leaderboard_row.dart';
 import '../repositories/leaderboard_repository.dart';
@@ -718,36 +719,11 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.arenaTokens;
-    return ArenaCard(
-      padding: const EdgeInsets.all(MedRashSpace.xl),
-      child: Column(
-        children: <Widget>[
-          Icon(
-            Icons.emoji_events_rounded,
-            color: tokens.primary,
-            size: MedRashIconSize.xl,
-          ),
-          const SizedBox(height: MedRashSpace.md),
-          Text(
-            'No rankings yet',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w800,
-                  color: tokens.textPrimary,
-                ),
-          ),
-          const SizedBox(height: MedRashSpace.sm),
-          Text(
-            'Finish a ranked attempt to claim the first podium spot.',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: tokens.textSecondary,
-                ),
-          ),
-        ],
-      ),
+    return const MedRashEmptyState(
+      icon: Icons.emoji_events_rounded,
+      title: 'Be the first on the podium',
+      body:
+          'No ranked attempts have synced for this pilot yet. Finish a ranked attempt to claim the inaugural top spot.',
     );
   }
 }

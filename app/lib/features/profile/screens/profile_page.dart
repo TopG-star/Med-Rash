@@ -14,9 +14,11 @@ import '../../../core/motion/press_scale.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/responsive.dart';
+import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../../core/ui/widgets/empty_state.dart';
 import '../../../core/ui/widgets/monogram_avatar.dart';
 import '../../quiz/storage/quiz_attempt_store.dart';
 import '../models/user_profile.dart';
@@ -102,7 +104,10 @@ class _ProfilePageState extends State<ProfilePage> {
         title: 'Profile',
         showBack: true,
         bottomNav: true,
-        child: Center(child: CircularProgressIndicator()),
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: MedRashSkeletonCard(),
+        ),
       );
     }
 
@@ -118,6 +123,17 @@ class _ProfilePageState extends State<ProfilePage> {
             _ProfileHero(profile: profile),
             const SizedBox(height: MedRashSpace.lg),
             _StatsRow(profile: profile),
+            if (profile.totalPoints <= 0 && profile.rank <= 0) ...<Widget>[
+              const SizedBox(height: MedRashSpace.lg),
+              MedRashEmptyState(
+                icon: Icons.history_edu_rounded,
+                title: 'No ranked attempts yet',
+                body:
+                    'Your ranked history lights up here once you finish your first ranked quiz. Tap below to start logging clinical reps.',
+                ctaLabel: 'Browse ranked quizzes',
+                onCta: () => context.go('/ranked'),
+              ),
+            ],
             const SizedBox(height: MedRashSpace.xl),
             const _SectionLabel(label: 'IDENTITY'),
             const SizedBox(height: MedRashSpace.sm),

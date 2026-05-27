@@ -75,8 +75,22 @@ class NetlifySupabaseSessionRepository implements SessionRepository {
       if (error.statusCode == 429 || error.code == 'RATE_LIMITED') {
         throw StateError('Too many session lookups right now. Please retry shortly.');
       }
-      if (error.statusCode == 404) {
-        throw StateError('Session code not found. Please verify the QR code and try again.');
+      if (error.code == 'SESSION_NOT_FOUND' || error.statusCode == 404) {
+        throw StateError(
+          'Session code "$normalized" not found. Please verify the QR code and try again.',
+        );
+      }
+      if (error.code == 'SESSION_QUIZ_MISSING') {
+        throw StateError(
+          'This session is missing its quiz. Please contact the host to refresh the session.',
+        );
+      }
+      if (error.code == 'SESSION_RESOLVE_QUERY_FAILED') {
+        throw StateError('Unable to resolve session right now. Please retry shortly.');
+      }
+      final String serverMessage = (error.body['message'] as String?)?.trim() ?? '';
+      if (serverMessage.isNotEmpty) {
+        throw StateError(serverMessage);
       }
       throw StateError('Unable to resolve session right now. Please retry shortly.');
     }

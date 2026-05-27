@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/motion/press_scale.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_button.dart';
@@ -99,10 +100,14 @@ class _LivePageState extends State<LivePage> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                ArenaButton(
-                  label: MedRashStrings.liveJoinCta,
-                  icon: Icons.login_rounded,
-                  onPressed: _canSubmit ? _submit : null,
+                PressScale(
+                  enabled: _canSubmit,
+                  onTap: _canSubmit ? _submit : null,
+                  child: ArenaButton(
+                    label: MedRashStrings.liveJoinCta,
+                    icon: Icons.login_rounded,
+                    onPressed: _canSubmit ? _submit : null,
+                  ),
                 ),
               ],
             ),
@@ -123,11 +128,14 @@ class _LivePageState extends State<LivePage> {
                   style: Theme.of(context).textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 16),
-                ArenaButton(
-                  label: MedRashStrings.liveScanQrCta,
-                  icon: Icons.qr_code_scanner_rounded,
-                  backgroundColor: Colors.white,
-                  onPressed: _openScanner,
+                PressScale(
+                  onTap: _openScanner,
+                  child: ArenaButton(
+                    label: MedRashStrings.liveScanQrCta,
+                    icon: Icons.qr_code_scanner_rounded,
+                    backgroundColor: Colors.white,
+                    onPressed: _openScanner,
+                  ),
                 ),
               ],
             ),

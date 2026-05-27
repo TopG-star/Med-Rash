@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/motion/press_scale.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/strings.dart';
+import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
@@ -80,7 +82,10 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
         future: _futureQuiz,
         builder: (BuildContext context, AsyncSnapshot<Quiz> snapshot) {
           if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: MedRashSkeletonCard(),
+            );
           }
 
           final Quiz quiz = snapshot.data!;
@@ -200,21 +205,30 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
               ),
               const SizedBox(height: 16),
               if (!rankedOnly)
-                ArenaButton(
-                  label: learnOnly
-                      ? MedRashStrings.learnStartCta
-                      : 'Start Learning',
-                  icon: Icons.menu_book_rounded,
-                  backgroundColor: learnOnly ? null : Colors.white,
-                  onPressed: () => _startMode(quiz, QuizMode.learning),
+                PressScale(
+                  onTap: () => _startMode(quiz, QuizMode.learning),
+                  child: ArenaButton(
+                    label: learnOnly
+                        ? MedRashStrings.learnStartCta
+                        : 'Start Learning',
+                    icon: Icons.menu_book_rounded,
+                    backgroundColor: learnOnly ? null : Colors.white,
+                    onPressed: () => _startMode(quiz, QuizMode.learning),
+                  ),
                 ),
               if (!learnOnly) ...<Widget>[
                 const SizedBox(height: 16),
-                ArenaButton(
-                  label: canStartRanked ? 'Go Ranked' : 'Ranked Attempt Used',
-                  icon: Icons.workspace_premium_rounded,
-                  onPressed:
+                PressScale(
+                  enabled: canStartRanked,
+                  onTap:
                       canStartRanked ? () => _startMode(quiz, QuizMode.ranked) : null,
+                  child: ArenaButton(
+                    label: canStartRanked ? 'Go Ranked' : 'Ranked Attempt Used',
+                    icon: Icons.workspace_premium_rounded,
+                    onPressed: canStartRanked
+                        ? () => _startMode(quiz, QuizMode.ranked)
+                        : null,
+                  ),
                 ),
               ],
             ],

@@ -8,6 +8,7 @@ import '../../../core/motion/haptics.dart';
 import '../../../core/motion/press_scale.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/theme_extensions.dart';
+import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
@@ -301,10 +302,13 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
               ),
             ],
             const SizedBox(height: MedRashSpace.md),
-            ArenaButton(
-              label: 'Back To Home',
-              icon: Icons.home_rounded,
-              onPressed: () => context.go('/home'),
+            PressScale(
+              onTap: () => context.go('/home'),
+              child: ArenaButton(
+                label: 'Back To Home',
+                icon: Icons.home_rounded,
+                onPressed: () => context.go('/home'),
+              ),
             ),
           ],
         ),
@@ -323,7 +327,10 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
         future: _futurePreparation,
         builder: (BuildContext context, AsyncSnapshot<_PreparationResult> snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
-            return Center(child: CircularProgressIndicator(color: tokens.primary));
+            return const Padding(
+              padding: EdgeInsets.all(16),
+              child: MedRashSkeletonCard(),
+            );
           }
 
           if (snapshot.hasError) {
@@ -353,10 +360,13 @@ class _QuizRunnerPageState extends State<QuizRunnerPage> {
 
           if (attempt == null || question == null) {
             return Center(
-              child: ArenaButton(
-                label: 'Back To Home',
-                icon: Icons.home_rounded,
-                onPressed: () => context.go('/home'),
+              child: PressScale(
+                onTap: () => context.go('/home'),
+                child: ArenaButton(
+                  label: 'Back To Home',
+                  icon: Icons.home_rounded,
+                  onPressed: () => context.go('/home'),
+                ),
               ),
             );
           }

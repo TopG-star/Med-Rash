@@ -12,6 +12,7 @@ import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/widgets/monogram_avatar.dart';
 import '../../profile/models/user_profile.dart';
 import '../../profile/repositories/profile_repository.dart';
@@ -216,11 +217,14 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
                 ),
                 if (!canStartRanked) ...<Widget>[
                   const SizedBox(height: MedRashSpace.md),
-                  ArenaButton(
-                    label: 'Switch to Learning Mode',
-                    icon: Icons.school_rounded,
-                    backgroundColor: Colors.white,
-                    onPressed: () => _startMode(session, QuizMode.learning),
+                  PressScale(
+                    onTap: () => _startMode(session, QuizMode.learning),
+                    child: ArenaButton(
+                      label: 'Switch to Learning Mode',
+                      icon: Icons.school_rounded,
+                      backgroundColor: Colors.white,
+                      onPressed: () => _startMode(session, QuizMode.learning),
+                    ),
                   ),
                 ],
               ],
@@ -490,7 +494,10 @@ class _LoadingState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          CircularProgressIndicator(color: tokens.primary),
+          const SizedBox(
+            width: 220,
+            child: MedRashSkeleton(height: 12, radius: 999),
+          ),
           const SizedBox(height: MedRashSpace.md),
           Text(
             joinCode != null && joinCode!.isNotEmpty
