@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:go_router/go_router.dart';
 
+import '../dev/component_catalog_page.dart';
+import '../motion/shared_axis_page.dart';
 import '../../features/badges/screens/badges_page.dart';
 import '../../features/leaderboard/screens/world_rank_page.dart';
 import '../../features/profile/screens/profile_page.dart';
@@ -18,32 +21,50 @@ List<RouteBase> buildUserRoutes() {
   return <RouteBase>[
     GoRoute(
       path: '/home',
-      builder: (_, __) => const ModeSelectionPage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const ModeSelectionPage(),
+      ),
     ),
     GoRoute(
       path: '/explore',
-      builder: (_, __) => const ExplorePage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const ExplorePage(),
+      ),
     ),
     GoRoute(
       path: '/live',
-      builder: (_, __) => const LivePage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const LivePage(),
+      ),
     ),
     GoRoute(
       path: '/ranked',
-      builder: (_, __) => const RankedPage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const RankedPage(),
+      ),
     ),
     GoRoute(
       path: '/learn',
-      builder: (_, __) => const LearnPage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const LearnPage(),
+      ),
     ),
     GoRoute(
       path: '/quiz-detail',
-      builder: (_, GoRouterState state) {
+      pageBuilder: (_, GoRouterState state) {
         final QuizDetailLaunch launch =
             QuizDetailLaunch.fromExtra(state.extra);
-        return QuizDetailPage(
-          quizId: launch.quizId,
-          preselectedMode: launch.preselectedMode,
+        return sharedAxisPage<void>(
+          state: state,
+          child: QuizDetailPage(
+            quizId: launch.quizId,
+            preselectedMode: launch.preselectedMode,
+          ),
         );
       },
     ),
@@ -55,35 +76,64 @@ List<RouteBase> buildUserRoutes() {
     ),
     GoRoute(
       path: '/session',
-      builder: (_, GoRouterState state) => SessionJoinPage(
-        joinCode: state.uri.queryParameters['joinCode'] ?? state.uri.queryParameters['code'],
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: SessionJoinPage(
+          joinCode: state.uri.queryParameters['joinCode'] ?? state.uri.queryParameters['code'],
+        ),
       ),
     ),
     GoRoute(
       path: '/session/:joinCode',
-      builder: (_, GoRouterState state) => SessionJoinPage(
-        joinCode: state.pathParameters['joinCode'],
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: SessionJoinPage(
+          joinCode: state.pathParameters['joinCode'],
+        ),
       ),
     ),
     GoRoute(
       path: '/quiz',
-      builder: (_, __) => const QuizRunnerPage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const QuizRunnerPage(),
+      ),
     ),
     GoRoute(
       path: '/result',
-      builder: (_, __) => const QuizResultPage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const QuizResultPage(),
+      ),
     ),
     GoRoute(
       path: '/leaderboard',
-      builder: (_, __) => const WorldRankPage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const WorldRankPage(),
+      ),
     ),
     GoRoute(
       path: '/profile',
-      builder: (_, __) => const ProfilePage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const ProfilePage(),
+      ),
     ),
     GoRoute(
       path: '/badges',
-      builder: (_, __) => const BadgesPage(),
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: const BadgesPage(),
+      ),
     ),
+    if (!kReleaseMode)
+      GoRoute(
+        path: '/dev/catalog',
+        pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+          state: state,
+          child: const ComponentCatalogPage(),
+        ),
+      ),
   ];
 }
