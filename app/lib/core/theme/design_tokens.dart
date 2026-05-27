@@ -82,7 +82,7 @@ class ArenaDesignTokens {
     secondaryStrong: Color(0xFFF59E0B),
     onSecondary: Color(0xFF261A00),
     tertiary: Color(0xFFFFD4E7),
-    success: Color(0xFF16A34A),
+    success: Color(0xFF128A3E),
     error: Color(0xFFDC2626),
     shadow: Color(0xFF6D28D9),
     warningSurface: Color(0xFFFFF7E6),

@@ -32,6 +32,7 @@ class ArenaScaffold extends StatelessWidget {
         title: Text(title.toUpperCase()),
         leading: showBack || showClose
             ? IconButton(
+                tooltip: showClose ? 'Close' : 'Back',
                 onPressed: () => context.pop(),
                 icon: Icon(showClose ? Icons.close_rounded : Icons.arrow_back_rounded),
               )

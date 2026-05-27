@@ -19,8 +19,9 @@ class MedRashSkeleton extends StatefulWidget {
 }
 
 class _MedRashSkeletonState extends State<MedRashSkeleton>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late final AnimationController _controller;
+  late final AnimationController _shimmer;
 
   @override
   void initState() {
@@ -29,32 +30,79 @@ class _MedRashSkeletonState extends State<MedRashSkeleton>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
+    _shimmer = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1600),
+    )..repeat();
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _shimmer.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
+    final bool reducedMotion = MediaQuery.of(context).disableAnimations;
+    if (reducedMotion) {
+      _controller.stop();
+      _shimmer.stop();
+    }
     return AnimatedBuilder(
-      animation: _controller,
+      animation:
+          reducedMotion ? const AlwaysStoppedAnimation<double>(0) : _controller,
       builder: (BuildContext context, Widget? _) {
-        final Color color = Color.lerp(
+        final Color base = Color.lerp(
               tokens.surfaceMuted,
               tokens.outlineMuted,
               _controller.value,
             ) ??
             tokens.surfaceMuted;
-        return Container(
+        final Widget shape = Container(
           width: widget.width,
           height: widget.height,
           decoration: BoxDecoration(
-            color: color,
+            color: base,
             borderRadius: BorderRadius.circular(widget.radius),
+          ),
+        );
+        if (reducedMotion) {
+          return shape;
+        }
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(widget.radius),
+          child: Stack(
+            children: <Widget>[
+              shape,
+              Positioned.fill(
+                child: AnimatedBuilder(
+                  animation: _shimmer,
+                  builder: (BuildContext context, Widget? _) {
+                    final double t = _shimmer.value;
+                    // Slide a soft purple-tinted highlight diagonally across.
+                    final Alignment begin = Alignment(-1.5 + 3.0 * t, -1.0);
+                    final Alignment end = Alignment(-0.5 + 3.0 * t, 1.0);
+                    return DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: begin,
+                          end: end,
+                          colors: <Color>[
+                            tokens.primary.withValues(alpha: 0.0),
+                            tokens.primary.withValues(alpha: 0.18),
+                            tokens.primary.withValues(alpha: 0.0),
+                          ],
+                          stops: const <double>[0.35, 0.5, 0.65],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         );
       },

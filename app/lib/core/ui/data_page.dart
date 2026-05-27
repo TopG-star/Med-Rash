@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'skeleton.dart';
+
 abstract class DataPage<T extends StatefulWidget> extends State<T>
     with WidgetsBindingObserver {
   static const Duration _resumeRefreshCooldown = Duration(seconds: 2);
@@ -98,7 +100,10 @@ abstract class DataPage<T extends StatefulWidget> extends State<T>
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: MedRashSkeletonList(rowCount: 4),
+      );
     }
 
     if (_error != null) {
