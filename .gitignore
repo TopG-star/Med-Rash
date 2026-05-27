@@ -23,3 +23,8 @@ supabase/.branches/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Local UI reference assets (screenshots, mock folders) — kept on disk for
+# design work but not version-controlled.
+/*.png
+/New UI/
