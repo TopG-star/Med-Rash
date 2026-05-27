@@ -69,15 +69,15 @@ Block C  (pre-scale / second customer / hospital RFP) ── ongoing
 
 **Sub-tasks**
 
-- [ ] New migration `supabase/migrations/0NN_auth_rate_limit.sql` creating `app.auth_rate_limit` (key text pk, window_started_at timestamptz, attempt_count int, locked_until timestamptz nullable). Index on `(key, window_started_at)`. RLS service-role only.
-- [ ] New shared module `admin/netlify/functions/_shared/rate-limit.ts` exporting `enforceLimit({ scope, key, limit, windowSeconds, lockoutSeconds })` backed by the table; pure SQL upsert so it's safe across instances.
-- [ ] Wire into `admin/src/app/login/actions.ts` (`requestOtpAction`, `verifyOtpAction`) — replace in-memory map.
-- [ ] Wire into `admin/netlify/functions/recover-request.ts` and `recover-verify.ts`.
-- [ ] Add unit tests for `_shared/rate-limit.ts` (first hit allowed, Nth hit denied, lockout window respected, window reset).
+- [x] New migration `supabase/migrations/013_auth_rate_limit.sql` creating `app.auth_rate_limit` (key text pk, window_started_at timestamptz, attempt_count int, locked_until timestamptz nullable). Partial index on `locked_until` for sweep visibility. RLS service-role only. Atomic plpgsql function `app.enforce_rate_limit(p_key, p_limit, p_window_seconds, p_lockout_seconds)` + `app.reset_rate_limit(p_key)`.
+- [x] New shared module `admin/src/lib/rate-limit.ts` (importable from both Next server actions and Netlify functions via `../../src/lib/rate-limit`) exporting `enforceRateLimit`, `resetRateLimit`, `rateLimitConfig`, `formatLockoutMessage`. Identifiers are SHA-256 hashed before storage (no raw email/IP at rest).
+- [x] Wired into `admin/src/app/login/actions.ts` — `requestOtpAction` (`auth_otp_request`, 5/15min) and `verifyOtpAction` (`auth_otp_verify`, 5/15min). In-memory map removed.
+- [x] Wired into `admin/netlify/functions/recover-request.ts` (`recover_otp_request`, 3/15min) and `recover-verify.ts` (`recover_otp_verify`, 5/15min, reset on success).
+- [x] Unit tests in `admin/src/lib/rate-limit.test.ts` (7 tests: first hit allowed, Nth hit denied, lockout respected, window reset, reset clears key, identifier hashing, case/whitespace normalization).
 
-**Files touched:** `supabase/migrations/`, `admin/netlify/functions/_shared/rate-limit.ts` (new), `admin/src/app/login/actions.ts`, `admin/netlify/functions/recover-*.ts`, `admin/vitest.config.ts` (if needed).
+**Files touched:** `supabase/migrations/013_auth_rate_limit.sql` (new), `admin/src/lib/rate-limit.ts` (new), `admin/src/lib/rate-limit.test.ts` (new), `admin/src/app/login/actions.ts`, `admin/netlify/functions/recover-request.ts`, `admin/netlify/functions/recover-verify.ts`.
 
-**Verification:** typecheck PASS · vitest PASS (new suite) · `supabase db push` PASS · manual: 6th wrong OTP within 15 min returns 429 across a fresh function instance (test by curling twice with `?_warm=1&_warm=2`).
+**Verification:** typecheck PASS (`npx tsc --noEmit`, exit 0) · vitest PASS (31/31, including 7 new rate-limit tests) · `supabase db push` PENDING (user to run against hosted DB) · manual 429-on-6th-wrong-OTP across fresh instance PENDING (requires hosted deploy).
 
 **Standards:** ISO 27002 §5.15, 5.17, 8.5 · OWASP ASVS V2.2 · NIST CSF PR.AA-3.
 
@@ -338,7 +338,7 @@ Before marking Block A complete:
 
 > Append-only. Newest entry on top.
 
-- _(no entries yet — first one will land with Slice A1 kick-off.)_
+- **2025-01 — Slice A1 shape.** Single shared module lives at `admin/src/lib/rate-limit.ts` (not `admin/netlify/functions/_shared/`) because Netlify functions in this repo already import from `../../src/lib/` (e.g. `session-create.ts`, `quiz-bank-write.ts`) and the Next.js server action at `admin/src/app/login/actions.ts` cannot reach a path under `netlify/functions/`. Identifiers are SHA-256 hashed before storage so `app.auth_rate_limit` never holds raw emails or IPs — pre-pays Slice A5's privacy discipline. Atomicity is enforced inside a plpgsql function (`enforce_rate_limit`) using `select … for update`, so concurrent verifies on the same key serialize cleanly. Lockout equals window (15 min) so a tripped limit resolves on the next window roll-over without a separate decay job.
 
 ---
 

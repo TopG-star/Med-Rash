@@ -16,6 +16,12 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireGateAuthorization } from "./_shared/gate";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+  resetRateLimit,
+} from "../../src/lib/rate-limit";
 
 // Slice 6b — step 2 of OTP-confirmed identity recovery.
 //
@@ -67,6 +73,21 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       });
     }
 
+    const supabase = getSupabaseAdminClient();
+
+    const limit = await enforceRateLimit(
+      supabase,
+      rateLimitConfig("recover_otp_verify", email),
+    );
+    if (!limit.allowed) {
+      return jsonResponse(429, {
+        ok: false,
+        code: "RATE_LIMITED",
+        message: formatLockoutMessage(limit),
+        retryAfterSeconds: limit.retryAfterSeconds,
+      });
+    }
+
     const auth = getSupabaseAuthClient();
     const { data: verified, error: verifyError } = await auth.auth.verifyOtp({
       email,
@@ -86,7 +107,6 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     }
 
     const authUserId = verified.user.id;
-    const supabase = getSupabaseAdminClient();
     const recovered = await findUserByRecoveryEmail(supabase, email);
 
     if (!recovered) {
@@ -121,6 +141,8 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     }
 
     await bindDeviceToUser(supabase, recovered.id, deviceInstallId);
+
+    await resetRateLimit(supabase, "recover_otp_verify", email);
 
     return jsonResponse(200, {
       ok: true,

@@ -2,45 +2,19 @@
 
 import { redirect } from "next/navigation";
 
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+  resetRateLimit,
+} from "@/lib/rate-limit";
+import { getAdminSupabaseClient } from "@/lib/supabase-server";
 import { getServerSupabaseClient } from "@/lib/supabase-ssr";
 import type { LoginActionState } from "./state";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_RE = /^\d{6}$/;
 const RESEND_COOLDOWN_MS = 60_000;
-
-// In-memory per-email lockout. Resets when the Node process restarts (fine
-// for Netlify functions — Supabase's own rate limit is the real defense;
-// this is just a small extra friction layer for credential stuffing).
-const MAX_WRONG_ATTEMPTS = 5;
-const ATTEMPT_WINDOW_MS = 15 * 60_000;
-type AttemptRecord = { count: number; firstAt: number };
-const attempts = new Map<string, AttemptRecord>();
-
-function readWrongAttempts(email: string): AttemptRecord | null {
-  const rec = attempts.get(email);
-  if (!rec) return null;
-  if (Date.now() - rec.firstAt > ATTEMPT_WINDOW_MS) {
-    attempts.delete(email);
-    return null;
-  }
-  return rec;
-}
-
-function recordWrongAttempt(email: string): AttemptRecord {
-  const existing = readWrongAttempts(email);
-  if (!existing) {
-    const fresh: AttemptRecord = { count: 1, firstAt: Date.now() };
-    attempts.set(email, fresh);
-    return fresh;
-  }
-  existing.count += 1;
-  return existing;
-}
-
-function clearAttempts(email: string): void {
-  attempts.delete(email);
-}
 
 function safeNext(raw: unknown): string {
   return typeof raw === "string" && raw.startsWith("/") ? raw : "/dashboard";
@@ -74,6 +48,19 @@ export async function requestOtpAction(
       status: "error",
       message:
         "Server is missing MEDRASH_ADMIN_PORTAL_BASE_URL — set it to the deployed admin origin.",
+      next,
+    };
+  }
+
+  const requestLimit = await enforceRateLimit(
+    getAdminSupabaseClient(),
+    rateLimitConfig("auth_otp_request", email),
+  );
+  if (!requestLimit.allowed) {
+    return {
+      status: "error",
+      message: formatLockoutMessage(requestLimit),
+      email,
       next,
     };
   }
@@ -134,15 +121,15 @@ export async function verifyOtpAction(
     };
   }
 
-  const lock = readWrongAttempts(email);
-  if (lock && lock.count >= MAX_WRONG_ATTEMPTS) {
-    const minutesLeft = Math.max(
-      1,
-      Math.ceil((ATTEMPT_WINDOW_MS - (Date.now() - lock.firstAt)) / 60_000),
-    );
+  const adminClient = getAdminSupabaseClient();
+  const verifyLimit = await enforceRateLimit(
+    adminClient,
+    rateLimitConfig("auth_otp_verify", email),
+  );
+  if (!verifyLimit.allowed) {
     return {
       status: "error",
-      message: `Too many wrong codes. Try again in ${minutesLeft} minute${minutesLeft === 1 ? "" : "s"}.`,
+      message: formatLockoutMessage(verifyLimit),
       email,
       next,
     };
@@ -156,8 +143,7 @@ export async function verifyOtpAction(
   });
 
   if (error) {
-    const rec = recordWrongAttempt(email);
-    const remaining = Math.max(0, MAX_WRONG_ATTEMPTS - rec.count);
+    const remaining = verifyLimit.attemptsRemaining;
     console.error("[login] verifyOtp failed", error.message);
     return {
       status: "error",
@@ -170,7 +156,7 @@ export async function verifyOtpAction(
     };
   }
 
-  clearAttempts(email);
+  await resetRateLimit(adminClient, "auth_otp_verify", email);
   // Supabase has set the auth cookies via the SSR client. Hand off to the
   // callback so it can resolve admin_users.status (invited -> verified ->
   // /onboarding, active -> /dashboard, deactivated -> /denied). B4 will

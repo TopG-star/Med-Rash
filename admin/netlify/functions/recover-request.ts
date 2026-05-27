@@ -13,6 +13,11 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireGateAuthorization } from "./_shared/gate";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 // Slice 6b — step 1 of OTP-confirmed identity recovery.
 //
@@ -57,6 +62,20 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     }
 
     const supabase = getSupabaseAdminClient();
+
+    const limit = await enforceRateLimit(
+      supabase,
+      rateLimitConfig("recover_otp_request", email),
+    );
+    if (!limit.allowed) {
+      return jsonResponse(429, {
+        ok: false,
+        code: "RATE_LIMITED",
+        message: formatLockoutMessage(limit),
+        retryAfterSeconds: limit.retryAfterSeconds,
+      });
+    }
+
     const existing = await findUserByRecoveryEmail(supabase, email);
 
     if (!existing) {
