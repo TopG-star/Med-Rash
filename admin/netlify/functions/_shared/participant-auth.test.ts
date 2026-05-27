@@ -9,15 +9,16 @@ const GATE_KEY = "legacy-gate-key-for-test";
 
 beforeEach(() => {
   process.env.MEDRASH_DEVICE_TOKEN_SECRET = TEST_SECRET;
+  // Gate key env is still set because /device-token uses it for bootstrap
+  // in Phase 3a. participant-auth no longer reads it.
   process.env.MEDRASH_GATE_API_KEY = GATE_KEY;
-  delete process.env.MEDRASH_GATE_KEY_FALLBACK;
 });
 
 afterEach(() => {
   process.env = { ...ORIGINAL_ENV };
 });
 
-describe("requireParticipantAuth", () => {
+describe("requireParticipantAuth (Phase 3a — bearer-only)", () => {
   it("accepts a valid device token via Authorization header", () => {
     const minted = mintDeviceToken({ deviceInstallId: "device-uuid" });
     const result = requireParticipantAuth({
@@ -27,13 +28,11 @@ describe("requireParticipantAuth", () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.method).toBe("device-token");
-      if (result.method === "device-token") {
-        expect(result.claims.deviceInstallId).toBe("device-uuid");
-      }
+      expect(result.claims.deviceInstallId).toBe("device-uuid");
     }
   });
 
-  it("rejects an invalid bearer without falling back to the gate key", () => {
+  it("rejects an invalid bearer with 401 (no fallback)", () => {
     const result = requireParticipantAuth({
       httpMethod: "POST",
       headers: {
@@ -47,19 +46,7 @@ describe("requireParticipantAuth", () => {
     }
   });
 
-  it("falls back to the legacy gate key when no bearer is present (default)", () => {
-    const result = requireParticipantAuth({
-      httpMethod: "POST",
-      headers: { "x-medrash-gate-key": GATE_KEY },
-    });
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.method).toBe("legacy-gate-key");
-    }
-  });
-
-  it("rejects when no bearer is present and fallback is disabled", () => {
-    process.env.MEDRASH_GATE_KEY_FALLBACK = "false";
+  it("rejects with 401 when only the legacy gate-key header is supplied", () => {
     const result = requireParticipantAuth({
       httpMethod: "POST",
       headers: { "x-medrash-gate-key": GATE_KEY },
@@ -67,6 +54,10 @@ describe("requireParticipantAuth", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.response.statusCode).toBe(401);
+      const body = JSON.parse(result.response.body as string) as {
+        code: string;
+      };
+      expect(body.code).toBe("UNAUTHORIZED");
     }
   });
 
@@ -81,10 +72,11 @@ describe("requireParticipantAuth", () => {
     }
   });
 
-  it("rejects when the gate key is wrong and no bearer was sent", () => {
+  it("ignores MEDRASH_GATE_KEY_FALLBACK env var entirely (kill-switch is gone)", () => {
+    process.env.MEDRASH_GATE_KEY_FALLBACK = "true";
     const result = requireParticipantAuth({
       httpMethod: "POST",
-      headers: { "x-medrash-gate-key": "wrong-key" },
+      headers: { "x-medrash-gate-key": GATE_KEY },
     });
     expect(result.ok).toBe(false);
     if (!result.ok) {

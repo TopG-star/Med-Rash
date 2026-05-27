@@ -104,10 +104,20 @@ _Phase 2 — Flutter switchover (this commit):_
 - [x] Wire `DeviceTokenStore` into `app/lib/core/di/init_core.dart` ahead of `MedRashHttpClient` and pass `tokenProvider: () => getIt<DeviceTokenStore>().currentToken()`.
 - [x] Document rotation procedure + new env vars (`MEDRASH_DEVICE_TOKEN_SECRET`, `MEDRASH_GATE_KEY_FALLBACK`) in `docs/admin-surfaces.md` §6.3 + §6.4.
 
-_Phase 3 — kill-switch (follow-up commit after one successful pilot session):_
+_Phase 3a — kill the fallback (this commit):_
 
-- [ ] Set `MEDRASH_GATE_KEY_FALLBACK=false` in Netlify env to verify no legacy traffic remains.
-- [ ] Delete `_shared/gate.ts`, drop `MEDRASH_GATE_API_KEY`, replace gate-key bootstrap on `/device-token` with Turnstile/hCaptcha or attestation challenge.
+- [x] Verify `MEDRASH_GATE_KEY_FALLBACK=false` in Netlify env. **Confirmed by user — pilot session ran clean on bearer-only traffic.**
+- [x] Remove the gate-key fallback branch from `admin/netlify/functions/_shared/participant-auth.ts`. Bearer-only. The `MEDRASH_GATE_KEY_FALLBACK` env var is now ignored. `participant-auth.test.ts` shrunk from 6 → 5 tests (dropped the two fallback paths, added one "ignores the env var" assertion).
+- [x] `_shared/gate.ts` kept in place because `/device-token` still uses it for bootstrap. Deletion deferred to Phase 3b once Turnstile lands.
+
+_Phase 3b — replace bootstrap + delete gate.ts (next commit):_
+
+- [ ] Add `admin/netlify/functions/_shared/turnstile.ts` — verifies a Cloudflare Turnstile token via `https://challenges.cloudflare.com/turnstile/v0/siteverify` using `MEDRASH_TURNSTILE_SECRET`. New public env `MEDRASH_TURNSTILE_SITE_KEY` exposed to Flutter via `--dart-define`.
+- [ ] Add `admin/netlify/functions/_shared/rate-limit.ts` — in-memory token bucket per `(remoteIp, deviceInstallId)` for `/device-token` (best-effort, per-instance; sufficient for pilot scale). Configurable via `MEDRASH_DEVICE_TOKEN_RATE_BURST` / `MEDRASH_DEVICE_TOKEN_RATE_REFILL_PER_MIN`.
+- [ ] Update `/device-token` to require both a valid Turnstile token in the body and a passing rate-limit check. Gate-key requirement removed at the same moment.
+- [ ] Flutter web: integrate Turnstile widget on the join flow's first launch, plumb the resulting token into `DeviceTokenStore.mint()`.
+- [ ] Delete `admin/netlify/functions/_shared/gate.ts`.
+- [ ] Remove `MEDRASH_GATE_API_KEY` from Netlify env, drop `_gateApiKey` field from Flutter `MedRashHttpClient`, `DeviceTokenStore`, `AppConfig`.
 
 **Files touched:** `admin/netlify/functions/_shared/device-token.ts` (new), `admin/netlify/functions/_shared/device-token.test.ts` (new), `admin/netlify/functions/_shared/participant-auth.ts` (new), `admin/netlify/functions/_shared/participant-auth.test.ts` (new), `admin/netlify/functions/device-token.ts` (new), 8 participant function files (1-line import + 3-line call-site swap each). Phase 2/3 will additionally touch `app/lib/core/...` and `docs/admin-surfaces.md`.
 
@@ -119,7 +129,9 @@ _Phase 3 — kill-switch (follow-up commit after one successful pilot session):_
 - expired-token re-mint — covered by `device-token.test.ts` ("rejects an expired token" → `DEVICE_TOKEN_EXPIRED`). **PASS**
 - legacy-fallback opt-out — covered by `participant-auth.test.ts` (`MEDRASH_GATE_KEY_FALLBACK=false` makes a gate-key-only request return 401). **PASS**
 - Flutter `flutter analyze` / `flutter test` — **PASS (Phase 2, 2026-05).** `flutter analyze` → No issues found. `flutter test` → 178/178 pass (incl. 6 new `device_token_store_test.dart` cases: cold-mint cache, refresh-after expiry, mint-failure no-cache → null, mint-failure with cache → cached token, `clear()` wipes prefs, concurrent calls dedupe into one mint).
-- Hosted smoke (`/device-token` returns valid token; existing Flutter build still passes via gate-key fallback) — **PENDING user deploy.**
+- Phase 3a typecheck / vitest (workspace `c:\Users\USER\Desktop\Personal\medRash\admin`) — **PASS.** `npm run typecheck` → exit 0; `npm test` → 5 files / 47 tests pass (was 48; net −3 fallback tests, +2 bearer-only tests on `participant-auth.test.ts`).
+- Phase 3a hosted smoke (Flutter pilot still 200s, `/device-token` mint still 200s) — **PENDING user redeploy.** Runtime should be identical because `MEDRASH_GATE_KEY_FALLBACK` was already `false` in prod; this commit only removes the disabled code path.
+- Phase 3b hosted smoke (Turnstile challenge succeeds, `/device-token` rejects without Turnstile, rate limit kicks in after burst) — **PENDING Phase 3b implementation.**
 
 **Standards:** ISO 27002 §5.16, 5.17, 8.2, 8.5 · OWASP ASVS V3.5, V6.2 · NIST CSF PR.AA-1, PR.AA-2.
 
@@ -358,6 +370,7 @@ Before marking Block A complete:
 
 > Append-only. Newest entry on top.
 
+- **2026-05 — Slice A2 phase 3a split.** Phase 3 itself bisected into 3a (this commit, code-only deletion of the already-disabled fallback branch) and 3b (next commit, Turnstile + rate-limit on `/device-token`, delete `_shared/gate.ts`, drop `_gateApiKey` from Flutter). The split exists because requiring Turnstile on `/device-token` and removing the gate-key fallback in the same commit would brick every live build that hasn't shipped a Turnstile widget yet — mint would fail, no bearer would be sent, no fallback would catch it, every request 401s. 3a is a no-op runtime change in prod (the fallback branch was already dead with `MEDRASH_GATE_KEY_FALLBACK=false` confirmed by user), so it's safe to ship before the Flutter widget is in place. Bootstrap protection chosen as Cloudflare Turnstile (invisible) + per-IP+device in-memory rate limit, per user direction. Turnstile is web-first and matches the pilot's web-only target; mobile attestation parked for a later pillar.
 - **2026-05 — Slice A2 phase 2 shape.** `DeviceTokenStore` is a separate object from `MedRashHttpClient` (injected via an optional `tokenProvider: Future<String?> Function()` callback) instead of an internal field on the HTTP client, because the store needs to call `/device-token` to mint — if the store *was* the HTTP client, mint would recurse through the bearer path. Keeping the store standalone with its own `http.Client` cleanly avoids the loop and keeps the HTTP client a pure transport. During Phase 2 both headers (`Authorization: Bearer …` and `x-medrash-gate-key …`) ship on every request — bearer is preferred server-side, gate key is the fallback if the token store has not yet minted (cold start, mint failure). The store falls back to a cached-but-past-refresh token if a fresh mint fails and the cache is still pre-expiry, so a brief network blip never logs a participant out. Concurrent `currentToken()` callers single-flight into one mint via a `Future<String?>? _inflight` field, so the burst of repository calls at app startup does not stampede `/device-token`.
 - **2026-05 — Slice A2 phase 1 shape.** Token wire format chosen as `${base64url(payloadJsonString)}.${base64url(sig)}` instead of the spec's `${did}.${pid}.${iat}.${nonce}` string. Same HMAC inputs (sig = HMAC-SHA256(secret, payloadB64)), but a structured JSON payload lets `verifyDeviceToken()` return parsed claims directly without a second parser. `MEDRASH_GATE_KEY_FALLBACK` defaults to **enabled** (opt-out via `false`/`0`/`off`/`no`), inverting the spec's "flagged by env" wording — required because Phase 1 ships the backend before Flutter is updated, so a missing env var must not lock live participants out. Bearer-then-fallback ordering is strict: a present-but-invalid bearer returns 401 immediately rather than silently retrying the legacy gate key, so client bugs surface instead of being masked by a stale shared secret. A2 split into three phases (backend dual-path → Flutter switchover → kill-switch) so the rollout cannot brick existing builds.
 - **2025-01 — Slice A1 shape.** Single shared module lives at `admin/src/lib/rate-limit.ts` (not `admin/netlify/functions/_shared/`) because Netlify functions in this repo already import from `../../src/lib/` (e.g. `session-create.ts`, `quiz-bank-write.ts`) and the Next.js server action at `admin/src/app/login/actions.ts` cannot reach a path under `netlify/functions/`. Identifiers are SHA-256 hashed before storage so `app.auth_rate_limit` never holds raw emails or IPs — pre-pays Slice A5's privacy discipline. Atomicity is enforced inside a plpgsql function (`enforce_rate_limit`) using `select … for update`, so concurrent verifies on the same key serialize cleanly. Lockout equals window (15 min) so a tripped limit resolves on the next window roll-over without a separate decay job.
