@@ -352,6 +352,30 @@ The `MEDRASH_DEVICE_TOKEN_SECRET` env var is the only secret that needs a docume
 5. **No client action is required.** Every existing token will fail with `DEVICE_TOKEN_BAD_SIGNATURE` on its next use; the Flutter `DeviceTokenStore` re-mints on the request after that. Phase 3a removed the legacy gate-key fallback server-side and Phase 3c removed the gate-key bootstrap entirely, so a rotation now produces one hard 401 per device followed by a successful Turnstile-backed re-mint. End-user impact is one extra round-trip per device.
 6. **Audit:** there is no rotation log table yet — record the rotation date and reason in the Decisions Log of `docs/security-hardening-plan.md`.
 
+### 6.5 Database RLS posture (Slice A3)
+
+After Slice A3 (migrations `014`–`016`, 2026-05-28), every table in the `app.*` schema has RLS enabled and every view in the schema runs with `security_invoker = true`. Service-role bypasses RLS in all cases; the table below documents what each role can do in addition to that bypass.
+
+| Table / view | RLS | service_role | authenticated | anon |
+| --- | --- | --- | --- | --- |
+| `app.users` | on | all (via bypass) | — | — |
+| `app.user_devices` | on | all (via bypass) | — | — |
+| `app.quizzes` | on | all (via bypass) | — | — |
+| `app.questions` | on | all (via bypass) | — | — |
+| `app.sessions` | on | all (explicit `sessions_service_role_all` + bypass) | — | — (`sessions_public_select` dropped) |
+| `app.attempts` | on | all (via bypass) | — | — |
+| `app.answers` | on | all (via bypass) | — | — |
+| `app.session_join_events` | on | all (via bypass) | — | — |
+| `app.admin_users` | on (A3) | all (explicit `admin_users_service_role_all` + bypass) | `select` own row only (`admin_users_self_select`) | — |
+| `app.auth_rate_limit` | on | all (via bypass) | — | — |
+| `app.ranked_attempt_totals_all_time` | view (`security_invoker=true`, A3) | — | — | — |
+| `app.ranked_attempt_totals_monthly` | view (`security_invoker=true`, A3) | — | — | — |
+
+Notes:
+- `sessions_public_select` (formerly `using (true)`) was dropped because every TS/Dart caller already goes through service-role functions; deny-by-default is the correct posture until a real anon read use-case appears. The plan's spec called for a narrow `status in ('open','live')` policy, but `app.sessions` has no `status` column (lifecycle is `starts_at`/`ends_at`), so we deviated.
+- `admin_users_self_select` is defence-in-depth — no current code path queries `admin_users` under a user session, but if a future SSR route does, an authenticated admin can read only their own row.
+- All views in `app.*` should ship with `with (security_invoker = true)` going forward (this becomes a lint check in Block B Slice B6).
+
 ---
 
 ## 7. Implementation status
