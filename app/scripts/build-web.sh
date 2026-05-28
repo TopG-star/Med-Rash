@@ -37,14 +37,14 @@ flutter pub get
 # Required env vars from Netlify UI. Failing loudly here beats producing
 # a build that silently points at localhost.
 : "${MEDRASH_FUNCTIONS_BASE_URL:?Set MEDRASH_FUNCTIONS_BASE_URL on the Netlify site (must end with a trailing slash, e.g. https://thriving-gingersnap-2f2932.netlify.app/.netlify/functions/)}"
-: "${MEDRASH_GATE_API_KEY:?Set MEDRASH_GATE_API_KEY on the Netlify site (same value as the admin site uses)}"
+: "${MEDRASH_TURNSTILE_SITE_KEY:?Set MEDRASH_TURNSTILE_SITE_KEY on the Netlify site (Cloudflare Turnstile site key for the invisible widget; required for /device-token bootstrap)}"
 
 echo "[build-web] Functions base URL: ${MEDRASH_FUNCTIONS_BASE_URL}"
-echo "[build-web] Gate key length: ${#MEDRASH_GATE_API_KEY}"
+echo "[build-web] Turnstile site key length: ${#MEDRASH_TURNSTILE_SITE_KEY}"
 
 flutter build web --release \
   --base-href=/ \
   --dart-define=MEDRASH_FUNCTIONS_BASE_URL="${MEDRASH_FUNCTIONS_BASE_URL}" \
-  --dart-define=MEDRASH_GATE_API_KEY="${MEDRASH_GATE_API_KEY}"
+  --dart-define=MEDRASH_TURNSTILE_SITE_KEY="${MEDRASH_TURNSTILE_SITE_KEY}"
 
 echo "[build-web] Web build complete → app/build/web/"

@@ -8,12 +8,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'device_identity_service.dart';
 import 'turnstile_token_provider.dart';
 
-/// Slice A2 phase 2 / 3b — client-side custodian of the per-device bearer
+/// Slice A2 phase 3c — client-side custodian of the per-device bearer
 /// token minted by `admin/netlify/functions/device-token.ts`.
 ///
 /// Responsibilities:
-///   * Mint a token via POST `/device-token` (bootstrap is gated by the
-///     legacy gate key — that's the whole point of the transitional window).
+///   * Mint a token via POST `/device-token` (bootstrap is a Cloudflare
+///     Turnstile token fetched via [TurnstileTokenProvider]).
 ///   * Persist `{token, issuedAt, expiresAt, refreshAfter}` to SharedPreferences.
 ///   * Hand the cached token to [MedRashHttpClient.tokenProvider] for every
 ///     subsequent participant call.
@@ -24,20 +24,18 @@ import 'turnstile_token_provider.dart';
 ///
 /// Failure mode: if mint fails and there is no cached token (or the cached
 /// one is expired), [currentToken] returns null and [MedRashHttpClient] simply
-/// omits the Authorization header. That leaves the server falling back to the
-/// legacy `x-medrash-gate-key` path — exactly the Phase 1 dual-path guarantee.
+/// omits the Authorization header — callers will then see a 401 from the
+/// Netlify function and surface it through their normal error path.
 class DeviceTokenStore {
   DeviceTokenStore({
     required SharedPreferences preferences,
     required String functionsBaseUrl,
-    required String? gateApiKey,
     required DeviceIdentityService deviceIdentityService,
     TurnstileTokenProvider? turnstileTokenProvider,
     http.Client? httpClient,
     DateTime Function()? clock,
   })  : _preferences = preferences,
         _baseFunctionsUri = _normalizeFunctionsUri(functionsBaseUrl),
-        _gateApiKey = gateApiKey,
         _deviceIdentityService = deviceIdentityService,
         _turnstileTokenProvider = turnstileTokenProvider,
         _httpClient = httpClient ?? http.Client(),
@@ -49,7 +47,6 @@ class DeviceTokenStore {
 
   final SharedPreferences _preferences;
   final Uri _baseFunctionsUri;
-  final String? _gateApiKey;
   final DeviceIdentityService _deviceIdentityService;
   final TurnstileTokenProvider? _turnstileTokenProvider;
   final http.Client _httpClient;
@@ -118,21 +115,17 @@ class DeviceTokenStore {
     final Map<String, String> headers = <String, String>{
       'content-type': 'application/json',
     };
-    final String gateKey = _gateApiKey?.trim() ?? '';
-    if (gateKey.isNotEmpty) {
-      headers['x-medrash-gate-key'] = gateKey;
-    }
 
-    // Phase 3b — fetch a Turnstile token when a provider is configured.
-    // Provider returns null on web-without-site-key, non-web platforms,
-    // widget timeout, or Cloudflare error; in all those cases we drop
-    // through to the gate-key bootstrap (Phase 3b transition only).
+    // Phase 3c — fetch a Cloudflare Turnstile token. Provider returns null
+    // on web-without-site-key, non-web platforms, widget timeout, or
+    // Cloudflare error; in all those cases the mint POST will go through
+    // without a turnstileToken field and the server will reject with 400.
     String? turnstileToken;
     try {
       turnstileToken = await _turnstileTokenProvider?.fetchToken();
     } catch (error, stack) {
       developer.log(
-        'TurnstileTokenProvider threw; continuing with gate-key bootstrap',
+        'TurnstileTokenProvider threw; mint will likely fail',
         name: 'DeviceTokenStore',
         error: error,
         stackTrace: stack,

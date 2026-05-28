@@ -40,7 +40,6 @@ Future<void> initCore() async {
     () => DeviceTokenStore(
       preferences: preferences,
       functionsBaseUrl: AppConfig.functionsBaseUrl,
-      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
       deviceIdentityService: getIt<DeviceIdentityService>(),
       turnstileTokenProvider: getIt<TurnstileTokenProvider>(),
     ),
@@ -48,7 +47,6 @@ Future<void> initCore() async {
   getIt.registerLazySingleton<MedRashHttpClient>(
     () => MedRashHttpClient(
       functionsBaseUrl: AppConfig.functionsBaseUrl,
-      gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
       tokenProvider: () => getIt<DeviceTokenStore>().currentToken(),
     ),
   );

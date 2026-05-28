@@ -126,13 +126,14 @@ Docker Desktop is required for local Supabase commands such as db reset.
 
 ## Privileged Gate Environment Variables
 Set these for Netlify functions (admin project):
-- MEDRASH_GATE_API_KEY: shared gate secret expected in x-medrash-gate-key header
+- MEDRASH_DEVICE_TOKEN_SECRET: HMAC key for per-device bearer tokens (Slice A2)
+- MEDRASH_TURNSTILE_SECRET: Cloudflare Turnstile secret for `/device-token` bootstrap (Slice A2 phase 3c)
 - SUPABASE_URL: project URL
 - SUPABASE_SERVICE_ROLE_KEY: service-role key (server-only)
 
-Set these for Flutter app startup (for gate calls):
+Set these for Flutter app startup (passed via `--dart-define` at build time):
 - MEDRASH_FUNCTIONS_BASE_URL
-- MEDRASH_GATE_API_KEY
+- MEDRASH_TURNSTILE_SITE_KEY
 
 ## Notes
 - If company policy blocks machine-level PATH writes, add C:\tools\supabase manually to your user PATH.

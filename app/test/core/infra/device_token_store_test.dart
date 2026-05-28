@@ -25,7 +25,6 @@ void main() {
       return DeviceTokenStore(
         preferences: prefs,
         functionsBaseUrl: 'https://example.test/.netlify/functions/',
-        gateApiKey: 'gate-key-for-test',
         deviceIdentityService: DeviceIdentityService(prefs),
         turnstileTokenProvider: turnstileTokenProvider,
         httpClient: httpClient,
@@ -38,7 +37,6 @@ void main() {
       int mintCount = 0;
       final http.Client mockHttp = MockClient((http.Request request) async {
         expect(request.url.path, endsWith('device-token'));
-        expect(request.headers['x-medrash-gate-key'], 'gate-key-for-test');
         final Map<String, dynamic> body =
             jsonDecode(request.body) as Map<String, dynamic>;
         expect(body['deviceInstallId'], isNotNull);
@@ -90,7 +88,6 @@ void main() {
       final DeviceTokenStore early = DeviceTokenStore(
         preferences: prefs,
         functionsBaseUrl: 'https://example.test/.netlify/functions/',
-        gateApiKey: 'gate-key',
         deviceIdentityService: DeviceIdentityService(prefs),
         httpClient: mockHttp,
         clock: () => DateTime.fromMillisecondsSinceEpoch(1700000500 * 1000),
@@ -101,7 +98,6 @@ void main() {
       final DeviceTokenStore late = DeviceTokenStore(
         preferences: prefs,
         functionsBaseUrl: 'https://example.test/.netlify/functions/',
-        gateApiKey: 'gate-key',
         deviceIdentityService: DeviceIdentityService(prefs),
         httpClient: mockHttp,
         clock: () => DateTime.fromMillisecondsSinceEpoch(1700083500 * 1000),
@@ -134,7 +130,6 @@ void main() {
       final DeviceTokenStore store = DeviceTokenStore(
         preferences: prefs,
         functionsBaseUrl: 'https://example.test/.netlify/functions/',
-        gateApiKey: 'gate-key',
         deviceIdentityService: DeviceIdentityService(prefs),
         httpClient: mockHttp,
         // After refreshAfter, before expiresAt.
@@ -153,7 +148,6 @@ void main() {
       final DeviceTokenStore store = DeviceTokenStore(
         preferences: prefs,
         functionsBaseUrl: 'https://example.test/.netlify/functions/',
-        gateApiKey: 'gate-key',
         deviceIdentityService: DeviceIdentityService(prefs),
         httpClient: MockClient(
           (http.Request request) async => http.Response('{}', 500),

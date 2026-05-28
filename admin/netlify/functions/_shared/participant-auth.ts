@@ -5,13 +5,13 @@ import {
 } from "./device-token";
 import { HandlerEvent, HandlerResponse, jsonResponse } from "./http";
 
-// Slice A2 phase 3a of docs/security-hardening-plan.md.
+// Slice A2 phase 3c of docs/security-hardening-plan.md.
 //
 // Bearer-only. The legacy `x-medrash-gate-key` fallback that existed in
-// Phase 1/2 has been removed now that every live Flutter build mints a
-// device token via /device-token first. `_shared/gate.ts` is still used
-// by /device-token itself as the bootstrap gate; it will be deleted in
-// Phase 3b once Cloudflare Turnstile lands on the mint endpoint.
+// Phase 1/2 was removed in 3a; the gate-key bootstrap on `/device-token`
+// was removed in 3c and `_shared/gate.ts` was deleted. Bootstrap is now
+// Cloudflare Turnstile + rate-limit (`_shared/turnstile.ts`,
+// `_shared/rate-limit-bucket.ts`).
 
 export type ParticipantAuthOk = {
   ok: true;

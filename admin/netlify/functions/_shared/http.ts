@@ -11,13 +11,14 @@ export type HandlerResponse = {
 };
 
 // Browser callers (the Flutter Web participant app on a different Netlify
-// site) require CORS headers + an OPTIONS preflight response. Auth is via
-// the x-medrash-gate-key header, never cookies, so wildcard origin is safe.
+// site) require CORS headers + an OPTIONS preflight response. Participant
+// auth is via `Authorization: Bearer` (device token) — never cookies — so
+// wildcard origin is safe.
 const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, OPTIONS",
   "access-control-allow-headers":
-    "content-type, x-medrash-gate-key, authorization, x-medrash-admin-write-key, x-medrash-internal-bypass",
+    "content-type, authorization, x-medrash-admin-write-key, x-medrash-internal-bypass",
   "access-control-max-age": "86400",
 };
 

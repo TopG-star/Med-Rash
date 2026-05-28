@@ -27,13 +27,9 @@ class MedRashGateException implements Exception {
 /// Thin, single-purpose HTTP wrapper for every Netlify function call the
 /// Flutter app makes. Centralises:
 ///   * Base URL normalisation
-///   * Per-device bearer token injection (Slice A2 phase 2). The optional
+///   * Per-device bearer token injection (Slice A2). The optional
 ///     [tokenProvider] is awaited before each request; if it returns a
 ///     non-empty token, the request gets `Authorization: Bearer <token>`.
-///   * Gate API key header injection — kept alongside the bearer header
-///     during the Phase 1+2 transition window so the legacy fallback path
-///     in `_shared/participant-auth.ts` keeps working when the token store
-///     has not minted yet (cold start, network failure on first launch).
 ///   * JSON encode/decode
 ///   * Structured error logging — every failure is `developer.log`'d with the
 ///     function name + status before being rethrown. There is exactly one
@@ -42,16 +38,13 @@ class MedRashGateException implements Exception {
 class MedRashHttpClient {
   MedRashHttpClient({
     required String functionsBaseUrl,
-    String? gateApiKey,
     http.Client? httpClient,
     Future<String?> Function()? tokenProvider,
   })  : _baseFunctionsUri = _normalizeFunctionsUri(functionsBaseUrl),
-        _gateApiKey = gateApiKey,
         _httpClient = httpClient ?? http.Client(),
         _tokenProvider = tokenProvider;
 
   final Uri _baseFunctionsUri;
-  final String? _gateApiKey;
   final http.Client _httpClient;
   final Future<String?> Function()? _tokenProvider;
 
@@ -69,11 +62,6 @@ class MedRashHttpClient {
       'content-type': 'application/json',
     };
 
-    final String gateKey = _gateApiKey?.trim() ?? '';
-    if (gateKey.isNotEmpty) {
-      headers['x-medrash-gate-key'] = gateKey;
-    }
-
     final Future<String?> Function()? provider = _tokenProvider;
     if (provider != null) {
       try {
@@ -83,7 +71,7 @@ class MedRashHttpClient {
         }
       } catch (error, stack) {
         developer.log(
-          'tokenProvider threw; falling back to gate-key only',
+          'tokenProvider threw; request will go without Authorization header',
           name: 'MedRashHttpClient',
           error: error,
           stackTrace: stack,

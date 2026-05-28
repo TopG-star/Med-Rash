@@ -1,5 +1,4 @@
 import { mintDeviceToken } from "./_shared/device-token";
-import { requireGateAuthorization } from "./_shared/gate";
 import {
   HandlerEvent,
   HandlerResponse,
@@ -14,20 +13,17 @@ import { extractRemoteIp, verifyTurnstileToken } from "./_shared/turnstile";
 
 // Slice A2 — mint a per-device bearer token.
 //
-// Phase 3b auth model (this commit) — **dual-path bootstrap**:
+// Phase 3c auth model (this commit) — **Turnstile-only**:
 //
-//   1. Preferred:  `turnstileToken` field in JSON body. Verified against
-//      Cloudflare siteverify (`_shared/turnstile.ts`). Per-(ip, device)
-//      rate-limit applied (`_shared/rate-limit-bucket.ts`). If the token
-//      is present but fails verification, we return 401 immediately —
-//      same strict-then-fallback ordering as `participant-auth.ts`.
-//   2. Fallback:   legacy `x-medrash-gate-key` header. Kept for the one
-//      deploy window where live Flutter builds may not yet ship the
-//      Turnstile widget. Phase 3c removes this branch + deletes
-//      `_shared/gate.ts`.
+//   `turnstileToken` is REQUIRED in the JSON body. Verified against
+//   Cloudflare siteverify (`_shared/turnstile.ts`). Per-(ip, device)
+//   rate-limit applied (`_shared/rate-limit-bucket.ts`). The legacy
+//   `x-medrash-gate-key` bootstrap was removed after Phase 3b dual-path
+//   shipped one clean hosted pilot session (`_shared/gate.ts` deleted,
+//   `MEDRASH_GATE_API_KEY` env retired).
 //
 // Request:  POST { deviceInstallId: string, participantId?: string,
-//                  turnstileToken?: string }
+//                  turnstileToken: string }
 // Response: { ok: true, token, issuedAt, expiresAt, refreshAfter }
 //
 // Rate-limit response (429):
@@ -69,46 +65,44 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     });
   }
 
-  // ---- Bootstrap auth ----------------------------------------------------
+  if (turnstileTokenRaw.length === 0) {
+    return jsonResponse(400, {
+      ok: false,
+      code: "BAD_REQUEST",
+      message: "turnstileToken is required.",
+    });
+  }
+
+  // ---- Bootstrap auth (Turnstile + rate-limit) ---------------------------
   const remoteIp = extractRemoteIp(event.headers);
 
-  if (turnstileTokenRaw.length > 0) {
-    // Path A — Turnstile + rate-limit. Strict: a present-but-invalid token
-    // does NOT silently fall back to the gate key.
-    const limit = consume(`${remoteIp ?? "anon"}::${deviceInstallId}`);
-    if (!limit.allowed) {
-      return {
-        statusCode: 429,
-        headers: {
-          "content-type": "application/json",
-          "cache-control": "no-store",
-          "retry-after": String(limit.retryAfterSeconds),
-        },
-        body: JSON.stringify({
-          ok: false,
-          code: "RATE_LIMITED",
-          retryAfterSeconds: limit.retryAfterSeconds,
-        }),
-      };
-    }
-
-    const verified = await verifyTurnstileToken(turnstileTokenRaw, remoteIp);
-    if (!verified.ok) {
-      return jsonResponse(401, {
+  const limit = consume(`${remoteIp ?? "anon"}::${deviceInstallId}`);
+  if (!limit.allowed) {
+    return {
+      statusCode: 429,
+      headers: {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+        "retry-after": String(limit.retryAfterSeconds),
+      },
+      body: JSON.stringify({
         ok: false,
-        code: "TURNSTILE_REJECTED",
-        message:
-          verified.errorMessage ??
-          "Cloudflare Turnstile token verification failed.",
-        errorCodes: verified.errorCodes,
-      });
-    }
-  } else {
-    // Path B — legacy gate-key fallback (Phase 3b transition only).
-    const gateResponse = requireGateAuthorization(event);
-    if (gateResponse) {
-      return gateResponse;
-    }
+        code: "RATE_LIMITED",
+        retryAfterSeconds: limit.retryAfterSeconds,
+      }),
+    };
+  }
+
+  const verified = await verifyTurnstileToken(turnstileTokenRaw, remoteIp);
+  if (!verified.ok) {
+    return jsonResponse(401, {
+      ok: false,
+      code: "TURNSTILE_REJECTED",
+      message:
+        verified.errorMessage ??
+        "Cloudflare Turnstile token verification failed.",
+      errorCodes: verified.errorCodes,
+    });
   }
 
   // ---- Mint ---------------------------------------------------------------

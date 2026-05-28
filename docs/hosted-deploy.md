@@ -52,7 +52,8 @@ unless noted. **Never** commit any of them.
 | `SUPABASE_URL` | admin SSR + functions | e.g. `https://abc123.supabase.co`. Build- and runtime-scoped. |
 | `SUPABASE_SERVICE_ROLE_KEY` | admin SSR + functions | **Secret.** Server-only. Never expose to a Client Component. |
 | `SUPABASE_ANON_KEY` | admin SSR + functions | Used to read the caller's Supabase session (cookie-bound on SSR; Bearer-bound on functions). |
-| `MEDRASH_GATE_API_KEY` | functions only | Shared header secret consumed by participant-facing endpoints (`quiz-list`, `attempt-submit`, `ranked-eligibility`, `session-resolve`). |
+| `MEDRASH_TURNSTILE_SECRET` | functions only | Cloudflare Turnstile secret key. Required by `/device-token` to verify the bootstrap challenge (Slice A2 phase 3c). |
+| `MEDRASH_TURNSTILE_SITE_KEY` | flutter web build | Cloudflare Turnstile site key (public, domain-bound). Required at Flutter web build time via `--dart-define`. |
 | `MEDRASH_ADMIN_WRITE_KEY` | functions only | **Optional defense-in-depth** shared secret. When set, admin-write functions require both `x-medrash-admin-write-key` AND a valid Supabase admin session. Leave empty to disable. |
 | `MEDRASH_INTERNAL_BYPASS` | functions only | **Secret.** Server-to-server bypass header for scheduled jobs. Senders pass `x-medrash-internal-bypass: <value>`. Leave UNSET in production unless a scheduled job needs it. |
 | `MEDRASH_ADMIN_PORTAL_BASE_URL` | admin SSR | Public origin of the admin app itself. Used to build the magic-link `emailRedirectTo` and the invitation redirect. Falls back to `NEXT_PUBLIC_SITE_URL`. |
@@ -60,7 +61,7 @@ unless noted. **Never** commit any of them.
 | `MEDRASH_APP_PUBLIC_BASE_URL` | admin SSR | Origin used to build session join URLs / QR codes. Set to the Flutter app's public origin (not the admin origin). |
 
 Recommended secret hygiene:
-- Generate `MEDRASH_GATE_API_KEY` and `MEDRASH_INTERNAL_BYPASS` with `openssl rand -hex 32`. If `MEDRASH_ADMIN_WRITE_KEY` is set, generate it the same way.
+- Generate `MEDRASH_INTERNAL_BYPASS` with `openssl rand -hex 32`. If `MEDRASH_ADMIN_WRITE_KEY` is set, generate it the same way. `MEDRASH_TURNSTILE_SECRET` is issued by the Cloudflare Turnstile dashboard, not generated locally.
 - Mark `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_ANON_KEY`, and all `MEDRASH_*_KEY` / `MEDRASH_INTERNAL_BYPASS` values as
   **Sensitive** in Netlify so they are not logged in deploy output.
 

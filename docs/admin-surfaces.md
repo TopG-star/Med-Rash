@@ -27,8 +27,9 @@ access is server-side:
 Why not reuse the Netlify functions in `admin/netlify/functions/`?
 
 - Those functions are the **participant gate** for the Flutter app. They
-  enforce a participant-facing auth model (`MEDRASH_GATE_API_KEY`) and the
-  request shape is participant-centric (identity payload, ranked
+  enforce a participant-facing auth model (`Authorization: Bearer` device
+  token minted via Cloudflare Turnstile on `/device-token`, Slice A2) and
+  the request shape is participant-centric (identity payload, ranked
   eligibility, etc.).
 - Admin needs a **different auth model** and richer queries (joins,
   pagination, aggregates). Server Components + Server Actions are the
@@ -331,10 +332,10 @@ All in `admin/src/lib/reports-queries.ts` (server-only):
 | `NEXT_PUBLIC_SITE_URL` | server fallback | Fallback origin when `MEDRASH_ADMIN_PORTAL_BASE_URL` is unset. |
 | `MEDRASH_ADMIN_WRITE_KEY` | netlify functions | Shared secret for `session-create` / `quiz-bank-write` admin-write endpoints. |
 | `MEDRASH_DEVICE_TOKEN_SECRET` | netlify functions | **Required.** ≥32-char random string. HMAC-SHA256 key for the per-device bearer tokens minted at `POST /device-token` and verified by every participant-facing endpoint (Slice A2). Rotation = generate a new secret, update the Netlify env, redeploy. All in-flight tokens immediately fail `DEVICE_TOKEN_BAD_SIGNATURE`; Flutter clients re-mint on the next request. **Do not rotate during a live pilot session** — the next request from every participant will see one 401 and re-mint, which is fine, but it's still avoidable noise. |
-| `MEDRASH_GATE_API_KEY` | netlify functions | **Transitional (Phase 3a + 3b).** Static shared bearer. Used by exactly one endpoint: `POST /device-token` as the **legacy fallback** bootstrap (Phase 3b). The preferred bootstrap in Phase 3b is a Cloudflare Turnstile token; gate-key is only consulted when the request body has no `turnstileToken` field. Will be deleted in Phase 3c. |
-| `MEDRASH_GATE_KEY_FALLBACK` | netlify functions | **Removed (Phase 3a).** Previously gated the gate-key fallback in `participant-auth.ts`. The fallback code path is gone; this env var is now ignored. Safe to delete from the Netlify env. |
-| `MEDRASH_TURNSTILE_SECRET` | netlify functions | **Required for Phase 3b production.** Cloudflare Turnstile **secret** key (from the Cloudflare dashboard — the longer of the two strings, never expose client-side). Verified by `_shared/turnstile.ts` against `https://challenges.cloudflare.com/turnstile/v0/siteverify` for every `/device-token` request that supplies a `turnstileToken` body field. If unset, the Turnstile path returns 401 `missing-input-secret` and clients fall back to the gate-key path (still works during 3b). |
-| `MEDRASH_TURNSTILE_SITE_KEY` (`--dart-define`) | flutter web build | **Required for Phase 3b production.** Cloudflare Turnstile **site** key (public, bound to your domain in the Cloudflare dashboard). Passed at Flutter build time via `--dart-define=MEDRASH_TURNSTILE_SITE_KEY=…`; baked into the JS shim in `web/index.html` at runtime. When empty, the Flutter side never fetches a Turnstile token and `/device-token` accepts the request via the legacy gate-key path. |
+| `MEDRASH_GATE_API_KEY` | **removed (Phase 3c)** | Previously the static shared bearer for `/device-token` bootstrap. After Phase 3c (2026-05-28), the gate-key code path is gone (`_shared/gate.ts` deleted, `_gateApiKey` removed from Flutter). The env var is no longer read anywhere. **Delete this entry from the Netlify env after the Phase 3c deploy lands.** |
+| `MEDRASH_GATE_KEY_FALLBACK` | **removed (Phase 3a)** | Previously gated the gate-key fallback in `participant-auth.ts`. The fallback code path is gone; this env var is now ignored. Safe to delete from the Netlify env. |
+| `MEDRASH_TURNSTILE_SECRET` | netlify functions | **Required (Phase 3c+).** Cloudflare Turnstile **secret** key (from the Cloudflare dashboard — the longer of the two strings, never expose client-side). Verified by `_shared/turnstile.ts` against `https://challenges.cloudflare.com/turnstile/v0/siteverify` for every `/device-token` request. If unset, the endpoint returns 401 `missing-input-secret` and every mint fails. |
+| `MEDRASH_TURNSTILE_SITE_KEY` (`--dart-define`) | flutter web build | **Required (Phase 3c+).** Cloudflare Turnstile **site** key (public, bound to your domain in the Cloudflare dashboard). Passed at Flutter build time via `--dart-define=MEDRASH_TURNSTILE_SITE_KEY=…`; baked into the JS shim in `web/index.html` at runtime. When empty, the Flutter side never fetches a Turnstile token and `/device-token` rejects with 400 `BAD_REQUEST`. `app/scripts/build-web.sh` hard-requires this value via a `:?` shell check. |
 | `MEDRASH_TURNSTILE_BYPASS_TOKEN` | netlify functions | **Optional, smoke-tests only.** When set AND a request sends exactly this value as its `turnstileToken`, verification short-circuits to OK. Lets `curl` smoke-tests verify the mint endpoint without solving a real Turnstile challenge. **Never set this in production** — anyone holding the value gets unlimited mints. |
 | `MEDRASH_DEVICE_TOKEN_RATE_BURST` | netlify functions | Optional. Max tokens in the per-(IP, device) bucket on `/device-token`. Default 5. |
 | `MEDRASH_DEVICE_TOKEN_RATE_REFILL_PER_MIN` | netlify functions | Optional. Tokens added to the bucket per minute. Default 10 (= 1 every 6s). |
@@ -347,8 +348,8 @@ The `MEDRASH_DEVICE_TOKEN_SECRET` env var is the only secret that needs a docume
 1. **Generate a new secret** of ≥32 chars (e.g. `openssl rand -base64 48`).
 2. **Outside of a live pilot session**, update `MEDRASH_DEVICE_TOKEN_SECRET` in the Netlify environment for the production site.
 3. **Trigger a deploy** (or wait for the next one) so the new value reaches every function instance.
-4. **Verify** by hitting `POST /.netlify/functions/device-token` with the legacy gate key — the response body should include a new `token` whose signature differs from any cached one on a participant device.
-5. **No client action is required.** Every existing token will fail with `DEVICE_TOKEN_BAD_SIGNATURE` on its next use; the Flutter `DeviceTokenStore` re-mints on the request after that. Phase 2 still attached the legacy gate key on every request as a fallback; Phase 3a removed that fallback server-side, so a rotation now produces one hard 401 per device followed by a successful re-mint. End-user impact is one extra round-trip per device.
+4. **Verify** by hitting `POST /.netlify/functions/device-token` with a fresh Turnstile token (or set `MEDRASH_TURNSTILE_BYPASS_TOKEN` temporarily and call with that value) — the response body should include a new `token` whose signature differs from any cached one on a participant device.
+5. **No client action is required.** Every existing token will fail with `DEVICE_TOKEN_BAD_SIGNATURE` on its next use; the Flutter `DeviceTokenStore` re-mints on the request after that. Phase 3a removed the legacy gate-key fallback server-side and Phase 3c removed the gate-key bootstrap entirely, so a rotation now produces one hard 401 per device followed by a successful Turnstile-backed re-mint. End-user impact is one extra round-trip per device.
 6. **Audit:** there is no rotation log table yet — record the rotation date and reason in the Decisions Log of `docs/security-hardening-plan.md`.
 
 ---

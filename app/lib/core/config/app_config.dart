@@ -6,16 +6,9 @@ class AppConfig {
     defaultValue: 'http://localhost:8888/.netlify/functions/',
   );
 
-  static const String gateApiKey = String.fromEnvironment(
-    'MEDRASH_GATE_API_KEY',
-    defaultValue: '',
-  );
-
-  /// Cloudflare Turnstile site key (public). When non-empty AND running on
-  /// Flutter web, the Turnstile widget is used as the bootstrap challenge
-  /// for `/device-token` (Slice A2 phase 3b). When empty, the legacy
-  /// `MEDRASH_GATE_API_KEY` header is the bootstrap. Phase 3c drops the
-  /// gate-key path entirely.
+  /// Cloudflare Turnstile site key (public). Required on Flutter web for the
+  /// `/device-token` bootstrap challenge (Slice A2 phase 3c). Empty means the
+  /// widget will not load and mint will fail; non-web platforms ignore this.
   static const String turnstileSiteKey = String.fromEnvironment(
     'MEDRASH_TURNSTILE_SITE_KEY',
     defaultValue: '',
