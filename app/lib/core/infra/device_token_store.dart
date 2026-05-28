@@ -6,9 +6,10 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'device_identity_service.dart';
+import 'turnstile_token_provider.dart';
 
-/// Slice A2 phase 2 — client-side custodian of the per-device bearer token
-/// minted by `admin/netlify/functions/device-token.ts`.
+/// Slice A2 phase 2 / 3b — client-side custodian of the per-device bearer
+/// token minted by `admin/netlify/functions/device-token.ts`.
 ///
 /// Responsibilities:
 ///   * Mint a token via POST `/device-token` (bootstrap is gated by the
@@ -31,12 +32,14 @@ class DeviceTokenStore {
     required String functionsBaseUrl,
     required String? gateApiKey,
     required DeviceIdentityService deviceIdentityService,
+    TurnstileTokenProvider? turnstileTokenProvider,
     http.Client? httpClient,
     DateTime Function()? clock,
   })  : _preferences = preferences,
         _baseFunctionsUri = _normalizeFunctionsUri(functionsBaseUrl),
         _gateApiKey = gateApiKey,
         _deviceIdentityService = deviceIdentityService,
+        _turnstileTokenProvider = turnstileTokenProvider,
         _httpClient = httpClient ?? http.Client(),
         _clock = clock ?? DateTime.now;
 
@@ -48,6 +51,7 @@ class DeviceTokenStore {
   final Uri _baseFunctionsUri;
   final String? _gateApiKey;
   final DeviceIdentityService _deviceIdentityService;
+  final TurnstileTokenProvider? _turnstileTokenProvider;
   final http.Client _httpClient;
   final DateTime Function() _clock;
 
@@ -119,13 +123,35 @@ class DeviceTokenStore {
       headers['x-medrash-gate-key'] = gateKey;
     }
 
+    // Phase 3b — fetch a Turnstile token when a provider is configured.
+    // Provider returns null on web-without-site-key, non-web platforms,
+    // widget timeout, or Cloudflare error; in all those cases we drop
+    // through to the gate-key bootstrap (Phase 3b transition only).
+    String? turnstileToken;
+    try {
+      turnstileToken = await _turnstileTokenProvider?.fetchToken();
+    } catch (error, stack) {
+      developer.log(
+        'TurnstileTokenProvider threw; continuing with gate-key bootstrap',
+        name: 'DeviceTokenStore',
+        error: error,
+        stackTrace: stack,
+      );
+      turnstileToken = null;
+    }
+
+    final Map<String, Object?> body = <String, Object?>{
+      'deviceInstallId': deviceInstallId,
+      'participantId': participantId,
+    };
+    if (turnstileToken != null && turnstileToken.isNotEmpty) {
+      body['turnstileToken'] = turnstileToken;
+    }
+
     final http.Response response = await _httpClient.post(
       _baseFunctionsUri.resolve('device-token'),
       headers: headers,
-      body: jsonEncode(<String, Object?>{
-        'deviceInstallId': deviceInstallId,
-        'participantId': participantId,
-      }),
+      body: jsonEncode(body),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {

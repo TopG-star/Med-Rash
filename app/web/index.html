@@ -33,6 +33,98 @@
 
   <title>MedRash Arena</title>
   <link rel="manifest" href="manifest.json">
+
+  <!--
+    Slice A2 phase 3b — Cloudflare Turnstile shim.
+
+    The Flutter side (lib/core/infra/turnstile_token_provider_web.dart)
+    calls `window.medrashTurnstileExecute(siteKey)` and expects a Promise
+    that resolves to a fresh single-use token (or null on failure). The
+    shim below handles lazy script load + hidden invisible widget
+    lifecycle so the rest of the app does not need to know Turnstile
+    exists.
+
+    Site key is supplied at runtime from `AppConfig.turnstileSiteKey`
+    (`--dart-define=MEDRASH_TURNSTILE_SITE_KEY=…`). When that define is
+    empty (local dev with no Cloudflare account) the shim resolves null
+    and `/device-token` falls back to the legacy gate-key bootstrap.
+  -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=__medrashTurnstileOnLoad&render=explicit" async defer></script>
+  <script>
+    (function () {
+      var widgetId = null;
+      var widgetReady = null; // Promise<void> — resolves when widget is rendered.
+      var scriptReady = new Promise(function (resolve) {
+        window.__medrashTurnstileOnLoad = function () { resolve(); };
+      });
+
+      function ensureContainer() {
+        var el = document.getElementById('medrash-turnstile-host');
+        if (el) return el;
+        el = document.createElement('div');
+        el.id = 'medrash-turnstile-host';
+        el.style.position = 'fixed';
+        el.style.left = '-10000px';
+        el.style.top = '0';
+        el.style.width = '1px';
+        el.style.height = '1px';
+        el.style.overflow = 'hidden';
+        document.body.appendChild(el);
+        return el;
+      }
+
+      function ensureWidget(siteKey) {
+        if (widgetReady) return widgetReady;
+        widgetReady = scriptReady.then(function () {
+          return new Promise(function (resolve, reject) {
+            try {
+              var host = ensureContainer();
+              widgetId = window.turnstile.render(host, {
+                sitekey: siteKey,
+                size: 'invisible',
+                // We trigger execution explicitly via execute(); these
+                // callbacks just unblock pending awaiters.
+                callback: function () { /* resolved per-execute below */ },
+                'error-callback': function () { /* resolved per-execute below */ },
+              });
+              resolve();
+            } catch (err) {
+              widgetReady = null;
+              reject(err);
+            }
+          });
+        });
+        return widgetReady;
+      }
+
+      window.medrashTurnstileExecute = function (siteKey) {
+        if (!siteKey || typeof siteKey !== 'string') {
+          return Promise.resolve(null);
+        }
+        return ensureWidget(siteKey).then(function () {
+          return new Promise(function (resolve) {
+            var settled = false;
+            function done(value) {
+              if (settled) return;
+              settled = true;
+              resolve(value);
+            }
+            try {
+              window.turnstile.execute(widgetId, {
+                callback: function (token) { done(token || null); },
+                'error-callback': function () { done(null); },
+                'timeout-callback': function () { done(null); },
+              });
+            } catch (err) {
+              done(null);
+            }
+            // Hard ceiling — index.html shim is the last line of defence.
+            setTimeout(function () { done(null); }, 12000);
+          });
+        }).catch(function () { return null; });
+      };
+    })();
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>

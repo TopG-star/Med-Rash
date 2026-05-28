@@ -7,6 +7,7 @@ import '../infra/device_token_store.dart';
 import '../infra/event_bus.dart';
 import '../infra/medrash_http_client.dart';
 import '../infra/overlay_manager.dart';
+import '../infra/turnstile_token_provider.dart';
 import '../../features/leaderboard/repositories/leaderboard_repository.dart';
 import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_repository.dart';
 import '../../features/profile/repositories/profile_repository.dart';
@@ -30,12 +31,18 @@ Future<void> initCore() async {
   getIt.registerLazySingleton<DeviceIdentityService>(
     () => DeviceIdentityService(preferences),
   );
+  getIt.registerLazySingleton<TurnstileTokenProvider>(
+    () => TurnstileTokenProvider.platformDefault(
+      siteKey: AppConfig.turnstileSiteKey,
+    ),
+  );
   getIt.registerLazySingleton<DeviceTokenStore>(
     () => DeviceTokenStore(
       preferences: preferences,
       functionsBaseUrl: AppConfig.functionsBaseUrl,
       gateApiKey: AppConfig.gateApiKey.isEmpty ? null : AppConfig.gateApiKey,
       deviceIdentityService: getIt<DeviceIdentityService>(),
+      turnstileTokenProvider: getIt<TurnstileTokenProvider>(),
     ),
   );
   getIt.registerLazySingleton<MedRashHttpClient>(

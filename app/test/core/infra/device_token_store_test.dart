@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:medrash_app/core/infra/device_identity_service.dart';
 import 'package:medrash_app/core/infra/device_token_store.dart';
+import 'package:medrash_app/core/infra/turnstile_token_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -18,6 +19,7 @@ void main() {
     Future<DeviceTokenStore> buildStore({
       required http.Client httpClient,
       DateTime Function()? clock,
+      TurnstileTokenProvider? turnstileTokenProvider,
     }) async {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       return DeviceTokenStore(
@@ -25,6 +27,7 @@ void main() {
         functionsBaseUrl: 'https://example.test/.netlify/functions/',
         gateApiKey: 'gate-key-for-test',
         deviceIdentityService: DeviceIdentityService(prefs),
+        turnstileTokenProvider: turnstileTokenProvider,
         httpClient: httpClient,
         clock: clock,
       );
@@ -188,6 +191,56 @@ void main() {
       ]);
       expect(results, everyElement('singleton-token'));
       expect(mintCount, 1);
+    });
+
+    test('sends turnstileToken in the body when provider returns non-null',
+        () async {
+      Object? capturedBody;
+      final http.Client mockHttp = MockClient((http.Request request) async {
+        capturedBody = jsonDecode(request.body);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'token': 'tok-with-turnstile',
+            'expiresAt': 1700086400,
+            'refreshAfter': 1700082800,
+          }),
+          200,
+        );
+      });
+      final DeviceTokenStore store = await buildStore(
+        httpClient: mockHttp,
+        clock: () => DateTime.fromMillisecondsSinceEpoch(1700000500 * 1000),
+        turnstileTokenProvider:
+            StaticTurnstileTokenProvider('fake-turnstile-token'),
+      );
+      expect(await store.currentToken(), 'tok-with-turnstile');
+      expect(capturedBody, isA<Map<String, dynamic>>());
+      final Map<String, dynamic> body = capturedBody! as Map<String, dynamic>;
+      expect(body['turnstileToken'], 'fake-turnstile-token');
+      expect(body['deviceInstallId'], isNotNull);
+    });
+
+    test('omits turnstileToken when provider returns null', () async {
+      Object? capturedBody;
+      final http.Client mockHttp = MockClient((http.Request request) async {
+        capturedBody = jsonDecode(request.body);
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'token': 'tok-no-turnstile',
+            'expiresAt': 1700086400,
+            'refreshAfter': 1700082800,
+          }),
+          200,
+        );
+      });
+      final DeviceTokenStore store = await buildStore(
+        httpClient: mockHttp,
+        clock: () => DateTime.fromMillisecondsSinceEpoch(1700000500 * 1000),
+        turnstileTokenProvider: StaticTurnstileTokenProvider(null),
+      );
+      expect(await store.currentToken(), 'tok-no-turnstile');
+      final Map<String, dynamic> body = capturedBody! as Map<String, dynamic>;
+      expect(body.containsKey('turnstileToken'), isFalse);
     });
   });
 }
