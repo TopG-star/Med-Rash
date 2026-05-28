@@ -146,7 +146,7 @@ _Phase 3c — strip the gate key entirely (this commit, after one clean Phase 3b
 - Phase 3b hosted smoke (Turnstile challenge succeeds, `/device-token` rejects without Turnstile, rate limit kicks in after burst) — **PASS (user-confirmed 2026-05-28).** Pilot session ran clean on a Turnstile-only `/device-token` mint with `MEDRASH_TURNSTILE_SECRET` + `MEDRASH_TURNSTILE_SITE_KEY` set; no regressions.
 - Phase 3c typecheck / vitest (workspace `c:\Users\USER\Desktop\Personal\medRash\admin`, mode local) — **PASS.** `npm run typecheck` → exit 0; `npm test` → 7 files / 66 tests pass (same count as 3b — same coverage now exercised against the Turnstile-only path).
 - Phase 3c Flutter `flutter analyze` / `flutter test` (workspace `c:\Users\USER\Desktop\Personal\medRash\app`, mode local) — **PASS.** `flutter analyze` → No issues found; `flutter test` → 180/180 pass (same count as 3b; the gate-key-header assertion in `device_token_store_test.dart` was removed, the cold-mint test now asserts the request body shape only).
-- Phase 3c hosted smoke (gate key fully removed, only Turnstile accepted; rejecting `x-medrash-gate-key`-only requests with 400) — **PENDING user redeploy with `MEDRASH_GATE_API_KEY` deleted from Netlify env.**
+- Phase 3c hosted smoke (gate key fully removed, only Turnstile accepted; rejecting `x-medrash-gate-key`-only requests with 400) — **PASS (user-confirmed 2026-05-28).** `MEDRASH_GATE_API_KEY` deleted from Netlify env, Flutter web rebuilt with only `MEDRASH_FUNCTIONS_BASE_URL` + `MEDRASH_TURNSTILE_SITE_KEY` defines, redeployed; one full pilot session (login → quiz → leaderboard) ran clean.
 
 **Standards:** ISO 27002 §5.16, 5.17, 8.2, 8.5 · OWASP ASVS V3.5, V6.2 · NIST CSF PR.AA-1, PR.AA-2.
 
