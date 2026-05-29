@@ -4,10 +4,10 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import {
+  initialMfaEnrollState,
   startEnrollmentAction,
   verifyEnrollmentAction,
 } from "./actions";
-import { initialMfaEnrollState } from "./state";
 
 type EnrollSectionProps = {
   email: string;
@@ -99,7 +99,6 @@ export function EnrollSection({ email, next }: EnrollSectionProps) {
           1. Open your authenticator app and scan this QR code.
         </p>
         <div
-          aria-label="MFA QR code"
           style={{
             display: "flex",
             justifyContent: "center",
@@ -108,10 +107,19 @@ export function EnrollSection({ email, next }: EnrollSectionProps) {
             borderRadius: "0.5rem",
             margin: "0.75rem 0",
           }}
-          // The QR is an SVG string we control end-to-end (Supabase server
-          // → server action → here). No untrusted input is interpolated.
-          dangerouslySetInnerHTML={{ __html: enrolling.qrSvg }}
-        />
+        >
+          {/* Supabase returns totp.qr_code as a data: URL (image/svg+xml).
+              Render it as an <img> so the browser decodes the data URL
+              instead of dumping the URL text into the DOM. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={enrolling.qrSvg}
+            alt="MFA QR code"
+            width={220}
+            height={220}
+            style={{ width: 220, height: 220, display: "block" }}
+          />
+        </div>
         <details>
           <summary style={{ cursor: "pointer", fontSize: "0.9rem" }}>
             Can&apos;t scan? Enter the secret manually
