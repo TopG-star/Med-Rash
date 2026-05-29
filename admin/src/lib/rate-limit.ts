@@ -31,7 +31,9 @@ export type RateLimitScope =
   | "leaderboard"
   | "quiz_list"
   | "quiz_bank_write"
-  | "session_create";
+  | "session_create"
+  | "auth_mfa_verify"
+  | "auth_mfa_recovery";
 
 export type RateLimitConfig = {
   scope: RateLimitScope;
@@ -137,6 +139,11 @@ export const RATE_LIMITS: Record<RateLimitScope, Omit<RateLimitConfig, "scope" |
   quiz_list: { limit: 60, windowSeconds: 60, lockoutSeconds: 60 },
   quiz_bank_write: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
   session_create: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
+  // Slice B1 P2 — MFA scopes. Tight verify limit (matches OTP) since
+  // each attempt is a TOTP guess; recovery scope is even tighter (3)
+  // because a real owner only ever consumes one code at a time.
+  auth_mfa_verify: { limit: 5, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 },
+  auth_mfa_recovery: { limit: 3, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 },
 };
 
 export function rateLimitConfig(

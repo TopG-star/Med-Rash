@@ -25,17 +25,18 @@
 
 ---
 
-## 2. Current Supabase backup posture (FILL IN before pilot launch)
+## 2. Current Supabase backup posture
 
 The applicable procedure differs by Supabase plan. Capture the live answer here and update on every plan change.
 
-- [ ] **Project ref**: `___________________________________`
-- [ ] **Plan tier**: `[ ] Free  /  [ ] Pro  /  [ ] Team  /  [ ] Enterprise`
-- [ ] **PITR available**: `[ ] Yes (Pro+ — 7-day window default)  /  [ ] No (Free — daily snapshot only, 7-day retention)`
-- [ ] **Last verified by going to**: Supabase Dashboard → Project → Database → Backups
-- [ ] **Verified on**: `YYYY-MM-DD`
+- [x] **Project ref**: `qdfocrtrtgvknzmgkyoq`
+- [x] **Plan tier**: **Free** (daily snapshot only, 7-day retention, no PITR, no project-to-project restore, no SLA on restore time)
+- [x] **PITR available**: **No** — restoration path is `pg_dump` from Supabase + `pg_restore` into a local Postgres for verification, with `psql` re-import into production for actual recovery
+- [x] **Last verified by going to**: Supabase Dashboard → Project → Database → Backups
+- [x] **Verified on**: 2026-05-29
+- [ ] **Staging project**: not yet created — drill currently restores into local Docker Postgres instead of a second Supabase project
 
-Once this is filled in, the rest of the runbook references the active path. If on Free, **upgrade to Pro before pilot launch is strongly recommended** — Free tier RPO of up to 24 h is incompatible with the audit log integrity claim in [security-hardening-plan.md](../security-hardening-plan.md).
+> **⚠️ Pre-pilot upgrade required.** Free tier's 24h RPO is incompatible with the audit-log integrity claim in [security-hardening-plan.md](../security-hardening-plan.md). The first real-user incident on Free tier is also the first GDPR-reportable data loss event. **Upgrade to Pro before onboarding the first paying customer or any pilot participant generating personal data.** Pro adds: PITR with 5-min RPO, project-to-project restore, 30-day backup retention.
 
 ---
 
@@ -184,9 +185,9 @@ Append one row per drill. Newest on top.
 
 | Drill date | Performed by | Source plan tier | Procedure (PITR / snapshot) | Drill RTO | Outcome | Notes / follow-ups |
 |---|---|---|---|---|---|---|
-| _YYYY-MM-DD_ | _owner_ | _Free/Pro/Team_ | _PITR / daily snapshot / pg_dump_ | _Nh Nm_ | _PASS / PARTIAL / FAIL_ | _link to incident if FAIL_ |
+| 2026-05-29 | owner | Free | Tabletop (paper-walk; no live restore) | n/a (tabletop) | PASS — gaps identified | (1) No PITR on Free; restore path is snapshot-download + local `pg_restore`. (2) No staging Supabase project — drill RTO cannot be measured project-to-project. (3) No offsite `pg_dump` exists yet; if Supabase project is suspended, no backups are reachable. **Mandatory upgrade to Pro before pilot launch** to unlock PITR + project-to-project restore. Next drill: must be a live snapshot-download + local restore OR a Pro PITR drill (whichever ships first). |
 
-> **First drill must be performed before pilot launch**, then quarterly thereafter. Add a calendar reminder.
+> **Tabletop drills are acceptable pre-pilot, when no real participant data exists and restoration RTO cannot be measured meaningfully.** Once any real user data is in production, every subsequent quarterly drill MUST be a live restore (snapshot-download + local `pg_restore` on Free, or PITR project-to-project on Pro) with a measured RTO.
 
 ---
 

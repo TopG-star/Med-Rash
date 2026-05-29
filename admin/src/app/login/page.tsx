@@ -1,4 +1,8 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
+
+import { logAuthEvent } from "@/lib/audit";
+import { getAdminSupabaseClient } from "@/lib/supabase-server";
 
 import { LoginForm } from "./login-form";
 
@@ -6,6 +10,7 @@ export const dynamic = "force-dynamic";
 
 type SearchParams = {
   next?: string;
+  reason?: string;
 };
 
 export default async function LoginPage({
@@ -17,6 +22,34 @@ export default async function LoginPage({
   const next = typeof params.next === "string" && params.next.startsWith("/")
     ? params.next
     : "/dashboard";
+
+  // Slice B1 P3 — when the middleware bounces a stale admin session back
+  // to /login with ?reason=session_idle|session_absolute, capture an
+  // audit event (fire-and-forget; the page render is the user-visible
+  // signal). We are deliberately in the Node runtime here, so
+  // `logAuthEvent` + `getAdminSupabaseClient` are safe to use.
+  const reason = typeof params.reason === "string" ? params.reason : null;
+  if (reason === "session_idle" || reason === "session_absolute") {
+    try {
+      const h = await headers();
+      const xff = h.get("x-forwarded-for");
+      const ip = xff ? (xff.split(",")[0]?.trim() ?? null) : null;
+      const userAgent = h.get("user-agent");
+      void logAuthEvent(getAdminSupabaseClient(), {
+        eventType:
+          reason === "session_idle"
+            ? "session_idle_timeout"
+            : "session_absolute_timeout",
+        ip,
+        userAgent,
+        result: "ok",
+        metadata: { next },
+      });
+    } catch (err) {
+      // Audit logging must never break the login page render.
+      console.error("[login] session-timeout audit emit failed", err);
+    }
+  }
 
   return (
     <main className="vp-auth">
@@ -59,6 +92,18 @@ export default async function LoginPage({
         <Suspense fallback={null}>
           <LoginForm next={next} />
         </Suspense>
+
+        {reason === "session_idle" ? (
+          <p className="vp-banner vp-banner-info" role="status">
+            Your session timed out after 30 minutes of inactivity. Sign in again
+            to continue.
+          </p>
+        ) : null}
+        {reason === "session_absolute" ? (
+          <p className="vp-banner vp-banner-info" role="status">
+            Your session reached its 8-hour maximum. Sign in again to continue.
+          </p>
+        ) : null}
 
         <p className="vp-fineprint">
           Need access? Ask your MedRash admin to add you as a Host.
