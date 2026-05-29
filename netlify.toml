@@ -16,6 +16,16 @@
   directory    = "netlify/functions"
   node_bundler = "esbuild"
 
+# Slice A5 phase 3 (Pillar 6) — nightly retention purge for audit tables.
+# Runs the admin/netlify/functions/audit-retention-purge.ts handler at
+# 03:17 UTC daily. Off-the-hour to avoid colliding with other cron jobs
+# that prefer round times. pg_cron is NOT enabled in this Supabase
+# project, so this is the canonical cleanup path for app.auth_events and
+# app.admin_audit rows whose expire_at (default = insert + 730 days) has
+# passed.
+[functions."audit-retention-purge"]
+  schedule = "17 3 * * *"
+
 [build.environment]
   # Node 22 required: @supabase/supabase-js Realtime client needs native
   # WebSocket (absent in Node 20). Next 16 supports Node 22.
