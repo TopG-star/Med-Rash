@@ -3,6 +3,7 @@ import {
   requireAdminUserSession,
   requireLegacyWriteKey,
 } from "./_shared/admin-user-session";
+import { getSupabaseAdminClient } from "./_shared/supabase";
 import {
   bulkCreateQuestions,
   createQuestionRecord,
@@ -18,6 +19,7 @@ import {
   type BulkQuestionInput,
 } from "../../src/lib/quiz-write";
 import { parseCsvQuestionRows, type CsvRowInput } from "../../src/lib/quiz-csv";
+import { logAdminAction } from "../../src/lib/audit";
 
 type Operation =
   | "create_quiz"
@@ -94,15 +96,35 @@ export async function handler(event: HandlerEvent) {
   }
 
   try {
+    const auditClient = getSupabaseAdminClient();
+    const actorMeta = { via: authResult.auth.via };
     switch (op) {
       case "create_quiz": {
         const parsed = parseCreateQuizInput(payload!, createdBy);
         const quiz = await createQuizRecord(parsed);
+        void logAdminAction(auditClient, {
+          actorUserId: createdBy,
+          actorRole: authResult.auth.role,
+          action: "create_quiz",
+          targetType: "quiz",
+          targetId: quiz.id,
+          payload: parsed,
+          metadata: actorMeta,
+        });
         return jsonResponse(201, { ok: true, quiz });
       }
       case "update_quiz": {
         const parsed = parseUpdateQuizInput(payload!);
         const quiz = await updateQuizRecord(parsed);
+        void logAdminAction(auditClient, {
+          actorUserId: createdBy,
+          actorRole: authResult.auth.role,
+          action: "update_quiz",
+          targetType: "quiz",
+          targetId: quiz.id,
+          payload: parsed,
+          metadata: actorMeta,
+        });
         return jsonResponse(200, { ok: true, quiz });
       }
       case "deactivate_quiz": {
@@ -115,16 +137,42 @@ export async function handler(event: HandlerEvent) {
           });
         }
         const quiz = await deactivateQuizRecord(id);
+        void logAdminAction(auditClient, {
+          actorUserId: createdBy,
+          actorRole: authResult.auth.role,
+          action: "deactivate_quiz",
+          targetType: "quiz",
+          targetId: id,
+          metadata: actorMeta,
+        });
         return jsonResponse(200, { ok: true, quiz });
       }
       case "create_question": {
         const parsed = parseCreateQuestionInput(payload!, createdBy);
         const question = await createQuestionRecord(parsed);
+        void logAdminAction(auditClient, {
+          actorUserId: createdBy,
+          actorRole: authResult.auth.role,
+          action: "create_question",
+          targetType: "question",
+          targetId: question.id,
+          payload: parsed,
+          metadata: actorMeta,
+        });
         return jsonResponse(201, { ok: true, question });
       }
       case "update_question": {
         const parsed = parseUpdateQuestionInput(payload!);
         const question = await updateQuestionRecord(parsed);
+        void logAdminAction(auditClient, {
+          actorUserId: createdBy,
+          actorRole: authResult.auth.role,
+          action: "update_question",
+          targetType: "question",
+          targetId: question.id,
+          payload: parsed,
+          metadata: actorMeta,
+        });
         return jsonResponse(200, { ok: true, question });
       }
       case "deactivate_question": {
@@ -137,6 +185,14 @@ export async function handler(event: HandlerEvent) {
           });
         }
         const question = await deactivateQuestionRecord(id);
+        void logAdminAction(auditClient, {
+          actorUserId: createdBy,
+          actorRole: authResult.auth.role,
+          action: "deactivate_question",
+          targetType: "question",
+          targetId: id,
+          metadata: actorMeta,
+        });
         return jsonResponse(200, { ok: true, question });
       }
       case "bulk_create_questions": {
@@ -178,6 +234,19 @@ export async function handler(event: HandlerEvent) {
           isActive: d.isActive,
         }));
         const result = await bulkCreateQuestions(quizId, inputs, createdBy);
+        void logAdminAction(auditClient, {
+          actorUserId: createdBy,
+          actorRole: authResult.auth.role,
+          action: "bulk_create_questions",
+          targetType: "quiz",
+          targetId: quizId,
+          metadata: {
+            ...actorMeta,
+            createdCount: result.created.length,
+            failureCount: result.failures.length,
+            rowErrorCount: rowErrors.length,
+          },
+        });
         return jsonResponse(201, {
           ok: true,
           createdCount: result.created.length,

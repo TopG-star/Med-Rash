@@ -13,6 +13,8 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { extractRemoteIp } from "./_shared/turnstile";
+import { logAuthEvent } from "../../src/lib/audit";
 import {
   enforceRateLimit,
   formatLockoutMessage,
@@ -62,12 +64,22 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     }
 
     const supabase = getSupabaseAdminClient();
+    const ip = extractRemoteIp(event.headers);
+    const userAgent = event.headers?.["user-agent"] ?? null;
 
     const limit = await enforceRateLimit(
       supabase,
       rateLimitConfig("recover_otp_request", email),
     );
     if (!limit.allowed) {
+      void logAuthEvent(supabase, {
+        eventType: "recover_rate_limited",
+        email,
+        ip,
+        userAgent,
+        result: "locked_out",
+        metadata: { scope: "recover_otp_request" },
+      });
       return jsonResponse(429, {
         ok: false,
         code: "RATE_LIMITED",
@@ -79,6 +91,13 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     const existing = await findUserByRecoveryEmail(supabase, email);
 
     if (!existing) {
+      void logAuthEvent(supabase, {
+        eventType: "recover_request",
+        email,
+        ip,
+        userAgent,
+        result: "profile_not_found",
+      });
       return jsonResponse(404, {
         ok: false,
         code: "PROFILE_NOT_FOUND",
@@ -97,12 +116,27 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     if (error) {
       const status = typeof (error as { status?: number }).status === "number" ? (error as { status: number }).status : 0;
       if (status === 429) {
+        void logAuthEvent(supabase, {
+          eventType: "recover_rate_limited",
+          email,
+          ip,
+          userAgent,
+          result: "supabase_429",
+        });
         return jsonResponse(429, {
           ok: false,
           code: "RATE_LIMITED",
           message: "Too many recovery codes requested. Wait a minute and try again.",
         });
       }
+      void logAuthEvent(supabase, {
+        eventType: "recover_request",
+        email,
+        ip,
+        userAgent,
+        result: "otp_send_failed",
+        metadata: { supabase_status: status, error: error.message },
+      });
       return jsonResponse(502, {
         ok: false,
         code: "OTP_SEND_FAILED",
@@ -110,6 +144,13 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       });
     }
 
+    void logAuthEvent(supabase, {
+      eventType: "recover_request",
+      email,
+      ip,
+      userAgent,
+      result: "code_sent",
+    });
     return jsonResponse(200, {
       ok: true,
       message: "Recovery code sent. Check your email.",

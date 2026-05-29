@@ -69,11 +69,21 @@ export async function requestOtpAction(
     };
   }
 
+  const adminClient = getAdminSupabaseClient();
   const requestLimit = await enforceRateLimit(
-    getAdminSupabaseClient(),
+    adminClient,
     rateLimitConfig("auth_otp_request", email),
   );
   if (!requestLimit.allowed) {
+    const { ip, userAgent } = await readClientHeaders();
+    void logAuthEvent(adminClient, {
+      eventType: "otp_rate_limited",
+      email,
+      ip,
+      userAgent,
+      result: "locked_out",
+      metadata: { scope: "auth_otp_request" },
+    });
     return {
       status: "error",
       message: formatLockoutMessage(requestLimit),
@@ -94,6 +104,15 @@ export async function requestOtpAction(
   });
 
   if (error) {
+    const { ip, userAgent } = await readClientHeaders();
+    void logAuthEvent(adminClient, {
+      eventType: "otp_request",
+      email,
+      ip,
+      userAgent,
+      result: error.message,
+      metadata: { success: false },
+    });
     console.error("[login] signInWithOtp failed", error);
     return {
       status: "error",
@@ -103,6 +122,15 @@ export async function requestOtpAction(
     };
   }
 
+  const { ip, userAgent } = await readClientHeaders();
+  void logAuthEvent(adminClient, {
+    eventType: "otp_request",
+    email,
+    ip,
+    userAgent,
+    result: "code_sent",
+    metadata: { success: true },
+  });
   return {
     status: "code_sent",
     message: `Code sent to ${email}. Enter the 6-digit code below.`,
@@ -209,6 +237,19 @@ export async function verifyOtpAction(
 
 export async function signOutAndRedirectAction() {
   const supabase = await getServerSupabaseClient();
+  // Capture identity BEFORE signOut clears the cookies, so the audit
+  // entry carries user_id + email_hash. Both are optional on the log
+  // path so a failed getUser doesn't block signout.
+  const { data: userData } = await supabase.auth.getUser();
+  const { ip, userAgent } = await readClientHeaders();
+  void logAuthEvent(getAdminSupabaseClient(), {
+    eventType: "signout",
+    userId: userData.user?.id ?? null,
+    email: userData.user?.email ?? null,
+    ip,
+    userAgent,
+    result: "ok",
+  });
   await supabase.auth.signOut();
   redirect("/login");
 }

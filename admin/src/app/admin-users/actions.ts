@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 
 import { requireAdminSession } from "@/lib/admin-session";
+import { logAdminAction } from "@/lib/audit";
 import { getAdminSupabaseClient } from "@/lib/supabase-server";
 
 export type AdminUsersActionResult =
@@ -144,6 +145,14 @@ export async function inviteAdminAction(
       return fail(`Failed to record admin row: ${upsertError.message}`);
     }
 
+    void logAdminAction(supabase, {
+      actorUserId: session.userId,
+      actorRole: session.role,
+      action: "invite_admin",
+      targetType: "admin_user",
+      targetId: userId,
+      payload: { email, role },
+    });
     revalidatePath("/admin-users");
     return { ok: true, message: `Invitation sent to ${email}.` };
   } catch (err) {
@@ -162,8 +171,9 @@ export async function inviteAdminAction(
 export async function reinviteAdminAction(
   userId: string,
 ): Promise<AdminUsersActionResult> {
+  let session;
   try {
-    await requireOwner();
+    session = await requireOwner();
   } catch (err) {
     return fail(
       err instanceof Error && err.message === "FORBIDDEN_OWNER_ONLY"
@@ -184,6 +194,14 @@ export async function reinviteAdminAction(
   if (error) return fail(error.message);
   if (!data) return fail("Teammate not found.");
 
+  void logAdminAction(supabase, {
+    actorUserId: session.userId,
+    actorRole: session.role,
+    action: "reinvite_admin",
+    targetType: "admin_user",
+    targetId: userId,
+    payload: { email: data.email, role: data.role },
+  });
   return inviteAdminAction({ email: data.email, role: data.role });
 }
 
@@ -218,6 +236,13 @@ async function setActive(
     .eq("user_id", userId);
   if (error) return fail(error.message);
 
+  void logAdminAction(supabase, {
+    actorUserId: session.userId,
+    actorRole: session.role,
+    action: active ? "reactivate_admin" : "deactivate_admin",
+    targetType: "admin_user",
+    targetId: userId,
+  });
   revalidatePath("/admin-users");
   return {
     ok: true,
@@ -270,6 +295,14 @@ export async function setRoleAction(
     .eq("user_id", userId);
   if (error) return fail(error.message);
 
+  void logAdminAction(supabase, {
+    actorUserId: session.userId,
+    actorRole: session.role,
+    action: "set_admin_role",
+    targetType: "admin_user",
+    targetId: userId,
+    payload: { role },
+  });
   revalidatePath("/admin-users");
   return { ok: true, message: `Role updated to ${role}.` };
 }

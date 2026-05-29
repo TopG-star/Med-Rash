@@ -16,6 +16,8 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { extractRemoteIp } from "./_shared/turnstile";
+import { logAuthEvent } from "../../src/lib/audit";
 import {
   enforceRateLimit,
   formatLockoutMessage,
@@ -74,12 +76,22 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     }
 
     const supabase = getSupabaseAdminClient();
+    const ip = extractRemoteIp(event.headers);
+    const userAgent = event.headers?.["user-agent"] ?? null;
 
     const limit = await enforceRateLimit(
       supabase,
       rateLimitConfig("recover_otp_verify", email),
     );
     if (!limit.allowed) {
+      void logAuthEvent(supabase, {
+        eventType: "recover_rate_limited",
+        email,
+        ip,
+        userAgent,
+        result: "locked_out",
+        metadata: { scope: "recover_otp_verify" },
+      });
       return jsonResponse(429, {
         ok: false,
         code: "RATE_LIMITED",
@@ -96,6 +108,14 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     });
 
     if (verifyError || !verified?.user?.id) {
+      void logAuthEvent(supabase, {
+        eventType: "recover_verify_fail",
+        email,
+        ip,
+        userAgent,
+        result: "otp_invalid",
+        metadata: { error: verifyError?.message ?? "missing_user" },
+      });
       // Supabase returns a generic "Token has expired or is invalid" for both
       // cases. Surface a single OTP_INVALID code; the client can show one
       // friendly message and a "resend" affordance.
@@ -110,6 +130,14 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     const recovered = await findUserByRecoveryEmail(supabase, email);
 
     if (!recovered) {
+      void logAuthEvent(supabase, {
+        eventType: "recover_verify_fail",
+        userId: authUserId,
+        email,
+        ip,
+        userAgent,
+        result: "profile_not_found",
+      });
       // The user verified the OTP but no app.users row matches. This only
       // happens if the recovery email was cleared between request and verify
       // (a race we don't otherwise expect). Treat as PROFILE_NOT_FOUND.
@@ -125,6 +153,14 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     // profile. Practically impossible given UNIQUE(claimed_auth_user_id) +
     // single auth user per email, but worth being explicit.
     if (recovered.claimedAuthUserId && recovered.claimedAuthUserId !== authUserId) {
+      void logAuthEvent(supabase, {
+        eventType: "recover_verify_fail",
+        userId: authUserId,
+        email,
+        ip,
+        userAgent,
+        result: "recovery_conflict",
+      });
       return jsonResponse(409, {
         ok: false,
         code: "RECOVERY_CONFLICT",
@@ -144,6 +180,15 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
     await resetRateLimit(supabase, "recover_otp_verify", email);
 
+    void logAuthEvent(supabase, {
+      eventType: "recover_verify_success",
+      userId: authUserId,
+      email,
+      ip,
+      userAgent,
+      result: "ok",
+      metadata: { participantId: recovered.id, merged: Boolean(currentParticipantId && currentParticipantId !== recovered.id) },
+    });
     return jsonResponse(200, {
       ok: true,
       participantId: recovered.id,

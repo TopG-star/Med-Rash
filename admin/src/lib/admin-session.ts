@@ -1,7 +1,9 @@
 import "server-only";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { logAuthEvent } from "./audit";
 import { getAdminSupabaseClient } from "./supabase-server";
 import { getServerSupabaseClient } from "./supabase-ssr";
 
@@ -12,6 +14,21 @@ export type AdminSession = {
   email: string;
   role: AdminRole;
 };
+
+async function readClientHeaders(): Promise<{
+  ip: string | null;
+  userAgent: string | null;
+}> {
+  try {
+    const h = await headers();
+    const xff = h.get("x-forwarded-for");
+    const ip = xff ? (xff.split(",")[0]?.trim() ?? null) : null;
+    const userAgent = h.get("user-agent");
+    return { ip, userAgent };
+  } catch {
+    return { ip: null, userAgent: null };
+  }
+}
 
 /**
  * Resolve the current request's admin session by checking:
@@ -41,9 +58,30 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
   if (lookupError) {
     console.error("[admin-session] admin_users lookup failed", lookupError);
+    const { ip, userAgent } = await readClientHeaders();
+    void logAuthEvent(service, {
+      eventType: "allowlist_deny",
+      userId,
+      email,
+      ip,
+      userAgent,
+      result: "lookup_error",
+      metadata: { error: lookupError.message },
+    });
     return null;
   }
-  if (!row || row.is_active !== true) return null;
+  if (!row || row.is_active !== true) {
+    const { ip, userAgent } = await readClientHeaders();
+    void logAuthEvent(service, {
+      eventType: "allowlist_deny",
+      userId,
+      email,
+      ip,
+      userAgent,
+      result: row ? "inactive" : "not_on_allowlist",
+    });
+    return null;
+  }
 
   const role: AdminRole = row.role === "owner" ? "owner" : "host";
   return { userId, email, role };

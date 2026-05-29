@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 
 import { requireAdminSession } from "@/lib/admin-session";
+import { logAdminAction } from "@/lib/audit";
 import { getAdminSupabaseClient } from "@/lib/supabase-server";
 import {
   JOB_ROLES,
@@ -83,5 +84,13 @@ export async function completeOnboardingAction(
     return { status: "error", message: "Could not save. Try again." };
   }
 
+  void logAdminAction(supabase, {
+    actorUserId: session.userId,
+    actorRole: session.role,
+    action: "complete_onboarding",
+    targetType: "admin_user",
+    targetId: session.userId,
+    payload: { fullName, company, jobRole: jobRoleRaw },
+  });
   redirect("/dashboard");
 }
