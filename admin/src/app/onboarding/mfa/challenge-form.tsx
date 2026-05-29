@@ -2,10 +2,7 @@
 
 import { useActionState, useState } from "react";
 
-import {
-  challengeAction,
-  useRecoveryAction,
-} from "./actions";
+import { challengeAction, useRecoveryAction } from "./actions";
 import {
   initialMfaChallengeState,
   initialMfaRecoveryState,

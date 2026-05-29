@@ -3,11 +3,8 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
-import {
-  initialMfaEnrollState,
-  startEnrollmentAction,
-  verifyEnrollmentAction,
-} from "./actions";
+import { startEnrollmentAction, verifyEnrollmentAction } from "./actions";
+import { initialMfaEnrollState } from "./state";
 
 type EnrollSectionProps = {
   email: string;

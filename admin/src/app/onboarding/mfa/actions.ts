@@ -22,6 +22,9 @@ import { getAdminSupabaseClient } from "@/lib/supabase-server";
 import { getServerSupabaseClient } from "@/lib/supabase-ssr";
 
 import {
+  initialMfaChallengeState,
+  initialMfaEnrollState,
+  initialMfaRecoveryState,
   safeNext,
   type MfaChallengeState,
   type MfaEnrollState,
