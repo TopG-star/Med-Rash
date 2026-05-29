@@ -1,7 +1,9 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { logAuthEvent } from "@/lib/audit";
 import {
   enforceRateLimit,
   formatLockoutMessage,
@@ -11,6 +13,21 @@ import {
 import { getAdminSupabaseClient } from "@/lib/supabase-server";
 import { getServerSupabaseClient } from "@/lib/supabase-ssr";
 import type { LoginActionState } from "./state";
+
+async function readClientHeaders(): Promise<{
+  ip: string | null;
+  userAgent: string | null;
+}> {
+  try {
+    const h = await headers();
+    const xff = h.get("x-forwarded-for");
+    const ip = xff ? (xff.split(",")[0]?.trim() ?? null) : null;
+    const userAgent = h.get("user-agent");
+    return { ip, userAgent };
+  } catch {
+    return { ip: null, userAgent: null };
+  }
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const OTP_RE = /^\d{6}$/;
@@ -127,6 +144,14 @@ export async function verifyOtpAction(
     rateLimitConfig("auth_otp_verify", email),
   );
   if (!verifyLimit.allowed) {
+    const { ip, userAgent } = await readClientHeaders();
+    void logAuthEvent(adminClient, {
+      eventType: "otp_rate_limited",
+      email,
+      ip,
+      userAgent,
+      result: "locked_out",
+    });
     return {
       status: "error",
       message: formatLockoutMessage(verifyLimit),
@@ -136,7 +161,7 @@ export async function verifyOtpAction(
   }
 
   const supabase = await getServerSupabaseClient();
-  const { error } = await supabase.auth.verifyOtp({
+  const { data: verifyData, error } = await supabase.auth.verifyOtp({
     email,
     token,
     type: "email",
@@ -144,6 +169,15 @@ export async function verifyOtpAction(
 
   if (error) {
     const remaining = verifyLimit.attemptsRemaining;
+    const { ip, userAgent } = await readClientHeaders();
+    void logAuthEvent(adminClient, {
+      eventType: "otp_verify_fail",
+      email,
+      ip,
+      userAgent,
+      result: error.message,
+      metadata: { attempts_remaining: remaining },
+    });
     console.error("[login] verifyOtp failed", error.message);
     return {
       status: "error",
@@ -157,6 +191,15 @@ export async function verifyOtpAction(
   }
 
   await resetRateLimit(adminClient, "auth_otp_verify", email);
+  const { ip, userAgent } = await readClientHeaders();
+  void logAuthEvent(adminClient, {
+    eventType: "otp_verify_success",
+    userId: verifyData.user?.id ?? null,
+    email,
+    ip,
+    userAgent,
+    result: "ok",
+  });
   // Supabase has set the auth cookies via the SSR client. Hand off to the
   // callback so it can resolve admin_users.status (invited -> verified ->
   // /onboarding, active -> /dashboard, deactivated -> /denied). B4 will

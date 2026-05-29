@@ -3,10 +3,12 @@ import {
   requireAdminUserSession,
   requireLegacyWriteKey,
 } from "./_shared/admin-user-session";
+import { getSupabaseAdminClient } from "./_shared/supabase";
 import {
   createSessionRecord,
   parseCreateSessionInput,
 } from "../../src/lib/session-create";
+import { logAdminAction } from "../../src/lib/audit";
 
 export async function handler(event: HandlerEvent) {
   const methodGuard = requirePost(event);
@@ -42,6 +44,15 @@ export async function handler(event: HandlerEvent) {
 
   try {
     const result = await createSessionRecord(input);
+    void logAdminAction(getSupabaseAdminClient(), {
+      actorUserId: authResult.auth.userId,
+      actorRole: authResult.auth.role,
+      action: "session_create",
+      targetType: "session",
+      targetId: result.session.id,
+      payload: input,
+      metadata: { via: authResult.auth.via },
+    });
     return jsonResponse(201, {
       ok: true,
       session: result.session,
