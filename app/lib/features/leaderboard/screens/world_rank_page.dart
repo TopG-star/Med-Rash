@@ -277,18 +277,18 @@ class _Podium extends StatelessWidget {
     final LeaderboardRow? third = podium.length >= 3 ? podium[2] : null;
     final tokens = context.arenaTokens;
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Expanded(
           child: second != null
               ? _PodiumColumn(
                   row: second,
                   rank: 2,
-                  surface: tokens.primarySoft,
-                  accent: tokens.primary,
-                  height: 200,
-                  avatarBg: tokens.primary,
+                  surface: tokens.rankSilver.withValues(alpha: 0.18),
+                  accent: tokens.textPrimary,
+                  avatarBg: tokens.rankSilver,
                   avatarFg: Colors.white,
+                  medalColor: tokens.rankSilver,
                 )
               : const SizedBox.shrink(),
         ),
@@ -298,12 +298,12 @@ class _Podium extends StatelessWidget {
               ? _PodiumColumn(
                   row: first,
                   rank: 1,
-                  surface: tokens.secondary,
-                  accent: tokens.onSecondary,
-                  height: 240,
+                  surface: tokens.rankGold.withValues(alpha: 0.22),
+                  accent: tokens.textPrimary,
                   champion: true,
-                  avatarBg: tokens.onSecondary,
-                  avatarFg: tokens.secondary,
+                  avatarBg: tokens.rankGold,
+                  avatarFg: Colors.white,
+                  medalColor: tokens.rankGold,
                 )
               : const SizedBox.shrink(),
         ),
@@ -313,11 +313,11 @@ class _Podium extends StatelessWidget {
               ? _PodiumColumn(
                   row: third,
                   rank: 3,
-                  surface: tokens.tertiary,
-                  accent: Colors.white,
-                  height: 200,
-                  avatarBg: Colors.white,
-                  avatarFg: tokens.tertiary,
+                  surface: tokens.rankBronze.withValues(alpha: 0.18),
+                  accent: tokens.textPrimary,
+                  avatarBg: tokens.rankBronze,
+                  avatarFg: Colors.white,
+                  medalColor: tokens.rankBronze,
                 )
               : const SizedBox.shrink(),
         ),
@@ -332,123 +332,130 @@ class _PodiumColumn extends StatelessWidget {
     required this.rank,
     required this.surface,
     required this.accent,
-    required this.height,
     required this.avatarBg,
     required this.avatarFg,
+    required this.medalColor,
     this.champion = false,
   });
+
+  static const double _height = 180;
 
   final LeaderboardRow row;
   final int rank;
   final Color surface;
   final Color accent;
-  final double height;
   final bool champion;
   final Color avatarBg;
   final Color avatarFg;
+  final Color medalColor;
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.arenaTokens;
     return Semantics(
       container: true,
       label: row.isCurrentUser
           ? 'Rank $rank, you, ${row.name}'
           : 'Rank $rank, ${row.name}',
       value: '${row.score} points',
-      child: Stack(
-        clipBehavior: Clip.none,
-        alignment: Alignment.topCenter,
-        children: <Widget>[
-          ConstrainedBox(
-            constraints: BoxConstraints(minHeight: height),
-            child: ArenaCard(
-              color: surface,
-              padding: const EdgeInsets.fromLTRB(
-                MedRashSpace.sm,
-                MedRashSpace.xxl,
-                MedRashSpace.sm,
-                MedRashSpace.lg,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _height),
+        child: ArenaCard(
+          color: surface,
+          padding: const EdgeInsets.fromLTRB(
+            MedRashSpace.sm,
+            MedRashSpace.md,
+            MedRashSpace.sm,
+            MedRashSpace.md,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: <Widget>[
+              Icon(
+                champion
+                    ? Icons.workspace_premium_rounded
+                    : Icons.military_tech_rounded,
+                color: medalColor,
+                size: champion ? 26 : 22,
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: MedRashSpace.sm + 2,
-                      vertical: 2,
+              const SizedBox(height: MedRashSpace.xs),
+              _PodiumAvatar(
+                source: row.name,
+                avatarBg: avatarBg,
+                avatarFg: avatarFg,
+                ringColor: medalColor,
+                champion: champion,
+              ),
+              const SizedBox(height: MedRashSpace.xs),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: MedRashSpace.sm + 2,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: medalColor.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  '#$rank',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w800,
+                        color: accent,
+                        letterSpacing: 0.4,
+                      ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                row.name,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      color: accent,
                     ),
-                    decoration: BoxDecoration(
-                      color: accent.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '#$rank',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              ),
+              const SizedBox(height: 2),
+              champion
+                  ? CountUpNumber(
+                      value: row.score,
+                      duration: const Duration(milliseconds: 900),
+                      curve: Curves.easeOutCubic,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(
                             fontFamily: 'Poppins',
                             fontWeight: FontWeight.w800,
                             color: accent,
-                            letterSpacing: 0.4,
+                            height: 1,
+                          ),
+                    )
+                  : Text(
+                      '${row.score}',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w800,
+                            color: accent,
+                            height: 1,
                           ),
                     ),
-                  ),
-                  const SizedBox(height: MedRashSpace.sm),
-                  Text(
-                    row.name,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w700,
-                          color: accent,
-                        ),
-                  ),
-                  const SizedBox(height: MedRashSpace.sm),
-                  CountUpNumber(
-                    value: row.score,
-                    duration: const Duration(milliseconds: 900),
-                    curve: Curves.easeOutCubic,
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w800,
-                          color: accent,
-                          height: 1,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'pts',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: accent.withValues(alpha: 0.75),
-                          letterSpacing: 0.6,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ],
+              Text(
+                'pts',
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: accent.withValues(alpha: 0.75),
+                      letterSpacing: 0.6,
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
-            ),
+            ],
           ),
-          Positioned(
-            top: -28,
-            child: _PodiumAvatar(
-              source: row.name,
-              avatarBg: avatarBg,
-              avatarFg: avatarFg,
-              champion: champion,
-              ringColor: champion ? tokens.secondary : surface,
-            ),
-          ),
-          if (champion)
-            Positioned(
-              top: -54,
-              child: Icon(
-                Icons.workspace_premium_rounded,
-                color: tokens.secondary,
-                size: 28,
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -472,24 +479,24 @@ class _PodiumAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
-    final double outerDiameter = champion ? 72 : 60;
+    final double outerDiameter = champion ? 56 : 48;
     return Container(
       width: outerDiameter,
       height: outerDiameter,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: ringColor,
+        color: Colors.white,
         border: Border.all(
-          color: champion ? tokens.secondary : tokens.outline,
-          width: champion ? 3 : tokens.borderWidth,
+          color: ringColor,
+          width: champion ? 2.5 : tokens.borderWidth,
         ),
         boxShadow: champion
             ? <BoxShadow>[
                 BoxShadow(
-                  color: tokens.secondary.withValues(alpha: 0.5),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 4),
+                  color: ringColor.withValues(alpha: 0.4),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 3),
                 ),
               ]
             : null,
@@ -497,7 +504,7 @@ class _PodiumAvatar extends StatelessWidget {
       alignment: Alignment.center,
       child: MonogramAvatar(
         source: source,
-        diameter: champion ? 60 : 52,
+        diameter: champion ? 46 : 40,
         backgroundColor: avatarBg,
         foregroundColor: avatarFg,
       ),

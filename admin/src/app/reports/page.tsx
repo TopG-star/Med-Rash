@@ -98,6 +98,7 @@ export default async function ReportsPage({
     <AdminShell
       title="Reports"
       subtitle="Intelligence + bulk exports. All downloads stream live from Supabase via the service-role admin client."
+      titleSize="sm"
       user={{ email: session.email, role: session.role }}
     >
       <div className="vp-scope vp-vstack vp-vstack-lg">

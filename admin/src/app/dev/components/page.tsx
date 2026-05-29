@@ -27,6 +27,7 @@ export default function DevComponentsPage() {
     <AdminShell
       title="Component catalog"
       subtitle="Dev-only preview of admin primitives. Hidden from production builds."
+      titleSize="sm"
       user={DEV_USER}
     >
       <div className="vp-scope flex flex-col gap-8">

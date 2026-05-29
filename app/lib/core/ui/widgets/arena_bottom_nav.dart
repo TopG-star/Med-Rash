@@ -41,13 +41,30 @@ class ArenaBottomNav extends StatelessWidget {
         }
       },
       backgroundColor: tokens.surface,
-      indicatorColor: tokens.primary,
+      indicatorColor: tokens.primarySoft,
       labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-      destinations: const <NavigationDestination>[
-        NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-        NavigationDestination(icon: Icon(Icons.bar_chart_rounded), label: 'Rank'),
-        NavigationDestination(icon: Icon(Icons.travel_explore_rounded), label: 'Explore'),
-        NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
+      destinations: <NavigationDestination>[
+        NavigationDestination(
+          icon: const Icon(Icons.home_rounded),
+          selectedIcon: Icon(Icons.home_rounded, color: tokens.primary),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.bar_chart_rounded),
+          selectedIcon: Icon(Icons.bar_chart_rounded, color: tokens.primary),
+          label: 'Rank',
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.travel_explore_rounded),
+          selectedIcon:
+              Icon(Icons.travel_explore_rounded, color: tokens.primary),
+          label: 'Explore',
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.person_rounded),
+          selectedIcon: Icon(Icons.person_rounded, color: tokens.primary),
+          label: 'Profile',
+        ),
       ],
     );
   }

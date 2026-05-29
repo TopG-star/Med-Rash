@@ -37,6 +37,7 @@ export default async function SessionLivePage({ params }: PageProps) {
     <AdminShell
       title={`Host Control Room · ${initial.name}`}
       subtitle={`Live distribution + audience · join code ${initial.joinCode} · refreshes every 3 seconds.`}
+      titleSize="sm"
       user={{ email: session.email, role: session.role }}
     >
       <LiveView
