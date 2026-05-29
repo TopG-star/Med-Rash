@@ -32,7 +32,15 @@ export type AuthEventType =
   | "recover_verify_success"
   | "recover_verify_fail"
   | "recover_rate_limited"
-  | "signout";
+  | "signout"
+  // Slice B1 (Pillar 1) — declared in phase 1; wired in phases 1 + 3.
+  | "session_idle_timeout"
+  | "session_absolute_timeout"
+  | "mfa_enroll"
+  | "mfa_verify_success"
+  | "mfa_verify_fail"
+  | "mfa_disable"
+  | "mfa_recovery_used";
 
 export type AuthEventInput = {
   eventType: AuthEventType;

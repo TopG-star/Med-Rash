@@ -127,6 +127,7 @@ Docker Desktop is required for local Supabase commands such as db reset.
 ## Privileged Gate Environment Variables
 Set these for Netlify functions (admin project):
 - MEDRASH_DEVICE_TOKEN_SECRET: HMAC key for per-device bearer tokens (Slice A2)
+- MEDRASH_ADMIN_SESSION_SECRET: HMAC key for the `medrash-admin-session` cookie that enforces idle 30 min + absolute 8 h timeout on admin requests (Slice B1 phase 1). ≥32-char random string; required for `npm run build` / `npm run start` of the admin app.
 - MEDRASH_TURNSTILE_SECRET: Cloudflare Turnstile secret for `/device-token` bootstrap (Slice A2 phase 3c)
 - SUPABASE_URL: project URL
 - SUPABASE_SERVICE_ROLE_KEY: service-role key (server-only)
