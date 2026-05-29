@@ -476,6 +476,23 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
   }
 
   @override
+  Future<void> prefetchRankedEligibility(String quizId) async {
+    // Best-effort: if the server says ineligible, cache it so the UI can
+    // render the disabled state on first paint instead of after a failed
+    // start-attempt round trip. Swallow every error class — authoritative
+    // check still runs inside [startAttempt].
+    if (!_delegate.canStartRankedAttempt(quizId)) return;
+    try {
+      final bool isEligible = await _fetchRankedEligibility(quizId);
+      if (!isEligible) {
+        _serverBlockedRankedQuizIds.add(quizId);
+      }
+    } catch (_) {
+      // Intentionally swallowed — preflight is advisory only.
+    }
+  }
+
+  @override
   Future<void> startAttempt({
     required String quizId,
     required QuizMode mode,

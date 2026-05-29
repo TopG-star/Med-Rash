@@ -73,6 +73,14 @@ abstract class QuizRepository {
 
   bool canStartRankedAttempt(String quizId);
 
+  /// Best-effort eligibility preflight. Updates the repository's local
+  /// blocked set so a follow-up [canStartRankedAttempt] reflects authoritative
+  /// server state. MUST NOT throw — network/transport failures are swallowed
+  /// and the caller falls back to tap-time eligibility checks inside
+  /// [startAttempt]. Implementations that have no server-side state (the
+  /// in-memory fake) treat this as a no-op.
+  Future<void> prefetchRankedEligibility(String quizId);
+
   /// Start a recordable attempt. Throws StateError if live data isn't ready
   /// and `allowOfflinePractice` is false.
   Future<void> startAttempt({
@@ -390,6 +398,13 @@ class InMemoryQuizRepository implements QuizRepository {
   @override
   bool canStartRankedAttempt(String quizId) {
     return !_completedRankedQuizIds.contains(quizId);
+  }
+
+  @override
+  Future<void> prefetchRankedEligibility(String quizId) async {
+    // In-memory repo has no server-side state; eligibility is fully captured
+    // by [_completedRankedQuizIds] which mutates synchronously inside
+    // [startAttempt]. Nothing to prefetch.
   }
 
   @override

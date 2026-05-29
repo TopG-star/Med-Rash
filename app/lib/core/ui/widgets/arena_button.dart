@@ -21,18 +21,31 @@ class ArenaButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
+    final bool disabled = onPressed == null;
+
+    final Color enabledBg = backgroundColor ?? tokens.primary;
+    final Color enabledFg = foregroundColor ?? tokens.textPrimary;
+    // Disabled visuals: muted surface + muted text + muted border so a button
+    // that cannot be tapped is unmistakably non-actionable. Avoids the
+    // "looks tappable but isn't" trap (e.g. ranked-attempt-used CTA).
+    final Color disabledBg = tokens.surfaceMuted;
+    final Color disabledFg = tokens.textSecondary.withValues(alpha: 0.7);
+    final Color borderColor =
+        disabled ? tokens.outlineMuted : tokens.outline;
 
     return SizedBox(
       width: double.infinity,
       child: FilledButton(
         onPressed: onPressed,
         style: FilledButton.styleFrom(
-          backgroundColor: backgroundColor ?? tokens.primary,
-          foregroundColor: foregroundColor ?? tokens.textPrimary,
+          backgroundColor: enabledBg,
+          foregroundColor: enabledFg,
+          disabledBackgroundColor: disabledBg,
+          disabledForegroundColor: disabledFg,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(tokens.radiusLarge),
-            side: BorderSide(color: tokens.outline, width: tokens.borderWidth),
+            side: BorderSide(color: borderColor, width: tokens.borderWidth),
           ),
           elevation: 0,
         ),

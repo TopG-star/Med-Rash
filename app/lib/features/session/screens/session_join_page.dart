@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -52,6 +54,12 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
   UserProfile? _profile;
   final GlobalKey _guestPromptKey = GlobalKey();
 
+  /// Locally-tracked ranked block flag. Driven by (a) the preflight
+  /// eligibility call after the session loads and (b) the StateError branch
+  /// in [_startMode] so any "ranked attempt used" rejection flips the UI
+  /// immediately rather than waiting for an incidental rebuild.
+  bool _rankedBlocked = false;
+
   @override
   void initState() {
     super.initState();
@@ -86,7 +94,21 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
       await _lastSessionStore.record(recordedCode);
       _eventBus.emit(LastSessionRecordedEvent(joinCode: recordedCode));
     }
+    // Kick off best-effort ranked-eligibility preflight so the lobby renders
+    // the correct "Ranked used" state on first paint instead of after a
+    // failed tap. Result is consumed via setState below; failures are
+    // swallowed inside the repository.
+    unawaited(_preflightRanked(session.quizId));
     return session;
+  }
+
+  Future<void> _preflightRanked(String quizId) async {
+    await _quizRepository.prefetchRankedEligibility(quizId);
+    if (!mounted) return;
+    final bool blocked = !_quizRepository.canStartRankedAttempt(quizId);
+    if (blocked != _rankedBlocked) {
+      setState(() => _rankedBlocked = blocked);
+    }
   }
 
   Future<void> _startMode(SessionInfo session, QuizMode mode) async {
@@ -109,6 +131,12 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
     } on StateError catch (error) {
       if (!mounted) {
         return;
+      }
+      // Authoritative server rejection. If this was a ranked attempt, flip
+      // the local flag so the lobby re-renders the disabled CTA + Learning
+      // fallback without waiting for another rebuild trigger.
+      if (mode == QuizMode.ranked && !_rankedBlocked) {
+        setState(() => _rankedBlocked = true);
       }
       final String message = error.message.toString().trim();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -165,6 +193,7 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
     return ArenaScaffold(
       title: 'Join Session',
       showBack: true,
+      bottomNav: true,
       child: FutureBuilder<SessionInfo>(
         future: _futureSession,
         builder: (BuildContext context, AsyncSnapshot<SessionInfo> snapshot) {
@@ -178,8 +207,13 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
             return _LoadingState(joinCode: widget.joinCode?.trim());
           }
           final SessionInfo session = snapshot.data!;
+          // Single source of truth: combine repository view (which already
+          // factors in server-blocked set on the Netlify wrapper) with the
+          // page-local _rankedBlocked flag set by failed-tap or preflight.
           final bool canStartRanked =
-              _quizRepository.canStartRankedAttempt(session.quizId);
+              _quizRepository.canStartRankedAttempt(session.quizId) &&
+                  !_rankedBlocked;
+          final bool isLearningSession = session.mode == 'learning';
 
           return ListView(
             padding: EdgeInsets.zero,
@@ -195,39 +229,69 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
                 ),
               _SessionHeroCard(session: session),
               const SizedBox(height: MedRashSpace.xl),
-              // Host-declared mode (Gap 6) drives a single primary CTA. For
-              // ranked sessions where the participant has already burned
-              // their official attempt, surface a secondary "Switch to
-              // Learning Mode" affordance so the lobby never dead-ends.
-              if (session.mode == 'learning') ...<Widget>[
+              // Host-declared mode (Gap 6) drives the primary CTA. Three
+              // explicit states, each guaranteeing the user has a forward
+              // action AND an escape hatch (the "Back to Home" footer CTA
+              // below, always rendered).
+              if (isLearningSession) ...<Widget>[
                 _PrimarySessionCta(
                   label: 'Start Learning Mode',
                   icon: Icons.school_rounded,
                   onPressed: () => _startMode(session, QuizMode.learning),
                 ),
-              ] else ...<Widget>[
+              ] else if (canStartRanked) ...<Widget>[
+                // Case A — ranked available.
                 _PrimarySessionCta(
-                  label: canStartRanked
-                      ? 'Start Ranked Mode'
-                      : 'Ranked Attempt Used',
+                  label: 'Start Ranked Mode',
                   icon: Icons.emoji_events_rounded,
-                  onPressed: canStartRanked
-                      ? () => _startMode(session, QuizMode.ranked)
-                      : null,
+                  onPressed: () => _startMode(session, QuizMode.ranked),
                 ),
-                if (!canStartRanked) ...<Widget>[
-                  const SizedBox(height: MedRashSpace.md),
-                  PressScale(
-                    onTap: () => _startMode(session, QuizMode.learning),
-                    child: ArenaButton(
-                      label: 'Switch to Learning Mode',
-                      icon: Icons.school_rounded,
-                      backgroundColor: Colors.white,
-                      onPressed: () => _startMode(session, QuizMode.learning),
-                    ),
+              ] else ...<Widget>[
+                // Case B — ranked attempt already used. Disabled ranked CTA
+                // makes the state unmistakable; learning CTA gives the user
+                // a way to still engage with the content.
+                const _PrimarySessionCta(
+                  label: 'Ranked Attempt Used',
+                  icon: Icons.emoji_events_rounded,
+                  onPressed: null,
+                ),
+                const SizedBox(height: MedRashSpace.sm),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: MedRashSpace.sm,
                   ),
-                ],
+                  child: Text(
+                    "You've already used your official attempt for this quiz. "
+                    'You can still play Learning Mode for practice — '
+                    'it will not affect your ranked score.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.arenaTokens.textSecondary,
+                        ),
+                  ),
+                ),
+                const SizedBox(height: MedRashSpace.md),
+                PressScale(
+                  onTap: () => _startMode(session, QuizMode.learning),
+                  child: ArenaButton(
+                    label: 'Play Learning Mode',
+                    icon: Icons.school_rounded,
+                    backgroundColor: Colors.white,
+                    onPressed: () => _startMode(session, QuizMode.learning),
+                  ),
+                ),
               ],
+              // Always-visible escape hatch. Sits below the primary CTAs so
+              // it never competes for attention but is reachable without
+              // relying on the app bar back arrow (which OS gesture + the
+              // scaffold's PopScope also cover).
+              const SizedBox(height: MedRashSpace.lg),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () => context.go('/home'),
+                  icon: const Icon(Icons.home_rounded, size: 18),
+                  label: const Text('Leave session and go home'),
+                ),
+              ),
             ],
           );
         },
@@ -465,18 +529,19 @@ class _PrimarySessionCta extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
     final bool enabled = onPressed != null;
+    // ArenaButton handles disabled visuals (muted bg + muted fg) natively;
+    // we just pass-through onPressed and let the primitive express state.
+    // PressScale.enabled gates the press animation so a disabled CTA
+    // doesn't bounce.
     return PressScale(
       enabled: enabled,
       onTap: enabled ? onPressed : null,
-      child: Opacity(
-        opacity: enabled ? 1 : 0.55,
-        child: ArenaButton(
-          label: label,
-          icon: icon,
-          backgroundColor: tokens.secondary,
-          foregroundColor: tokens.onSecondary,
-          onPressed: enabled ? onPressed : null,
-        ),
+      child: ArenaButton(
+        label: label,
+        icon: icon,
+        backgroundColor: enabled ? tokens.secondary : null,
+        foregroundColor: enabled ? tokens.onSecondary : null,
+        onPressed: onPressed,
       ),
     );
   }
