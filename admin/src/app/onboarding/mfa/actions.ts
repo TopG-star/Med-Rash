@@ -22,9 +22,6 @@ import { getAdminSupabaseClient } from "@/lib/supabase-server";
 import { getServerSupabaseClient } from "@/lib/supabase-ssr";
 
 import {
-  initialMfaChallengeState,
-  initialMfaEnrollState,
-  initialMfaRecoveryState,
   safeNext,
   type MfaChallengeState,
   type MfaEnrollState,
@@ -369,6 +366,3 @@ export async function disableMfaAction(): Promise<{ ok: true } | { ok: false; me
   if (!result.ok) return { ok: false, message: result.error };
   return { ok: true };
 }
-
-// Re-exports so callers `import {...} from "./actions"` cleanly.
-export { initialMfaEnrollState, initialMfaChallengeState, initialMfaRecoveryState };

@@ -4,10 +4,12 @@ import { useActionState, useState } from "react";
 
 import {
   challengeAction,
-  initialMfaChallengeState,
-  initialMfaRecoveryState,
   useRecoveryAction,
 } from "./actions";
+import {
+  initialMfaChallengeState,
+  initialMfaRecoveryState,
+} from "./state";
 
 type ChallengeSectionProps = {
   email: string;
