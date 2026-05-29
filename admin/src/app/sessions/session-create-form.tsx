@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 
 import {
   createSessionAction,
@@ -19,16 +19,6 @@ type CreatedSnapshot = {
   sessionName: string;
 };
 
-const DURATION_PRESETS: ReadonlyArray<{ label: string; minutes: number }> = [
-  { label: "15m", minutes: 15 },
-  { label: "30m", minutes: 30 },
-  { label: "1h", minutes: 60 },
-  { label: "2h", minutes: 120 },
-  { label: "4h", minutes: 240 },
-];
-
-const CUSTOM_DURATION_KEY = "custom";
-
 function toIsoOrNull(value: string): string | null {
   const trimmed = value.trim();
   if (trimmed.length === 0) return null;
@@ -37,42 +27,12 @@ function toIsoOrNull(value: string): string | null {
   return new Date(ms).toISOString();
 }
 
-function formatEndsAt(startsAtIso: string | null, minutes: number | null): string {
-  if (!startsAtIso || !minutes || minutes <= 0) return "\u2014";
-  const startMs = Date.parse(startsAtIso);
-  if (Number.isNaN(startMs)) return "\u2014";
-  const endMs = startMs + minutes * 60_000;
-  return new Date(endMs).toLocaleString();
-}
-
 export function SessionCreateForm({ quizOptions }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedSnapshot | null>(null);
 
-  // Local UI state for the new Start + Duration picker.
-  const [startsAtRaw, setStartsAtRaw] = useState("");
-  const [durationKey, setDurationKey] = useState<string>("60");
-  const [customMinutesRaw, setCustomMinutesRaw] = useState<string>("45");
-
   const hasQuizzes = quizOptions.length > 0;
-
-  const effectiveMinutes: number | null = useMemo(() => {
-    if (durationKey === CUSTOM_DURATION_KEY) {
-      const parsed = Number.parseInt(customMinutesRaw, 10);
-      if (Number.isNaN(parsed) || parsed < 5 || parsed > 480) return null;
-      return parsed;
-    }
-    const preset = Number.parseInt(durationKey, 10);
-    return Number.isNaN(preset) ? null : preset;
-  }, [durationKey, customMinutesRaw]);
-
-  const startsAtIso = useMemo(() => toIsoOrNull(startsAtRaw), [startsAtRaw]);
-  const endsAtPreview = formatEndsAt(startsAtIso, effectiveMinutes);
-  const endsAtIso: string | null =
-    startsAtIso && effectiveMinutes
-      ? new Date(Date.parse(startsAtIso) + effectiveMinutes * 60_000).toISOString()
-      : null;
 
   function handleSubmit(formData: FormData) {
     setError(null);
@@ -80,8 +40,8 @@ export function SessionCreateForm({ quizOptions }: Props) {
       quizId: String(formData.get("quizId") ?? ""),
       name: String(formData.get("name") ?? ""),
       hostName: String(formData.get("hostName") ?? ""),
-      startsAt: startsAtIso,
-      endsAt: endsAtIso,
+      startsAt: toIsoOrNull(String(formData.get("startsAt") ?? "")),
+      endsAt: toIsoOrNull(String(formData.get("endsAt") ?? "")),
       mode: String(formData.get("mode") ?? "ranked"),
     };
 
@@ -168,10 +128,10 @@ export function SessionCreateForm({ quizOptions }: Props) {
               className="vp-select"
             >
               <option value="ranked">
-                Ranked &mdash; single official attempt, counts on leaderboard
+                Ranked — single official attempt, counts on leaderboard
               </option>
               <option value="learning">
-                Learning &mdash; unlimited practice, no leaderboard impact
+                Learning — unlimited practice, no leaderboard impact
               </option>
             </select>
             <span className="vp-help-text">
@@ -179,69 +139,18 @@ export function SessionCreateForm({ quizOptions }: Props) {
               their ranked attempt is already used.
             </span>
           </label>
-          <label className="vp-field col-span-2">
+          <label className="vp-field">
             <span className="vp-label">Starts At (optional)</span>
             <input
+              name="startsAt"
               type="datetime-local"
               className="vp-input"
-              value={startsAtRaw}
-              onChange={(event) => setStartsAtRaw(event.target.value)}
             />
-            <span className="vp-help-text">
-              Leave blank to start when the first participant joins.
-            </span>
           </label>
-          <div className="vp-field col-span-2">
-            <span className="vp-label">Duration</span>
-            <div
-              role="group"
-              aria-label="Session duration"
-              className="vp-chip-group"
-            >
-              {DURATION_PRESETS.map((preset) => {
-                const key = String(preset.minutes);
-                const selected = durationKey === key;
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => setDurationKey(key)}
-                    className={`vp-chip-option ${selected ? "is-selected" : ""}`}
-                  >
-                    {preset.label}
-                  </button>
-                );
-              })}
-              <button
-                type="button"
-                aria-pressed={durationKey === CUSTOM_DURATION_KEY}
-                onClick={() => setDurationKey(CUSTOM_DURATION_KEY)}
-                className={`vp-chip-option ${durationKey === CUSTOM_DURATION_KEY ? "is-selected" : ""}`}
-              >
-                Custom
-              </button>
-            </div>
-            {durationKey === CUSTOM_DURATION_KEY ? (
-              <label className="vp-field vp-mt-3">
-                <span className="vp-label">Custom minutes (5&ndash;480)</span>
-                <input
-                  type="number"
-                  min={5}
-                  max={480}
-                  step={5}
-                  inputMode="numeric"
-                  className="vp-input"
-                  value={customMinutesRaw}
-                  onChange={(event) => setCustomMinutesRaw(event.target.value)}
-                />
-              </label>
-            ) : null}
-            <span className="vp-help-text">
-              Ends at: <strong>{endsAtPreview}</strong>
-              {!startsAtIso ? " (no start time set, end is open)" : ""}
-            </span>
-          </div>
+          <label className="vp-field">
+            <span className="vp-label">Ends At (optional)</span>
+            <input name="endsAt" type="datetime-local" className="vp-input" />
+          </label>
           <button
             type="submit"
             disabled={isPending || !hasQuizzes}

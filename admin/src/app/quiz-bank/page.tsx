@@ -36,14 +36,24 @@ export default async function QuizBankPage({
     <AdminShell
       title="Quiz Bank Management"
       subtitle="Manage approved medical quizzes, question sets, and upload-ready content for live sessions and self-paced play."
-      titleSize="sm"
       user={{ email: session.email, role: session.role }}
       actions={
-        <Link href="/quiz-bank/new" className="vp-button vp-button-primary">
-          Create New Quiz
-        </Link>
+        <>
+          <ScopeToggle current={scope} label="Show" />
+          <span className="vp-scope inline-flex items-center gap-2">
+            <button
+              className="vp-button vp-button-secondary"
+              disabled
+              title="Bulk upload pipeline ships in a follow-up commit."
+            >
+              Bulk Upload (CSV)
+            </button>
+            <Link href="/quiz-bank/new" className="vp-button vp-button-primary">
+              Create New Quiz
+            </Link>
+          </span>
+        </>
       }
-      filters={<ScopeToggle current={scope} label="Show" />}
     >
       <div className="vp-scope">
         {loadError ? (
@@ -67,16 +77,6 @@ export default async function QuizBankPage({
           </div>
         ) : (
           <div className="vp-list">
-            <div className="vp-list-utility-row">
-              <button
-                type="button"
-                className="vp-link-ghost"
-                disabled
-                title="Bulk upload pipeline ships in a follow-up commit."
-              >
-                + Bulk import via CSV
-              </button>
-            </div>
             {quizzes.map((quiz) => {
               const canManage =
                 session.role === "owner" || quiz.createdBy === session.userId;

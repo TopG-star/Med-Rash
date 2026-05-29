@@ -46,7 +46,6 @@ export default async function QuizDetailPage({ params }: PageProps) {
       <AdminShell
         title="Quiz Detail"
         subtitle="Edit metadata and manage questions."
-        titleSize="sm"
         user={user}
         actions={backAction}
       >
@@ -72,7 +71,6 @@ export default async function QuizDetailPage({ params }: PageProps) {
     <AdminShell
       title={quiz.title}
       subtitle={`Slug: ${quiz.slug} · ${quiz.isActive ? "Active" : "Inactive"} · ${questions.length} question${questions.length === 1 ? "" : "s"}`}
-      titleSize="sm"
       user={user}
       actions={backAction}
     >

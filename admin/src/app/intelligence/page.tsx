@@ -57,8 +57,7 @@ export default async function IntelligencePage() {
   return (
     <AdminShell
       title="Intelligence"
-      subtitle="Knowledge gaps, facility performance, and treatment perception."
-      titleSize="sm"
+      subtitle="Deep-dive into knowledge gaps, facility performance, and treatment perception patterns surfaced by answer-level analytics."
       user={{ email: session.email, role: session.role }}
       actions={
         <span className="vp-scope">
@@ -96,8 +95,8 @@ export default async function IntelligencePage() {
           </div>
           <div className="vp-stat-tile">
             <span className="vp-stat-label">Top Gap Area</span>
-            <span className="vp-stat-value-text">
-              {topGap ? truncate(topGap.prompt, 64) : "\u2014"}
+            <span className="vp-stat-value">
+              {topGap ? truncate(topGap.prompt, 28) : "\u2014"}
             </span>
             <span className="vp-stat-delta">
               {topGap

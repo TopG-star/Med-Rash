@@ -58,9 +58,8 @@ export default async function SessionsPage({
     <AdminShell
       title="Sessions"
       subtitle="Create live sessions, attach an approved quiz, and generate QR-linked access for presentation or CME use."
-      titleSize="sm"
       user={{ email: session.email, role: session.role }}
-      filters={
+      actions={
         session.role === "owner" ? (
           <ScopeToggle current={scope} label="Show" />
         ) : null

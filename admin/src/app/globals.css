@@ -235,16 +235,6 @@ select {
   color: var(--vp-primary);
 }
 
-.vp-display-sm {
-  font-family: var(--font-anybody), system-ui, sans-serif;
-  font-size: 1.7rem;
-  font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.015em;
-  color: var(--vp-ink);
-  margin: 0;
-}
-
 .vp-tagline {
   font-size: 0.95rem;
   line-height: 1.55;
@@ -675,14 +665,6 @@ select {
   letter-spacing: -0.02em;
   color: var(--vp-ink);
   font-variant-numeric: tabular-nums;
-}
-
-.vp-stat-value-text {
-  font-family: var(--font-poppins), system-ui, sans-serif;
-  font-size: 1.05rem;
-  font-weight: 700;
-  line-height: 1.35;
-  color: var(--vp-ink);
 }
 
 .vp-stat-delta {
@@ -2244,26 +2226,40 @@ select {
 }
 
 .vp-user-menu-trigger {
-  display: grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  padding: 0;
-  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
 }
 
 .vp-user-menu-avatar {
   display: grid;
   place-items: center;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 1.9rem;
+  height: 1.9rem;
   border-radius: 999px;
   background:
     radial-gradient(circle at 28% 25%, rgba(255, 255, 255, 0.72), transparent 55%),
     linear-gradient(160deg, rgba(83, 0, 183, 0.18), rgba(255, 195, 41, 0.34));
   color: var(--vp-primary-strong);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 800;
+}
+
+.vp-user-menu-email {
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+}
+
+.vp-user-menu-role {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--vp-ink-muted);
 }
 
 .vp-user-menu-popover {
@@ -2340,130 +2336,6 @@ select {
   }
   .vp-quiz-card:hover,
   .vp-row-card:hover {
-    transform: none;
-  }
-}
-
-/* Header → filters row (chip strip directly under page header) */
-.vp-shell-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  margin-top: -0.25rem;
-}
-
-/* Small utility strip above list contents (e.g. Quiz Bank bulk-upload ghost link). */
-.vp-list-utility-row {
-  display: flex;
-  justify-content: flex-end;
-  padding: 0 0.25rem 0.5rem;
-}
-
-.vp-link-ghost {
-  appearance: none;
-  background: transparent;
-  border: none;
-  padding: 0.25rem 0.5rem;
-  color: var(--vp-ink-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: color 140ms ease, background 140ms ease;
-}
-
-.vp-link-ghost:hover:not(:disabled) {
-  color: var(--vp-primary-strong);
-  background: rgba(83, 0, 183, 0.06);
-}
-
-.vp-link-ghost:focus-visible {
-  outline: 2px solid var(--vp-primary);
-  outline-offset: 2px;
-}
-
-.vp-link-ghost:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-/* Generic chip radiogroup (used by Session duration picker) */
-.vp-chip-group {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-}
-
-.vp-chip-option {
-  appearance: none;
-  border: 1px solid rgba(204, 195, 215, 0.55);
-  background: var(--vp-surface);
-  color: var(--vp-ink-muted);
-  border-radius: 999px;
-  padding: 0.4rem 0.85rem;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background 140ms ease, color 140ms ease, border-color 140ms ease, transform 120ms ease;
-}
-
-.vp-chip-option:hover:not(:disabled) {
-  background: rgba(83, 0, 183, 0.08);
-  color: var(--vp-primary-strong);
-}
-
-.vp-chip-option:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.vp-chip-option.is-selected {
-  background: var(--vp-primary-soft);
-  border-color: transparent;
-  color: var(--vp-primary-strong);
-}
-
-.vp-chip-option:focus-visible {
-  outline: 2px solid var(--vp-primary);
-  outline-offset: 2px;
-}
-
-.vp-chip-option:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-/* Modern thin scrollbars */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--vp-primary-soft);
-  border-radius: 999px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--vp-primary);
-}
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--vp-primary-soft) transparent;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vp-chip-option {
-    transition: none;
-  }
-  .vp-chip-option:active:not(:disabled) {
     transform: none;
   }
 }
