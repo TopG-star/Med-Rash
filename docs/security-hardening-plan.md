@@ -279,12 +279,12 @@ _Phase 3c — strip the gate key entirely (this commit, after one clean Phase 3b
 
 Before marking Block A complete:
 
-- [ ] All 7 slices verified PASS.
-- [ ] `npm run typecheck`, `npm run test`, `npm run lint` PASS in `admin/`.
-- [ ] `flutter analyze` and `flutter test` PASS in `app/`.
-- [ ] Supabase Advisor lints: **0 critical, 0 SECURITY DEFINER view findings, 0 missing-RLS findings**.
-- [ ] One end-to-end pilot dry-run: admin login → create session → participant scan QR → attempt → leaderboard, with audit + rate-limit + token-bound headers all observed.
-- [ ] Decisions Log updated with one entry per slice noting any deviations.
+- [x] All 7 slices verified PASS (A1–A7 shipped 2026-05 through 2026-05-29; see per-slice Verification lines above).
+- [x] `npm run typecheck`, `npm run test`, `npm run lint` PASS in `admin/` (workspace `c:\Users\USER\Desktop\Personal\medRash\admin`, mode local, 2026-05-29) — typecheck exit 0; vitest 9 files / **131/131** PASS in 3.64s; lint 0 errors / 14 pre-existing warnings (unchanged baseline).
+- [x] `flutter analyze` and `flutter test` PASS in `app/` (workspace `c:\Users\USER\Desktop\Personal\medRash\app`, mode local, 2026-05-29) — `flutter analyze` → **No issues found** (ran in 79.0s); `flutter test` → **180/180** PASS.
+- [ ] Supabase Advisor lints: **0 critical, 0 SECURITY DEFINER view findings, 0 missing-RLS findings** — **user-driven (deferred to user dashboard run, not autonomously executable from CLI).**
+- [ ] One end-to-end pilot dry-run: admin login → create session → participant scan QR → attempt → leaderboard, with audit + rate-limit + token-bound headers all observed — **user-driven (hosted Netlify session); Netlify redeploy 2026-05-29 succeeded, hosted is healthy.**
+- [x] Decisions Log updated with one entry per slice noting any deviations (A7 Phase 1/2/3 entries on top; A1–A6 entries below).
 
 ---
 
