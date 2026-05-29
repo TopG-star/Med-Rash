@@ -30,7 +30,7 @@ const SECURITY_HEADERS = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
   },
-  { key: "Content-Security-Policy-Report-Only", value: ADMIN_CSP_DIRECTIVES },
+  { key: "Content-Security-Policy", value: ADMIN_CSP_DIRECTIVES },
 ];
 
 const nextConfig: NextConfig = {
