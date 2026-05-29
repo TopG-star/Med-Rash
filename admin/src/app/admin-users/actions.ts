@@ -5,13 +5,17 @@ import { createClient } from "@supabase/supabase-js";
 
 import { requireAdminSession } from "@/lib/admin-session";
 import { logAdminAction } from "@/lib/audit";
+import { validateForAction } from "@/lib/schemas/_helpers";
+import {
+  inviteAdminSchema,
+  setRoleSchema,
+  userIdInputSchema,
+} from "@/lib/schemas/admin-users";
 import { getAdminSupabaseClient } from "@/lib/supabase-server";
 
 export type AdminUsersActionResult =
   | { ok: true; message: string }
   | { ok: false; message: string };
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function fail(message: string): { ok: false; message: string } {
   return { ok: false, message };
@@ -81,13 +85,17 @@ export async function inviteAdminAction(
     );
   }
 
-  const emailRaw = raw.email;
-  const roleRaw = raw.role;
-  const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : "";
-  const role: "host" | "owner" =
-    roleRaw === "owner" ? "owner" : "host";
-
-  if (!EMAIL_RE.test(email)) return fail("Enter a valid email address.");
+  const validated = validateForAction(inviteAdminSchema, raw);
+  if (!validated.ok) {
+    // Preserve UX message for the most common failure (bad email).
+    const path = validated.issues[0]?.path ?? "";
+    return fail(
+      path === "email"
+        ? "Enter a valid email address."
+        : validated.message,
+    );
+  }
+  const { email, role } = validated.data;
 
   let redirectTo: string;
   try {
@@ -183,7 +191,8 @@ export async function reinviteAdminAction(
           : "Authorization failed.",
     );
   }
-  if (!userId) return fail("userId is required.");
+  const v = validateForAction(userIdInputSchema, { userId });
+  if (!v.ok) return fail("userId is required.");
 
   const supabase = getAdminSupabaseClient();
   const { data, error } = await supabase
@@ -221,7 +230,8 @@ async function setActive(
           : "Authorization failed.",
     );
   }
-  if (!userId) return fail("userId is required.");
+  const v = validateForAction(userIdInputSchema, { userId });
+  if (!v.ok) return fail("userId is required.");
   if (userId === session.userId) {
     return fail("You can't change your own status. Ask another Owner.");
   }
@@ -278,9 +288,13 @@ export async function setRoleAction(
           : "Authorization failed.",
     );
   }
-  if (!userId) return fail("userId is required.");
-  if (role !== "host" && role !== "owner")
-    return fail("role must be host or owner.");
+  const v = validateForAction(setRoleSchema, { userId, role });
+  if (!v.ok) {
+    const path = v.issues[0]?.path ?? "";
+    return fail(
+      path === "role" ? "role must be host or owner." : "userId is required.",
+    );
+  }
   if (userId === session.userId) {
     return fail("You can't change your own role. Ask another Owner.");
   }

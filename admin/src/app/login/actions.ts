@@ -10,6 +10,11 @@ import {
   rateLimitConfig,
   resetRateLimit,
 } from "@/lib/rate-limit";
+import { validateForAction } from "@/lib/schemas/_helpers";
+import {
+  loginRequestOtpSchema,
+  loginVerifyOtpSchema,
+} from "@/lib/schemas/identity";
 import { getAdminSupabaseClient } from "@/lib/supabase-server";
 import { getServerSupabaseClient } from "@/lib/supabase-ssr";
 import type { LoginActionState } from "./state";
@@ -29,8 +34,6 @@ async function readClientHeaders(): Promise<{
   }
 }
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const OTP_RE = /^\d{6}$/;
 const RESEND_COOLDOWN_MS = 60_000;
 
 function safeNext(raw: unknown): string {
@@ -49,15 +52,16 @@ export async function requestOtpAction(
   _prev: LoginActionState,
   formData: FormData,
 ): Promise<LoginActionState> {
-  const email =
-    typeof formData.get("email") === "string"
-      ? (formData.get("email") as string).trim().toLowerCase()
-      : "";
+  const rawEmail = formData.get("email");
   const next = safeNext(formData.get("next"));
-
-  if (!EMAIL_RE.test(email)) {
+  const validated = validateForAction(loginRequestOtpSchema, {
+    email: rawEmail,
+    next,
+  });
+  if (!validated.ok) {
     return { status: "error", message: "Enter a valid work email.", next };
   }
+  const email = validated.data.email;
 
   const portalBaseUrl = getPortalBaseUrl();
   if (!portalBaseUrl) {
@@ -144,27 +148,32 @@ export async function verifyOtpAction(
   _prev: LoginActionState,
   formData: FormData,
 ): Promise<LoginActionState> {
-  const email =
-    typeof formData.get("email") === "string"
-      ? (formData.get("email") as string).trim().toLowerCase()
-      : "";
-  const token =
-    typeof formData.get("token") === "string"
-      ? (formData.get("token") as string).replace(/\s+/g, "")
-      : "";
+  const rawEmail = formData.get("email");
+  const rawToken = formData.get("token");
   const next = safeNext(formData.get("next"));
-
-  if (!EMAIL_RE.test(email)) {
-    return { status: "error", message: "Missing or invalid email.", next };
-  }
-  if (!OTP_RE.test(token)) {
+  const validated = validateForAction(loginVerifyOtpSchema, {
+    email: rawEmail,
+    token: rawToken,
+    next,
+  });
+  if (!validated.ok) {
+    // Preserve the original UX split between bad email vs bad token by
+    // re-running the email check on its own when the issue path is `email`.
+    const emailIssue = validated.issues.find((i) => i.path === "email");
+    if (emailIssue) {
+      return { status: "error", message: "Missing or invalid email.", next };
+    }
+    const emailEcho =
+      typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
     return {
       status: "error",
       message: "Enter the 6-digit code from your email.",
-      email,
+      email: emailEcho,
       next,
     };
   }
+  const email = validated.data.email;
+  const token = validated.data.token;
 
   const adminClient = getAdminSupabaseClient();
   const verifyLimit = await enforceRateLimit(

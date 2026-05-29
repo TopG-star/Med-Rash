@@ -5,6 +5,12 @@ import { recoverRequestSchema, recoverVerifySchema } from "./recover";
 import { attemptSubmitSchema } from "./attempt";
 import { createSessionSchema, sessionResolveSchema } from "./session";
 import {
+  inviteAdminSchema,
+  setRoleSchema,
+  userIdInputSchema,
+} from "./admin-users";
+import { completeOnboardingSchema } from "./onboarding";
+import {
   quizBankWriteSchema,
   createQuizPayloadSchema,
   createQuestionPayloadSchema,
@@ -324,5 +330,92 @@ describe("leaderboard schemas", () => {
     expect(profileSyncSchema.safeParse({ participantId: "", deviceInstallId: "d" }).success).toBe(
       false,
     );
+  });
+});
+
+
+describe("admin-users schemas", () => {
+  it("inviteAdmin happy lowercases email + defaults role to host", () => {
+    const r = inviteAdminSchema.safeParse({ email: " A@B.co" });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.email).toBe("a@b.co");
+      expect(r.data.role).toBe("host");
+    }
+  });
+  it("inviteAdmin accepts role=owner", () => {
+    const r = inviteAdminSchema.safeParse({ email: "a@b.co", role: "owner" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.role).toBe("owner");
+  });
+  it("inviteAdmin rejects bad email", () => {
+    expect(inviteAdminSchema.safeParse({ email: "nope" }).success).toBe(false);
+  });
+  it("inviteAdmin rejects unknown role", () => {
+    expect(inviteAdminSchema.safeParse({ email: "a@b.co", role: "guest" }).success).toBe(false);
+  });
+  it("userIdInput happy trims", () => {
+    const r = userIdInputSchema.safeParse({ userId: " uid " });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.userId).toBe("uid");
+  });
+  it("userIdInput rejects empty", () => {
+    expect(userIdInputSchema.safeParse({ userId: "  " }).success).toBe(false);
+  });
+  it("setRole happy", () => {
+    const r = setRoleSchema.safeParse({ userId: "uid", role: "owner" });
+    expect(r.success).toBe(true);
+  });
+  it("setRole rejects bad role", () => {
+    expect(setRoleSchema.safeParse({ userId: "uid", role: "guest" }).success).toBe(false);
+  });
+});
+
+describe("onboarding schemas", () => {
+  it("completeOnboarding happy trims", () => {
+    const r = completeOnboardingSchema.safeParse({
+      fullName: " Dr Foo ",
+      company: " Pharma Co ",
+      jobRole: "MSR",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.fullName).toBe("Dr Foo");
+      expect(r.data.company).toBe("Pharma Co");
+      expect(r.data.jobRole).toBe("MSR");
+    }
+  });
+  it("rejects fullName < 2", () => {
+    expect(
+      completeOnboardingSchema.safeParse({ fullName: "A", company: "Foo", jobRole: "MSR" }).success,
+    ).toBe(false);
+  });
+  it("rejects fullName > 120", () => {
+    expect(
+      completeOnboardingSchema.safeParse({
+        fullName: "a".repeat(121),
+        company: "Foo",
+        jobRole: "MSR",
+      }).success,
+    ).toBe(false);
+  });
+  it("rejects company < 2", () => {
+    expect(
+      completeOnboardingSchema.safeParse({ fullName: "Foo", company: "x", jobRole: "MSR" }).success,
+    ).toBe(false);
+  });
+  it("rejects unknown jobRole", () => {
+    expect(
+      completeOnboardingSchema.safeParse({ fullName: "Foo", company: "Bar", jobRole: "CEO" })
+        .success,
+    ).toBe(false);
+  });
+  it("accepts Manager role", () => {
+    const r = completeOnboardingSchema.safeParse({
+      fullName: "Foo",
+      company: "Bar",
+      jobRole: "Manager",
+    });
+    expect(r.success).toBe(true);
   });
 });

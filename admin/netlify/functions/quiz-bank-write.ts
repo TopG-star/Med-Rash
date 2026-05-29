@@ -4,7 +4,13 @@ import {
   requireLegacyWriteKey,
 } from "./_shared/admin-user-session";
 import { validateOrRespond } from "./_shared/validate";
-import { quizBankWriteSchema } from "../../src/lib/schemas/quiz";
+import {
+  quizBankWriteSchema,
+  type CreateQuestionPayload,
+  type CreateQuizPayload,
+  type UpdateQuestionPayload,
+  type UpdateQuizPayload,
+} from "../../src/lib/schemas/quiz";
 import { getSupabaseAdminClient } from "./_shared/supabase";
 import {
   bulkCreateQuestions,
@@ -12,13 +18,13 @@ import {
   createQuizRecord,
   deactivateQuestionRecord,
   deactivateQuizRecord,
-  parseCreateQuestionInput,
-  parseCreateQuizInput,
-  parseUpdateQuestionInput,
-  parseUpdateQuizInput,
   updateQuestionRecord,
   updateQuizRecord,
   type BulkQuestionInput,
+  type CreateQuestionInput,
+  type CreateQuizInput,
+  type UpdateQuestionInput,
+  type UpdateQuizInput,
 } from "../../src/lib/quiz-write";
 import { parseCsvQuestionRows, type CsvRowInput } from "../../src/lib/quiz-csv";
 import { logAdminAction } from "../../src/lib/audit";
@@ -28,27 +34,66 @@ import {
   rateLimitConfig,
 } from "../../src/lib/rate-limit";
 
-type Operation =
-  | "create_quiz"
-  | "update_quiz"
-  | "deactivate_quiz"
-  | "create_question"
-  | "update_question"
-  | "deactivate_question"
-  | "bulk_create_questions";
+function toCreateQuizInput(
+  v: CreateQuizPayload,
+  createdBy: string | null,
+): CreateQuizInput {
+  return {
+    slug: v.slug,
+    title: v.title,
+    category: v.category,
+    product: v.product ?? null,
+    summary: v.summary,
+    questionCountDefault: v.questionCountDefault,
+    isActive: v.isActive,
+    metadata: v.metadata ?? {},
+    createdBy,
+  };
+}
 
-const SUPPORTED_OPS: ReadonlySet<Operation> = new Set([
-  "create_quiz",
-  "update_quiz",
-  "deactivate_quiz",
-  "create_question",
-  "update_question",
-  "deactivate_question",
-  "bulk_create_questions",
-]);
+function toUpdateQuizInput(v: UpdateQuizPayload): UpdateQuizInput {
+  return {
+    id: v.id,
+    title: v.title,
+    category: v.category,
+    product: v.product ?? null,
+    summary: v.summary,
+    questionCountDefault: v.questionCountDefault,
+    isActive: v.isActive,
+    metadata: v.metadata ?? {},
+  };
+}
 
-function isOperation(value: unknown): value is Operation {
-  return typeof value === "string" && SUPPORTED_OPS.has(value as Operation);
+function toCreateQuestionInput(
+  v: CreateQuestionPayload,
+  createdBy: string | null,
+): CreateQuestionInput {
+  return {
+    quizId: v.quizId,
+    prompt: v.prompt,
+    options: v.options,
+    correctIndex: v.correctIndex,
+    explanation: v.explanation,
+    clinicalArea: v.clinicalArea ?? null,
+    tags: v.tags,
+    position: v.position ?? null,
+    isActive: v.isActive,
+    createdBy,
+  };
+}
+
+function toUpdateQuestionInput(v: UpdateQuestionPayload): UpdateQuestionInput {
+  return {
+    id: v.id,
+    prompt: v.prompt,
+    options: v.options,
+    correctIndex: v.correctIndex,
+    explanation: v.explanation,
+    clinicalArea: v.clinicalArea ?? null,
+    tags: v.tags,
+    position: v.position ?? null,
+    isActive: v.isActive,
+  };
 }
 
 export async function handler(event: HandlerEvent) {
@@ -96,40 +141,18 @@ export async function handler(event: HandlerEvent) {
     });
   }
 
-  // A7 — zod discriminated-union front door. Catches malformed op, missing
-  // payload, wrong payload shape, etc. with structured issues[]. The shared
-  // parseCreate*/parseUpdate* below still apply normalization + fallbacks.
+  // A7 — zod discriminated-union is the sole validator now. parseCreate*/parseUpdate*
+  // were retired in P3; per-op payloads are typed via the discriminated union.
   const validated = validateOrRespond(quizBankWriteSchema, body);
   if (!validated.ok) return validated.response;
-
-  const op = body.op;
-  if (!isOperation(op)) {
-    return jsonResponse(400, {
-      ok: false,
-      code: "UNSUPPORTED_OP",
-      message: `op must be one of: ${Array.from(SUPPORTED_OPS).join(", ")}.`,
-    });
-  }
-
-  const payload =
-    body.payload && typeof body.payload === "object" && !Array.isArray(body.payload)
-      ? (body.payload as Record<string, unknown>)
-      : null;
-
-  if (!payload && op !== "deactivate_quiz" && op !== "deactivate_question") {
-    return jsonResponse(400, {
-      ok: false,
-      code: "MISSING_PAYLOAD",
-      message: "payload is required for this op.",
-    });
-  }
+  const data = validated.data;
 
   try {
     const auditClient = getSupabaseAdminClient();
     const actorMeta = { via: authResult.auth.via };
-    switch (op) {
+    switch (data.op) {
       case "create_quiz": {
-        const parsed = parseCreateQuizInput(payload!, createdBy);
+        const parsed = toCreateQuizInput(data.payload, createdBy);
         const quiz = await createQuizRecord(parsed);
         void logAdminAction(auditClient, {
           actorUserId: createdBy,
@@ -143,7 +166,7 @@ export async function handler(event: HandlerEvent) {
         return jsonResponse(201, { ok: true, quiz });
       }
       case "update_quiz": {
-        const parsed = parseUpdateQuizInput(payload!);
+        const parsed = toUpdateQuizInput(data.payload);
         const quiz = await updateQuizRecord(parsed);
         void logAdminAction(auditClient, {
           actorUserId: createdBy,
@@ -157,14 +180,7 @@ export async function handler(event: HandlerEvent) {
         return jsonResponse(200, { ok: true, quiz });
       }
       case "deactivate_quiz": {
-        const id = typeof body.id === "string" ? body.id : "";
-        if (!id) {
-          return jsonResponse(400, {
-            ok: false,
-            code: "MISSING_ID",
-            message: "id is required.",
-          });
-        }
+        const id = data.id;
         const quiz = await deactivateQuizRecord(id);
         void logAdminAction(auditClient, {
           actorUserId: createdBy,
@@ -177,7 +193,7 @@ export async function handler(event: HandlerEvent) {
         return jsonResponse(200, { ok: true, quiz });
       }
       case "create_question": {
-        const parsed = parseCreateQuestionInput(payload!, createdBy);
+        const parsed = toCreateQuestionInput(data.payload, createdBy);
         const question = await createQuestionRecord(parsed);
         void logAdminAction(auditClient, {
           actorUserId: createdBy,
@@ -191,7 +207,7 @@ export async function handler(event: HandlerEvent) {
         return jsonResponse(201, { ok: true, question });
       }
       case "update_question": {
-        const parsed = parseUpdateQuestionInput(payload!);
+        const parsed = toUpdateQuestionInput(data.payload);
         const question = await updateQuestionRecord(parsed);
         void logAdminAction(auditClient, {
           actorUserId: createdBy,
@@ -205,14 +221,7 @@ export async function handler(event: HandlerEvent) {
         return jsonResponse(200, { ok: true, question });
       }
       case "deactivate_question": {
-        const id = typeof body.id === "string" ? body.id : "";
-        if (!id) {
-          return jsonResponse(400, {
-            ok: false,
-            code: "MISSING_ID",
-            message: "id is required.",
-          });
-        }
+        const id = data.id;
         const question = await deactivateQuestionRecord(id);
         void logAdminAction(auditClient, {
           actorUserId: createdBy,
@@ -225,22 +234,8 @@ export async function handler(event: HandlerEvent) {
         return jsonResponse(200, { ok: true, question });
       }
       case "bulk_create_questions": {
-        const quizId = typeof payload!.quizId === "string" ? payload!.quizId : "";
-        if (!quizId) {
-          return jsonResponse(400, {
-            ok: false,
-            code: "MISSING_QUIZ_ID",
-            message: "payload.quizId is required.",
-          });
-        }
-        const rowsRaw = payload!.rows;
-        if (!Array.isArray(rowsRaw)) {
-          return jsonResponse(400, {
-            ok: false,
-            code: "INVALID_INPUT",
-            message: "payload.rows must be an array of CSV row objects.",
-          });
-        }
+        const quizId = data.payload.quizId;
+        const rowsRaw = data.payload.rows;
         const { drafts, errors: rowErrors } = parseCsvQuestionRows(
           rowsRaw as CsvRowInput[],
         );

@@ -4,16 +4,10 @@ import { redirect } from "next/navigation";
 
 import { requireAdminSession } from "@/lib/admin-session";
 import { logAdminAction } from "@/lib/audit";
+import { validateForAction } from "@/lib/schemas/_helpers";
+import { completeOnboardingSchema } from "@/lib/schemas/onboarding";
 import { getAdminSupabaseClient } from "@/lib/supabase-server";
-import {
-  JOB_ROLES,
-  type JobRole,
-  type OnboardingActionState,
-} from "./state";
-
-function isJobRole(value: string): value is JobRole {
-  return (JOB_ROLES as readonly string[]).includes(value);
-}
+import { type OnboardingActionState } from "./state";
 
 export async function completeOnboardingAction(
   _prev: OnboardingActionState,
@@ -24,28 +18,26 @@ export async function completeOnboardingAction(
   // below pins the update to session.userId.
   const session = await requireAdminSession({ currentPath: "/onboarding" });
 
-  const fullName =
-    typeof formData.get("full_name") === "string"
-      ? (formData.get("full_name") as string).trim()
-      : "";
-  const company =
-    typeof formData.get("company") === "string"
-      ? (formData.get("company") as string).trim()
-      : "";
-  const jobRoleRaw =
-    typeof formData.get("job_role") === "string"
-      ? (formData.get("job_role") as string).trim()
-      : "";
-
-  if (fullName.length < 2 || fullName.length > 120) {
-    return { status: "error", message: "Enter your full name (2–120 characters)." };
+  const validated = validateForAction(completeOnboardingSchema, {
+    fullName: formData.get("full_name"),
+    company: formData.get("company"),
+    jobRole: formData.get("job_role"),
+  });
+  if (!validated.ok) {
+    // Preserve original UX-friendly messages by mapping the failing path
+    // to the matching string used pre-A7.
+    const path = validated.issues[0]?.path ?? "";
+    const message =
+      path === "fullName"
+        ? "Enter your full name (2–120 characters)."
+        : path === "company"
+          ? "Enter your company (2–120 characters)."
+          : path === "jobRole"
+            ? "Pick a job role (MSR or Manager)."
+            : validated.message;
+    return { status: "error", message };
   }
-  if (company.length < 2 || company.length > 120) {
-    return { status: "error", message: "Enter your company (2–120 characters)." };
-  }
-  if (!isJobRole(jobRoleRaw)) {
-    return { status: "error", message: "Pick a job role (MSR or Manager)." };
-  }
+  const { fullName, company, jobRole } = validated.data;
 
   const supabase = getAdminSupabaseClient();
 
@@ -73,7 +65,7 @@ export async function completeOnboardingAction(
     .update({
       full_name: fullName,
       company,
-      job_role: jobRoleRaw,
+      job_role: jobRole,
       status: "active",
     })
     .eq("user_id", session.userId)
@@ -90,7 +82,7 @@ export async function completeOnboardingAction(
     action: "complete_onboarding",
     targetType: "admin_user",
     targetId: session.userId,
-    payload: { fullName, company, jobRole: jobRoleRaw },
+    payload: { fullName, company, jobRole },
   });
   redirect("/dashboard");
 }

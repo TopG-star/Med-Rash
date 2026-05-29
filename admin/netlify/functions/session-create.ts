@@ -8,7 +8,7 @@ import { createSessionSchema } from "../../src/lib/schemas/session";
 import { getSupabaseAdminClient } from "./_shared/supabase";
 import {
   createSessionRecord,
-  parseCreateSessionInput,
+  type CreateSessionInput,
 } from "../../src/lib/session-create";
 import { logAdminAction } from "../../src/lib/audit";
 import {
@@ -54,22 +54,21 @@ export async function handler(event: HandlerEvent) {
     });
   }
 
-  // A7 — zod front door. The shared parseCreateSessionInput below still
-  // applies fallback defaults; schema only validates shape + cross-field rules
-  // (endsAt >= startsAt) so callers get structured `issues[]` on bad input.
+  // A7 — zod is the sole validator now. parseCreateSessionInput retired in P3.
   const validated = validateOrRespond(createSessionSchema, body);
   if (!validated.ok) return validated.response;
 
-  let input;
-  try {
-    input = parseCreateSessionInput(body, authResult.auth.userId);
-  } catch (err) {
-    return jsonResponse(400, {
-      ok: false,
-      code: "INVALID_INPUT",
-      message: err instanceof Error ? err.message : "Invalid input.",
-    });
-  }
+  const v = validated.data;
+  const input: CreateSessionInput = {
+    quizId: v.quizId,
+    name: v.name,
+    hostName: v.hostName ?? null,
+    startsAt: v.startsAt ?? null,
+    endsAt: v.endsAt ?? null,
+    mode: v.mode,
+    metadata: v.metadata ?? {},
+    createdBy: authResult.auth.userId,
+  };
 
   try {
     const result = await createSessionRecord(input);

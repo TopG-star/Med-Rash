@@ -13,18 +13,29 @@ import {
   createQuizRecord,
   deactivateQuestionRecord,
   deactivateQuizRecord,
-  parseCreateQuestionInput,
-  parseCreateQuizInput,
-  parseUpdateQuestionInput,
-  parseUpdateQuizInput,
   updateQuestionRecord,
   updateQuizRecord,
   type BulkCreateQuestionsResult,
   type BulkQuestionInput,
+  type CreateQuestionInput,
+  type CreateQuizInput,
   type QuestionRecord,
   type QuizRecord,
+  type UpdateQuestionInput,
+  type UpdateQuizInput,
 } from "@/lib/quiz-write";
 import type { CsvQuestionDraft } from "@/lib/quiz-csv";
+import { validateForAction } from "@/lib/schemas/_helpers";
+import {
+  createQuestionPayloadSchema,
+  createQuizPayloadSchema,
+  updateQuestionPayloadSchema,
+  updateQuizPayloadSchema,
+  type CreateQuestionPayload,
+  type CreateQuizPayload,
+  type UpdateQuestionPayload,
+  type UpdateQuizPayload,
+} from "@/lib/schemas/quiz";
 
 export type QuizActionResult<T> =
   | { ok: true; data: T }
@@ -34,6 +45,68 @@ function fail(err: unknown, fallback: string): { ok: false; message: string } {
   return {
     ok: false,
     message: err instanceof Error ? err.message : fallback,
+  };
+}
+
+function toCreateQuizInput(
+  v: CreateQuizPayload,
+  createdBy: string | null,
+): CreateQuizInput {
+  return {
+    slug: v.slug,
+    title: v.title,
+    category: v.category,
+    product: v.product ?? null,
+    summary: v.summary,
+    questionCountDefault: v.questionCountDefault,
+    isActive: v.isActive,
+    metadata: v.metadata ?? {},
+    createdBy,
+  };
+}
+
+function toUpdateQuizInput(v: UpdateQuizPayload): UpdateQuizInput {
+  return {
+    id: v.id,
+    title: v.title,
+    category: v.category,
+    product: v.product ?? null,
+    summary: v.summary,
+    questionCountDefault: v.questionCountDefault,
+    isActive: v.isActive,
+    metadata: v.metadata ?? {},
+  };
+}
+
+function toCreateQuestionInput(
+  v: CreateQuestionPayload,
+  createdBy: string | null,
+): CreateQuestionInput {
+  return {
+    quizId: v.quizId,
+    prompt: v.prompt,
+    options: v.options,
+    correctIndex: v.correctIndex,
+    explanation: v.explanation,
+    clinicalArea: v.clinicalArea ?? null,
+    tags: v.tags,
+    position: v.position ?? null,
+    isActive: v.isActive,
+    createdBy,
+  };
+}
+
+function toUpdateQuestionInput(v: UpdateQuestionPayload): UpdateQuestionInput {
+  return {
+    id: v.id,
+    prompt: v.prompt,
+    options: v.options,
+    correctIndex: v.correctIndex,
+    explanation: v.explanation,
+    clinicalArea: v.clinicalArea ?? null,
+    tags: v.tags,
+    position: v.position ?? null,
+    isActive: v.isActive,
   };
 }
 
@@ -96,12 +169,9 @@ export async function createQuizAction(
   } catch (err) {
     return fail(err, "Authorization failed.");
   }
-  let parsed;
-  try {
-    parsed = parseCreateQuizInput(raw, session.userId);
-  } catch (err) {
-    return fail(err, "Invalid quiz input.");
-  }
+  const validated = validateForAction(createQuizPayloadSchema, raw);
+  if (!validated.ok) return { ok: false, message: validated.message };
+  const parsed = toCreateQuizInput(validated.data, session.userId);
   try {
     const quiz = await createQuizRecord(parsed);
     revalidatePath("/quiz-bank");
@@ -114,12 +184,9 @@ export async function createQuizAction(
 export async function updateQuizAction(
   raw: Record<string, unknown>,
 ): Promise<QuizActionResult<QuizRecord>> {
-  let parsed;
-  try {
-    parsed = parseUpdateQuizInput(raw);
-  } catch (err) {
-    return fail(err, "Invalid quiz input.");
-  }
+  const validated = validateForAction(updateQuizPayloadSchema, raw);
+  if (!validated.ok) return { ok: false, message: validated.message };
+  const parsed = toUpdateQuizInput(validated.data);
   try {
     await requireQuizMutationAllowed(parsed.id);
   } catch (err) {
@@ -165,12 +232,9 @@ export async function createQuestionAction(
   raw: Record<string, unknown>,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
-  let parsed;
-  try {
-    parsed = parseCreateQuestionInput(raw, null);
-  } catch (err) {
-    return fail(err, "Invalid question input.");
-  }
+  const validated = validateForAction(createQuestionPayloadSchema, raw);
+  if (!validated.ok) return { ok: false, message: validated.message };
+  const parsed = toCreateQuestionInput(validated.data, null);
   let session;
   try {
     session = await requireQuizMutationAllowed(parsed.quizId);
@@ -194,12 +258,9 @@ export async function updateQuestionAction(
   raw: Record<string, unknown>,
   quizSlug: string,
 ): Promise<QuizActionResult<QuestionRecord>> {
-  let parsed;
-  try {
-    parsed = parseUpdateQuestionInput(raw);
-  } catch (err) {
-    return fail(err, "Invalid question input.");
-  }
+  const validated = validateForAction(updateQuestionPayloadSchema, raw);
+  if (!validated.ok) return { ok: false, message: validated.message };
+  const parsed = toUpdateQuestionInput(validated.data);
   try {
     await requireQuestionMutationAllowed(parsed.id);
   } catch (err) {

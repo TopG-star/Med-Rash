@@ -51,69 +51,6 @@ function generateJoinCode(): string {
   return out;
 }
 
-function requireString(value: unknown, fieldName: string): string {
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error(`${fieldName} is required.`);
-  }
-  return value.trim();
-}
-
-function optionalIsoTimestamp(value: unknown, fieldName: string): string | null {
-  if (value === undefined || value === null || value === "") return null;
-  if (typeof value !== "string") {
-    throw new Error(`${fieldName} must be an ISO-8601 string when provided.`);
-  }
-  const parsedMs = Date.parse(value);
-  if (Number.isNaN(parsedMs)) {
-    throw new Error(`${fieldName} is not a valid ISO-8601 timestamp.`);
-  }
-  return new Date(parsedMs).toISOString();
-}
-
-/**
- * Validate + normalize raw input. Throws Error with caller-safe messages.
- * Used by both the Netlify HTTP handler and the admin server action.
- * `createdBy` is sourced from the authenticated admin caller (never from
- * the request payload) so spoofing the field is impossible.
- */
-export function parseCreateSessionInput(
-  raw: Record<string, unknown>,
-  createdBy: string | null,
-): CreateSessionInput {
-  const quizId = requireString(raw.quizId, "quizId");
-  const name = requireString(raw.name, "name");
-
-  const hostNameRaw = raw.hostName;
-  const hostName =
-    typeof hostNameRaw === "string" && hostNameRaw.trim().length > 0
-      ? hostNameRaw.trim()
-      : null;
-
-  const startsAt = optionalIsoTimestamp(raw.startsAt, "startsAt");
-  const endsAt = optionalIsoTimestamp(raw.endsAt, "endsAt");
-
-  if (startsAt && endsAt && Date.parse(endsAt) < Date.parse(startsAt)) {
-    throw new Error("endsAt must be on or after startsAt.");
-  }
-
-  const modeRaw = raw.mode;
-  let mode: SessionMode = DEFAULT_SESSION_MODE;
-  if (modeRaw !== undefined && modeRaw !== null && modeRaw !== "") {
-    if (typeof modeRaw !== "string" || !SESSION_MODES.includes(modeRaw as SessionMode)) {
-      throw new Error("mode must be 'ranked' or 'learning'.");
-    }
-    mode = modeRaw as SessionMode;
-  }
-
-  const metadataRaw = raw.metadata;
-  const metadata =
-    metadataRaw && typeof metadataRaw === "object" && !Array.isArray(metadataRaw)
-      ? (metadataRaw as Record<string, unknown>)
-      : {};
-
-  return { quizId, name, hostName, startsAt, endsAt, mode, metadata, createdBy };
-}
-
 function buildJoinUrl(joinCode: string): string {
   return buildSessionJoinUrl(joinCode);
 }

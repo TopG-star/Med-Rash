@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 import { requireAdminSession } from "@/lib/admin-session";
 import {
   createSessionRecord,
-  parseCreateSessionInput,
+  type CreateSessionInput,
   type CreateSessionResult,
 } from "@/lib/session-create";
+import { validateForAction } from "@/lib/schemas/_helpers";
+import { createSessionSchema } from "@/lib/schemas/session";
 
 export type CreateSessionActionResult =
   | { ok: true; data: CreateSessionResult }
@@ -25,18 +27,25 @@ export async function createSessionAction(
 ): Promise<CreateSessionActionResult> {
   const session = await requireAdminSession({ currentPath: "/sessions" });
 
-  let parsed;
-  try {
-    parsed = parseCreateSessionInput(rawInput, session.userId);
-  } catch (err) {
-    return {
-      ok: false,
-      message: err instanceof Error ? err.message : "Invalid session input.",
-    };
+  const validated = validateForAction(createSessionSchema, rawInput);
+  if (!validated.ok) {
+    return { ok: false, message: validated.message };
   }
 
+  const v = validated.data;
+  const input: CreateSessionInput = {
+    quizId: v.quizId,
+    name: v.name,
+    hostName: v.hostName ?? null,
+    startsAt: v.startsAt ?? null,
+    endsAt: v.endsAt ?? null,
+    mode: v.mode,
+    metadata: v.metadata ?? {},
+    createdBy: session.userId,
+  };
+
   try {
-    const data = await createSessionRecord(parsed);
+    const data = await createSessionRecord(input);
     revalidatePath("/sessions");
     return { ok: true, data };
   } catch (err) {

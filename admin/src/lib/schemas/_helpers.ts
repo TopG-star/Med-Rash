@@ -21,6 +21,25 @@ export function validateBody<T>(
   return { ok: false, code: "invalid_input", issues };
 }
 
+/**
+ * Server-action convenience: wraps {@link validateBody} and surfaces the
+ * first issue as a flat `message` so callers can return their existing
+ * `{ ok: false; message }` envelope unchanged.
+ */
+export type ActionValidationResult<T> =
+  | { ok: true; data: T }
+  | { ok: false; message: string; issues: ValidationIssue[] };
+
+export function validateForAction<T>(
+  schema: z.ZodType<T>,
+  payload: unknown,
+): ActionValidationResult<T> {
+  const result = validateBody(schema, payload);
+  if (result.ok) return { ok: true, data: result.data };
+  const message = result.issues[0]?.message ?? "Invalid input.";
+  return { ok: false, message, issues: result.issues };
+}
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export const emailField = z.preprocess(
