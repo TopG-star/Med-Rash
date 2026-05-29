@@ -73,6 +73,16 @@
 #     (currently medrash-admin.netlify.app and thriving-gingersnap-…).
 #     Tighten to specific hosts once a stable production functions origin
 #     is locked.
+#   - script-src + connect-src https://www.gstatic.com: Flutter's default
+#     CanvasKit loader fetches canvaskit.js + canvaskit.wasm from
+#     https://www.gstatic.com/flutter-canvaskit/<hash>/ at boot. Self-
+#     hosting via `flutter build web --web-renderer canvaskit
+#     --no-web-resources-cdn` would drop this need; deferred until we
+#     decide to vendor the wasm bundle into build/web.
+#   - connect-src + font-src https://fonts.gstatic.com: Flutter falls back
+#     to fetching the Roboto woff2 from Google's font CDN when the embedded
+#     glyph isn't available. Needed in both connect-src (Fetch API call)
+#     and font-src (browser font-face binding).
 #   - worker-src 'self' blob: + child-src blob:: Flutter service worker
 #     (flutter_service_worker.js) plus CanvasKit's blob-URL workers.
 #   - img-src + font-src data: + blob:: Flutter rasterizes glyphs/images
@@ -89,5 +99,5 @@
     X-Content-Type-Options    = "nosniff"
     Referrer-Policy           = "strict-origin-when-cross-origin"
     Permissions-Policy        = "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
-    Content-Security-Policy   = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.netlify.app https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; child-src blob: https://challenges.cloudflare.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+    Content-Security-Policy   = "default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://challenges.cloudflare.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://*.netlify.app https://challenges.cloudflare.com https://www.gstatic.com https://fonts.gstatic.com; frame-src https://challenges.cloudflare.com; child-src blob: https://challenges.cloudflare.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 
