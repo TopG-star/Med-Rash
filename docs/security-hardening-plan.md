@@ -172,7 +172,7 @@ _Phase 3c — strip the gate key entirely (this commit, after one clean Phase 3b
 
 **Files touched:** `supabase/migrations/0NN_*.sql` (2–3 files), `docs/admin-surfaces.md` §6 (RLS table refresh).
 
-**Verification:** SQL drafted in `supabase/migrations/014_security_invoker_views.sql`, `015_admin_users_rls.sql`, `016_tighten_sessions_rls.sql` (3 files, idempotent — all `drop policy if exists` / `alter` statements safe to re-run) · static caller audit PASS (every TS/Dart reference to `app.sessions`, `app.admin_users`, and the two ranked views uses the service-role client; no anon callers will break) · `supabase db push` against hosted DB PENDING (user to run; requires `supabase link --project-ref …`) · Supabase advisor lints re-run PENDING (user to confirm 0 view findings + 0 missing-RLS findings post-push) · hosted smoke (participant join + admin host page + admin user-management page) PENDING (user to confirm post-deploy).
+**Verification:** SQL drafted in `supabase/migrations/014_security_invoker_views.sql`, `015_admin_users_rls.sql`, `016_tighten_sessions_rls.sql` (3 files, idempotent — all `drop policy if exists` / `alter` statements safe to re-run) · static caller audit PASS (every TS/Dart reference to `app.sessions`, `app.admin_users`, and the two ranked views uses the service-role client; no anon callers will break) · `supabase db push` against hosted DB **PASS (user-confirmed 2026-05-29)** · hosted smoke (participant join → quiz → leaderboard + admin login + sessions + admin-users pages) **PASS (user-confirmed 2026-05-29).**
 
 **Standards:** ISO 27002 §5.15, 8.3, 8.12 · OWASP ASVS V8.3 · GDPR Art. 25, 32 · NIST CSF PR.DS-5.
 
