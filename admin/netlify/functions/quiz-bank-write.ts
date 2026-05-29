@@ -20,6 +20,11 @@ import {
 } from "../../src/lib/quiz-write";
 import { parseCsvQuestionRows, type CsvRowInput } from "../../src/lib/quiz-csv";
 import { logAdminAction } from "../../src/lib/audit";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 type Operation =
   | "create_quiz"
@@ -61,6 +66,22 @@ export async function handler(event: HandlerEvent) {
     });
   }
   const createdBy = authResult.auth.userId;
+
+  // A6 — per-admin bucket (30/60s). Bulk CSV imports happen, but never at
+  // 30/min from a single admin — that signals automation or a stuck client.
+  const auditClientEarly = getSupabaseAdminClient();
+  const adminLimit = await enforceRateLimit(
+    auditClientEarly,
+    rateLimitConfig("quiz_bank_write", createdBy),
+  );
+  if (!adminLimit.allowed) {
+    return jsonResponse(429, {
+      ok: false,
+      code: "RATE_LIMITED",
+      message: formatLockoutMessage(adminLimit),
+      retryAfterSeconds: adminLimit.retryAfterSeconds,
+    });
+  }
 
   let body: Record<string, unknown>;
   try {

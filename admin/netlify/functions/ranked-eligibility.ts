@@ -1,6 +1,11 @@
 import { getSupabaseAdminClient, parseIdentityInput, resolveOrCreateUserId, resolveQuiz } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 function readQuizRef(body: Record<string, unknown>): string {
   const value = body.quizId;
@@ -32,6 +37,22 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     const quizRef = readQuizRef(body);
 
     const supabase = getSupabaseAdminClient();
+
+    // A6 — per-device bucket (120/60s). Higher than profile_sync because the
+    // Flutter app polls eligibility ahead of each ranked quiz start.
+    const deviceLimit = await enforceRateLimit(
+      supabase,
+      rateLimitConfig("ranked_eligibility", identity.deviceInstallId),
+    );
+    if (!deviceLimit.allowed) {
+      return jsonResponse(429, {
+        ok: false,
+        code: "RATE_LIMITED",
+        message: formatLockoutMessage(deviceLimit),
+        retryAfterSeconds: deviceLimit.retryAfterSeconds,
+      });
+    }
+
     const userId = await resolveOrCreateUserId(supabase, identity);
     const quiz = await resolveQuiz(supabase, quizRef);
 

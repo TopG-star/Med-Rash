@@ -14,6 +14,12 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { extractRemoteIp } from "./_shared/turnstile";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 type LeaderboardType = "monthly" | "allTime";
 
@@ -101,6 +107,23 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     const identity = readIdentityOrNull(body);
 
     const supabase = getSupabaseAdminClient();
+
+    // A6 — IP-keyed bucket (60/60s). Identity is optional on this endpoint
+    // (anonymous leaderboard browsing is supported), so we always have an IP
+    // but not always a participantId — IP is the only universal key here.
+    const clientIp = extractRemoteIp(event.headers) ?? "unknown-ip";
+    const ipLimit = await enforceRateLimit(
+      supabase,
+      rateLimitConfig("leaderboard", clientIp),
+    );
+    if (!ipLimit.allowed) {
+      return jsonResponse(429, {
+        ok: false,
+        code: "RATE_LIMITED",
+        message: formatLockoutMessage(ipLimit),
+        retryAfterSeconds: ipLimit.retryAfterSeconds,
+      });
+    }
 
     let seasonKey: string | null = null;
     let topRows: RpcRow[] = [];

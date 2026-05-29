@@ -18,7 +18,20 @@ export type RateLimitScope =
   | "auth_otp_request"
   | "auth_otp_verify"
   | "recover_otp_request"
-  | "recover_otp_verify";
+  | "recover_otp_verify"
+  // Slice A6 — participant + admin endpoint scopes. Identifiers vary
+  // per scope: attempt_submit buckets by participantId, attempt_submit_ip
+  // buckets by client IP (dual bucket), profile_sync / ranked_eligibility
+  // bucket by deviceInstallId, leaderboard / quiz_list bucket by IP,
+  // quiz_bank_write / session_create bucket by admin user_id.
+  | "attempt_submit"
+  | "attempt_submit_ip"
+  | "profile_sync"
+  | "ranked_eligibility"
+  | "leaderboard"
+  | "quiz_list"
+  | "quiz_bank_write"
+  | "session_create";
 
 export type RateLimitConfig = {
   scope: RateLimitScope;
@@ -112,6 +125,18 @@ export const RATE_LIMITS: Record<RateLimitScope, Omit<RateLimitConfig, "scope" |
   auth_otp_verify: { limit: 5, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 },
   recover_otp_request: { limit: 3, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 },
   recover_otp_verify: { limit: 5, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 },
+  // Slice A6 — participant + admin endpoint defaults (plan §3 A6).
+  // 60-second windows + matching lockouts: a burst trips the limit for
+  // one minute, then auto-recovers. No need for 15-minute lockouts on
+  // non-OTP scopes because there's no email-send cost to amortize.
+  attempt_submit: { limit: 60, windowSeconds: 60, lockoutSeconds: 60 },
+  attempt_submit_ip: { limit: 600, windowSeconds: 60, lockoutSeconds: 60 },
+  profile_sync: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
+  ranked_eligibility: { limit: 120, windowSeconds: 60, lockoutSeconds: 60 },
+  leaderboard: { limit: 60, windowSeconds: 60, lockoutSeconds: 60 },
+  quiz_list: { limit: 60, windowSeconds: 60, lockoutSeconds: 60 },
+  quiz_bank_write: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
+  session_create: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
 };
 
 export function rateLimitConfig(

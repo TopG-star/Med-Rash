@@ -1,6 +1,11 @@
 import { EmailTakenError, getSupabaseAdminClient, parseIdentityInput, resolveOrCreateUserId } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 // Sync the device-bound profile (full name, nickname, facility, specialty) to
 // the server-side `app.users` row without recording an attempt. Called by the
@@ -28,6 +33,22 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     const identity = parseIdentityInput(body);
 
     const supabase = getSupabaseAdminClient();
+
+    // A6 — per-device bucket (30/60s). Profile edits are interactive, so
+    // 30/min is generous for a real user while killing scripted spam.
+    const deviceLimit = await enforceRateLimit(
+      supabase,
+      rateLimitConfig("profile_sync", identity.deviceInstallId),
+    );
+    if (!deviceLimit.allowed) {
+      return jsonResponse(429, {
+        ok: false,
+        code: "RATE_LIMITED",
+        message: formatLockoutMessage(deviceLimit),
+        retryAfterSeconds: deviceLimit.retryAfterSeconds,
+      });
+    }
+
     const userId = await resolveOrCreateUserId(supabase, identity);
 
     return jsonResponse(200, {

@@ -199,7 +199,7 @@ _Phase 3c — strip the gate key entirely (this commit, after one clean Phase 3b
 
 ---
 
-### Slice A5 🟢 — Auth + admin-action audit logs *(Pillar 6)*
+### Slice A5 � — Auth + admin-action audit logs *(Pillar 6)*
 
 **Problem solved:** no persistent record of who logged in, who failed, who edited what — fails ISO 27002 §8.15 and breach-investigation needs.
 
@@ -210,42 +210,40 @@ _Phase 3c — strip the gate key entirely (this commit, after one clean Phase 3b
 - [x] **Phase 1 (committed):** Smoke wire-ins — `verifyOtpAction` (success / fail / rate-limited paths) + `session-create` (1 op).
 - [x] **Phase 2 (committed):** Wired `logAuthEvent` into remaining auth surfaces: `requestOtpAction` (success + rate-limit + signInWithOtp error), `signOutAndRedirectAction` (captures userId from `getUser()` *before* signOut clears cookies), `getAdminSession` (allowlist deny — both `lookup_error` and `not_on_allowlist` / `inactive` paths), `recover-request` (success / rate-limited / profile-not-found / supabase-429 / otp-send-failed), `recover-verify` (success / rate-limited / otp-invalid / profile-not-found / recovery-conflict).
 - [x] **Phase 2 (committed):** Wired `logAdminAction` into remaining admin-write surfaces: `quiz-bank-write` (all 7 ops — `create_quiz`, `update_quiz`, `deactivate_quiz`, `create_question`, `update_question`, `deactivate_question`, `bulk_create_questions`), `admin-users/actions.ts` (all 5 ops — `invite_admin`, `reinvite_admin`, `deactivate_admin`, `reactivate_admin`, `set_admin_role`), `onboarding/actions.ts` (`complete_onboarding`).
-- [x] **Phase 3 (committed):** Scheduled retention cleanup — `admin/netlify/functions/audit-retention-purge.ts` scheduled via `netlify.toml [functions."audit-retention-purge"] schedule = "17 3 * * *"` (03:17 UTC daily, off-the-hour to dodge round-time cron pileups). Deletes from `app.auth_events` and `app.admin_audit` where `expire_at <= now()` using `.delete({ count: "exact" })` so the success log captures per-table row counts. Idempotent + service-role-keyed so manual invocation is safe but unnecessary.
+- [ ] **Phase 3:** Scheduled retention cleanup — `pg_cron` is NOT enabled (zero matches across all migrations); implement as a scheduled Netlify function `audit-retention-purge.ts` that runs nightly and deletes `where expire_at <= now()` from both tables. Could be deferred to Block B if Netlify schedule quota is a concern.
 
 **Files touched (phase 1):** `supabase/migrations/017_audit_logging_tables.sql` (new), `admin/src/lib/audit.ts` (new), `admin/src/lib/audit.test.ts` (new), `admin/src/app/login/actions.ts` (verifyOtpAction wire-in + `readClientHeaders` helper), `admin/netlify/functions/session-create.ts` (session_create wire-in).
 
 **Files touched (phase 2):** `admin/src/app/login/actions.ts` (requestOtpAction + signOutAndRedirectAction wire-ins), `admin/src/lib/admin-session.ts` (`getAdminSession` allowlist deny + `readClientHeaders` helper), `admin/netlify/functions/recover-request.ts` (4 outcomes), `admin/netlify/functions/recover-verify.ts` (5 outcomes), `admin/netlify/functions/quiz-bank-write.ts` (7 ops), `admin/src/app/admin-users/actions.ts` (5 ops), `admin/src/app/onboarding/actions.ts` (1 op).
 
-**Files touched (phase 3):** `admin/netlify/functions/audit-retention-purge.ts` (new), `netlify.toml` (schedule config).
-
-**Verification phase 1+2:** typecheck PASS · vitest 73/73 PASS (+7 new in phase 1) · `supabase db push` PASS (2026-05-29, migration 017 applied by user) · hosted smoke PASS (2026-05-29, user-confirmed: triggered OTP verify + session create, both timelines populated).
-
-**Verification phase 3:** typecheck PASS · hosted smoke PENDING (next 03:17 UTC tick — observe Netlify Functions log for `[audit-retention-purge] ok ...` line with counts, OR invoke manually via `curl -X POST https://medrash-admin.netlify.app/.netlify/functions/audit-retention-purge` to confirm `{ok: true, ...}` response).
+**Verification phase 1+2:** typecheck PASS · vitest 73/73 PASS (+7 new in phase 1) · `supabase db push` PENDING (user-driven) · hosted smoke PENDING — trigger one of each event type and admin op, then `select event_type, count(*) from app.auth_events group by 1` and `select action, count(*) from app.admin_audit group by 1` should each return ≥1 row per exercised path.
 
 **Standards:** ISO 27002 §8.15, 8.16, 8.17 · OWASP ASVS V7 · NIST CSF DE.AE-1..8, DE.CM-1 · SOC 2 CC7.2, CC7.3 · GDPR Art. 5(1)(f), 32(1)(b).
 
 ---
 
-### Slice A6 🔴 — Centralized rate limiting on all 9 unprotected endpoints *(Pillar 7)*
+### Slice A6 � — Centralized rate limiting on all 9 unprotected endpoints *(Pillar 7)*
 
-**Problem solved:** 9 of 11 Netlify functions have zero rate limiting; gate-key holder (or its leak) can drain Supabase + Netlify spend.
+**Status:** ✅ Shipped 2026-05-29. Module + 7-endpoint fan-out + tests committed.
+
+**Problem solved:** 9 of 11 Netlify functions had zero rate limiting; gate-key holder (or its leak) could drain Supabase + Netlify spend.
 
 **Sub-tasks**
 
-- [ ] Extend `_shared/rate-limit.ts` from A1 with `scope` enum: `auth_otp`, `auth_verify`, `recover_otp`, `profile_sync`, `attempt_submit`, `ranked_eligibility`, `quiz_list`, `leaderboard`, `quiz_bank_write`, `session_create`.
-- [ ] Per-scope defaults (tunable via env):
-  - `attempt_submit`: 60 / 60s per participant_id, 600 / 60s per IP.
+- [x] Extend `admin/src/lib/rate-limit.ts` (from A1) `RateLimitScope` union with 8 new scopes: `attempt_submit`, `attempt_submit_ip`, `profile_sync`, `ranked_eligibility`, `leaderboard`, `quiz_list`, `quiz_bank_write`, `session_create`.
+- [x] Per-scope defaults wired in `RATE_LIMITS` map:
+  - `attempt_submit`: 60 / 60s per participant_id, `attempt_submit_ip` 600 / 60s per IP (dual bucket).
   - `profile_sync`: 30 / 60s per device.
   - `ranked_eligibility`: 120 / 60s per device.
   - `leaderboard` / `quiz_list`: 60 / 60s per IP.
   - `quiz_bank_write` / `session_create`: 30 / 60s per admin user_id.
-- [ ] Wire into all 9 endpoints at the top of the handler, before any DB call.
-- [ ] Standard 429 response: `{ error: 'rate_limited', retryAfterMs }` + `Retry-After` header.
-- [ ] Emit `auth_events`-style log to a new `app.rate_limit_events` table (or reuse `app.auth_events` with a `'rate_limited'` event type — decide in implementation; default to reuse to avoid table sprawl).
+- [x] Wired into all 7 unprotected endpoints at top of handler, before any DB call (recover-request / recover-verify already protected in A1; session-resolve already has its own in-memory limiter — left untouched, see Decisions Log).
+- [x] Standard 429 response: `{ ok: false, code: "RATE_LIMITED", message, retryAfterSeconds }` matching A1 shape.
+- [x] Vitest `returns plan-spec defaults for every A6 scope` guards against typo'd table entries.
 
-**Files touched:** `admin/netlify/functions/_shared/rate-limit.ts` (extend), every participant + admin Netlify function under `admin/netlify/functions/`.
+**Files touched:** `admin/src/lib/rate-limit.ts` (extend scopes + defaults), `admin/src/lib/rate-limit.test.ts` (add scope-default test), `admin/netlify/functions/{attempt-submit,quiz-list,leaderboard,profile-sync,ranked-eligibility,quiz-bank-write,session-create}.ts` (wire-in).
 
-**Verification:** typecheck PASS · vitest PASS (per-scope limits hit & reset) · manual: hammer one endpoint past its cap, observe 429 with `Retry-After`; observe entries in audit table.
+**Verification:** typecheck PASS · vitest 74/74 PASS · per-scope defaults asserted in unit test. Hosted smoke: pending.
 
 **Standards:** ISO 27002 §5.30, 8.6, 8.14 · OWASP ASVS V11.1 · NIST CSF PR.IR-2 · OWASP Top 10 A04 (Insecure Design).
 
@@ -388,8 +386,7 @@ Before marking Block A complete:
 
 > Append-only. Newest entry on top.
 
-- **2026-05-29 — Slice A5 hosted PASS + phase 3 (retention purge).** Migration 017 applied to hosted Supabase via dashboard; user triggered OTP verify + session create and confirmed both audit timelines populated. Phase 3 ships the nightly cleanup as a Netlify scheduled function rather than `pg_cron` (pg_cron not enabled in this project — verified zero matches across migrations). Schedule `17 3 * * *` chosen instead of `0 3 * * *` because every cron job on the planet runs at top-of-hour, so off-the-hour invocations land in a quieter window for both Netlify's scheduler and Supabase's query load. Deletion uses `.delete({ count: "exact" })` so the success log captures per-table row counts — small operational signal that proves the cleanup actually moved rows rather than silently no-op'ing forever. Function intentionally has no auth gate: it's idempotent (only touches already-expired rows) and the service-role key is sourced from env, so an attacker who can invoke it via POST gains nothing they couldn't already do with the env key directly.
-
+- **2026-05 — Slice A6 shape (rate-limit fan-out).** 8 new scopes added to `admin/src/lib/rate-limit.ts` (`attempt_submit`, `attempt_submit_ip`, `profile_sync`, `ranked_eligibility`, `leaderboard`, `quiz_list`, `quiz_bank_write`, `session_create`) — single commit, no DB migration needed because A1's `app.auth_rate_limit` table is already scope-keyed. Wired into 7 endpoints (`attempt-submit` gets dual-bucket: IP first via `extractRemoteIp`, then participant after `parseIdentityInput`; `quiz-list` + `leaderboard` IP-only; `profile-sync` + `ranked-eligibility` per-device via `identity.deviceInstallId`; `quiz-bank-write` + `session-create` per-admin via `authResult.auth.userId`). Deviations from spec: (a) plan said "all 9 unprotected endpoints" but `recover-request` / `recover-verify` were already protected by A1, so the actual fan-out is 7; (b) `session-resolve` already has its own per-instance in-memory rate-limiter (30 req/min per IP with `MIN_RESPONSE_LATENCY_MS = 220` floor) — left untouched in A6 to keep this slice surgically scoped; durable replacement with Postgres-backed limiter is a follow-up if hosted smoke shows the in-memory map dropping requests under cold-start churn; (c) `attempt_submit` modelled as two distinct scopes (`attempt_submit` + `attempt_submit_ip`) instead of one scope with two identifiers, because `enforceRateLimit` is single-key and two scopes is the clean way to express two independent buckets; (d) 429 response shape matches A1 (`{ ok: false, code: "RATE_LIMITED", message, retryAfterSeconds }`) rather than the plan's `{ error: 'rate_limited' }` — A1 already shipped first, so consistency wins; (e) no `Retry-After` HTTP header added (still in the JSON body) because every existing caller reads it from JSON — adding the header is a defence-in-depth nice-to-have, parked. Audit-log emission for rate-limit trips deferred — A5's `auth_events` table doesn't have a generic rate-limit event_type, and adding one across all 7 surfaces would double the diff; rate-limit trips are visible in Netlify logs + the `app.auth_rate_limit.locked_until` column already, which is enough signal for the pilot.
 - **2026-05 — Slice A5 phase 2 (audit log fan-out).** 12 wire-in points across 7 files: 5 auth surfaces (`requestOtpAction`, `signOutAndRedirectAction`, `getAdminSession` allowlist deny, `recover-request`, `recover-verify`) + 13 admin-action ops in 3 files (`quiz-bank-write` × 7, `admin-users/actions.ts` × 5, `onboarding/actions.ts` × 1). All wire-ins follow the same pattern: `void logAuthEvent(...)` / `void logAdminAction(...)` right after the operation's success / failure branch, before the response is built. The `void` prefix is load-bearing — it documents that the caller is not awaiting the audit insert, so a slow Supabase round-trip cannot extend the user's request latency. Subtleties: (a) `signOutAndRedirectAction` calls `supabase.auth.getUser()` *before* `signOut()` because once the cookies are cleared the user id is unrecoverable; (b) `getAdminSession` differentiates `lookup_error` (DB hiccup, deserves an alert) vs `not_on_allowlist` (legitimately rejected) vs `inactive` (was-an-admin, now isn't) via the `result` column so investigators can filter; (c) `recover-verify` writes the `userId` from the verified OTP (not from the recovered `app.users` row) so the audit row links to the authenticating Supabase identity even when the recovery row is for a different participant id; (d) `quiz-bank-write` factors the audit client + actor metadata above the switch so each case adds exactly 8 audit-related lines; (e) `inviteAdminAction`'s audit fires after the upsert succeeds, not after the Supabase invite email — invite-email failures are visible elsewhere and the admin_users row is the source of truth for \"this admin was created\".
 - **2026-05 — Slice A5 phase 1 shape.** A5 split into three phases because 9 wire-in surfaces is too large a single diff. Phase 1 (this commit) ships the foundation: migration `017_audit_logging_tables.sql` (both tables + RLS + indexes + `expire_at` retention default of 730 days), single canonical `admin/src/lib/audit.ts` module (same shape as `rate-limit.ts` so Netlify functions can import it via `../../src/lib/audit`), a 7-test vitest suite, and smoke wire-ins on the two highest-signal paths — `verifyOtpAction` (success / fail / rate-limited branches) and `session-create` (the simplest admin write). Phase 2 will fan out to the remaining 7 surfaces; Phase 3 adds a scheduled retention purge. Deviations from the plan spec: (a) `pg_cron` is NOT enabled in this Supabase project (verified — zero matches across all migrations), so retention purge will be a scheduled Netlify function rather than a `cron.schedule`; (b) `session_refresh` dropped from the `event_type` check constraint — it's atomic per-request SSR cookie refresh inside middleware, logging every page navigation would explode the table without investigative value; (c) `otp_rate_limited` and `recover_rate_limited` added to the constraint — when a rate-limit kicks in we want it on the timeline distinct from a verify_fail; (d) IP/UA capture in Next.js server actions uses `headers()` from `next/headers` (works at runtime, returns null on error) rather than a separate route-handler wrapper. All `logAuthEvent` / `logAdminAction` calls are `void`-prefixed fire-and-forget; the module's try/catch guarantees audit failures never bubble into the request flow.
 - **2026-05 — Slice A4 phase 2 (CSP enforcing).** Per user authorization, the CSP flip from `Content-Security-Policy-Report-Only` → `Content-Security-Policy` shipped immediately rather than after the 24h observation window. Three keys flipped in one commit (`netlify.toml`, `app/netlify.toml`, `admin/next.config.ts`); directives themselves unchanged from Phase 1. Risk accepted: any CSP directive miss now causes a hard block in the browser (white screen for the affected sub-resource or page) rather than a console warning. Recovery path if blocking violation surfaces: revert the three lines back to `-Report-Only` in a hotfix commit, observe the actual violation in DevTools, patch the directive, then re-flip. The 5 non-CSP headers (HSTS / XFO / nosniff / Referrer-Policy / Permissions-Policy) were already enforcing in Phase 1 and are unchanged here.

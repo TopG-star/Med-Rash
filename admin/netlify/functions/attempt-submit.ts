@@ -3,6 +3,12 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { EmailTakenError, getSupabaseAdminClient, isUniqueViolation, parseIdentityInput, resolveOrCreateUserId, resolveQuiz } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { extractRemoteIp } from "./_shared/turnstile";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 type Mode = "learning" | "ranked";
 type Origin = "qr_session" | "open_access";
@@ -105,9 +111,42 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
     return auth.response;
   }
 
+  // A6 — IP bucket first (no body parse needed; catches malformed-body abuse
+  // that would otherwise fail-fast at parse without ever touching the limiter).
+  const supabase = getSupabaseAdminClient();
+  const clientIp = extractRemoteIp(event.headers) ?? "unknown-ip";
+  const ipLimit = await enforceRateLimit(
+    supabase,
+    rateLimitConfig("attempt_submit_ip", clientIp),
+  );
+  if (!ipLimit.allowed) {
+    return jsonResponse(429, {
+      ok: false,
+      code: "RATE_LIMITED",
+      message: formatLockoutMessage(ipLimit),
+      retryAfterSeconds: ipLimit.retryAfterSeconds,
+    });
+  }
+
   try {
     const body = parseJsonBody(event);
     const identity = parseIdentityInput(body);
+
+    // A6 — per-participant bucket (60/60s). Plan default; lets one user
+    // submit at most 1 attempt/sec which is well above any human cadence.
+    const participantLimit = await enforceRateLimit(
+      supabase,
+      rateLimitConfig("attempt_submit", identity.participantId),
+    );
+    if (!participantLimit.allowed) {
+      return jsonResponse(429, {
+        ok: false,
+        code: "RATE_LIMITED",
+        message: formatLockoutMessage(participantLimit),
+        retryAfterSeconds: participantLimit.retryAfterSeconds,
+      });
+    }
+
     const quizRef = parseQuizRef(body);
     const mode = parseMode(body.mode);
     const origin = parseOrigin(body.origin);
@@ -128,7 +167,7 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
     const now = new Date();
 
-    const supabase = getSupabaseAdminClient();
+    // supabase client already created above for the A6 IP rate-limit bucket.
     const userId = await resolveOrCreateUserId(supabase, identity);
     const quiz = await resolveQuiz(supabase, quizRef);
 

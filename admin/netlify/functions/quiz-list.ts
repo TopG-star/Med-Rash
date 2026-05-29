@@ -1,6 +1,12 @@
 import { getSupabaseAdminClient } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, requirePost, toV2Handler } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { extractRemoteIp } from "./_shared/turnstile";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 type QuestionRow = {
   id: string;
@@ -34,6 +40,22 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const supabase = getSupabaseAdminClient();
+
+    // A6 — IP-keyed bucket (60/60s). Quiz catalog is participant-token gated
+    // already; this stops a single misbehaving install from scraping the bank.
+    const clientIp = extractRemoteIp(event.headers) ?? "unknown-ip";
+    const ipLimit = await enforceRateLimit(
+      supabase,
+      rateLimitConfig("quiz_list", clientIp),
+    );
+    if (!ipLimit.allowed) {
+      return jsonResponse(429, {
+        ok: false,
+        code: "RATE_LIMITED",
+        message: formatLockoutMessage(ipLimit),
+        retryAfterSeconds: ipLimit.retryAfterSeconds,
+      });
+    }
 
     const { data, error } = await supabase
       .from("quizzes")

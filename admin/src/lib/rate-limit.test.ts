@@ -228,4 +228,35 @@ describe("enforceRateLimit", () => {
     expect(fake.store.size).toBe(1);
     expect(second.attemptsRemaining).toBe(rateLimitConfig("auth_otp_verify", "x").limit - 2);
   });
+
+  // Slice A6 — verify every newly added scope has a config so a typo in the
+  // RATE_LIMITS table can't make `rateLimitConfig(scope, id)` return undefined
+  // fields at runtime (TypeScript already guards against missing keys at
+  // compile time, but a wrong-value entry like 0/0/0 would silently allow
+  // every request through).
+  it("returns plan-spec defaults for every A6 scope", () => {
+    const cases: Array<[
+      "attempt_submit" | "attempt_submit_ip" | "profile_sync" |
+      "ranked_eligibility" | "leaderboard" | "quiz_list" |
+      "quiz_bank_write" | "session_create",
+      { limit: number; windowSeconds: number; lockoutSeconds: number },
+    ]> = [
+      ["attempt_submit",      { limit: 60,  windowSeconds: 60, lockoutSeconds: 60 }],
+      ["attempt_submit_ip",   { limit: 600, windowSeconds: 60, lockoutSeconds: 60 }],
+      ["profile_sync",        { limit: 30,  windowSeconds: 60, lockoutSeconds: 60 }],
+      ["ranked_eligibility",  { limit: 120, windowSeconds: 60, lockoutSeconds: 60 }],
+      ["leaderboard",         { limit: 60,  windowSeconds: 60, lockoutSeconds: 60 }],
+      ["quiz_list",           { limit: 60,  windowSeconds: 60, lockoutSeconds: 60 }],
+      ["quiz_bank_write",     { limit: 30,  windowSeconds: 60, lockoutSeconds: 60 }],
+      ["session_create",      { limit: 30,  windowSeconds: 60, lockoutSeconds: 60 }],
+    ];
+
+    for (const [scope, expected] of cases) {
+      const cfg = rateLimitConfig(scope, "x");
+      expect(cfg.scope, scope).toBe(scope);
+      expect(cfg.limit, `${scope} limit`).toBe(expected.limit);
+      expect(cfg.windowSeconds, `${scope} window`).toBe(expected.windowSeconds);
+      expect(cfg.lockoutSeconds, `${scope} lockout`).toBe(expected.lockoutSeconds);
+    }
+  });
 });

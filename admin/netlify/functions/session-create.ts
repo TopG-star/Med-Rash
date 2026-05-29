@@ -9,6 +9,11 @@ import {
   parseCreateSessionInput,
 } from "../../src/lib/session-create";
 import { logAdminAction } from "../../src/lib/audit";
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 export async function handler(event: HandlerEvent) {
   const methodGuard = requirePost(event);
@@ -19,6 +24,22 @@ export async function handler(event: HandlerEvent) {
 
   const authResult = await requireAdminUserSession(event);
   if (!authResult.ok) return authResult.response;
+
+  // A6 — per-admin bucket (30/60s). Session creation is rare; this caps
+  // accidental loops in the dashboard from creating dozens of stale sessions.
+  const supabaseEarly = getSupabaseAdminClient();
+  const adminLimit = await enforceRateLimit(
+    supabaseEarly,
+    rateLimitConfig("session_create", authResult.auth.userId),
+  );
+  if (!adminLimit.allowed) {
+    return jsonResponse(429, {
+      ok: false,
+      code: "RATE_LIMITED",
+      message: formatLockoutMessage(adminLimit),
+      retryAfterSeconds: adminLimit.retryAfterSeconds,
+    });
+  }
 
   let body: Record<string, unknown>;
   try {
