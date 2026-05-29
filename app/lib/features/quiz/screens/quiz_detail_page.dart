@@ -69,6 +69,16 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(message.isEmpty ? 'Unable to start attempt.' : message)),
       );
+    } catch (error) {
+      // Catch non-StateError failures (network/MedRashGateException/
+      // storage write failures from _persistActive) so the user always
+      // gets feedback instead of a button that silently swallows taps.
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to start attempt. Please retry. ($error)')),
+      );
     }
   }
 
@@ -206,7 +216,6 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
               const SizedBox(height: 16),
               if (!rankedOnly)
                 PressScale(
-                  onTap: () => _startMode(quiz, QuizMode.learning),
                   child: ArenaButton(
                     label: learnOnly
                         ? MedRashStrings.learnStartCta
@@ -220,8 +229,6 @@ class _QuizDetailPageState extends State<QuizDetailPage> {
                 const SizedBox(height: 16),
                 PressScale(
                   enabled: canStartRanked,
-                  onTap:
-                      canStartRanked ? () => _startMode(quiz, QuizMode.ranked) : null,
                   child: ArenaButton(
                     label: canStartRanked ? 'Go Ranked' : 'Ranked Attempt Used',
                     icon: Icons.workspace_premium_rounded,
