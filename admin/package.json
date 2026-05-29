@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.55.0",
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.49.8",
     "@types/papaparse": "^5.5.2",

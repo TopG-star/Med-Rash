@@ -136,6 +136,10 @@ Set these for Flutter app startup (passed via `--dart-define` at build time):
 - MEDRASH_FUNCTIONS_BASE_URL
 - MEDRASH_TURNSTILE_SITE_KEY
 
+Optional telemetry (Slice B7) — all SDKs no-op when DSN is empty:
+- Admin Netlify build env: `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_RELEASE`, `NEXT_PUBLIC_SENTRY_ENVIRONMENT`, `SENTRY_ENVIRONMENT`, plus `SENTRY_AUTH_TOKEN` / `SENTRY_ORG` / `SENTRY_PROJECT` for source-map upload.
+- Flutter `--dart-define` env: `SENTRY_DSN`, `SENTRY_RELEASE` (defaults to Netlify `COMMIT_REF`), `SENTRY_ENVIRONMENT` (defaults to Netlify `CONTEXT`). See [docs/security/alerting.md](./security/alerting.md) for alert routing.
+
 ## Notes
 - If company policy blocks machine-level PATH writes, add C:\tools\supabase manually to your user PATH.
 - User-scope Flutter installation is supported through the setup script.

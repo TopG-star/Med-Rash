@@ -17,6 +17,9 @@ dependencies:
   http: ^1.2.2
   shared_preferences: ^2.3.2
   mobile_scanner: ^7.2.0
+  # Slice B7 — client-side telemetry. DSN is supplied at build time via
+  # --dart-define=SENTRY_DSN=...; when empty, SentryFlutter.init no-ops.
+  sentry_flutter: ^9.1.0
 
 dev_dependencies:
   flutter_test:

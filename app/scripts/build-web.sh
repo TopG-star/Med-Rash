@@ -42,9 +42,24 @@ flutter pub get
 echo "[build-web] Functions base URL: ${MEDRASH_FUNCTIONS_BASE_URL}"
 echo "[build-web] Turnstile site key length: ${#MEDRASH_TURNSTILE_SITE_KEY}"
 
+# Slice B7 — telemetry env vars are optional. When SENTRY_DSN is empty the
+# SDK skips init and the build still ships clean. Release defaults to the
+# Netlify commit ref so each deploy lands as a distinct release in Sentry.
+SENTRY_DSN="${SENTRY_DSN:-}"
+SENTRY_RELEASE="${SENTRY_RELEASE:-${COMMIT_REF:-}}"
+SENTRY_ENVIRONMENT="${SENTRY_ENVIRONMENT:-${CONTEXT:-production}}"
+if [ -n "${SENTRY_DSN}" ]; then
+  echo "[build-web] Sentry enabled (release=${SENTRY_RELEASE:-unset}, env=${SENTRY_ENVIRONMENT})"
+else
+  echo "[build-web] Sentry disabled (no SENTRY_DSN set)"
+fi
+
 flutter build web --release \
   --base-href=/ \
   --dart-define=MEDRASH_FUNCTIONS_BASE_URL="${MEDRASH_FUNCTIONS_BASE_URL}" \
-  --dart-define=MEDRASH_TURNSTILE_SITE_KEY="${MEDRASH_TURNSTILE_SITE_KEY}"
+  --dart-define=MEDRASH_TURNSTILE_SITE_KEY="${MEDRASH_TURNSTILE_SITE_KEY}" \
+  --dart-define=SENTRY_DSN="${SENTRY_DSN}" \
+  --dart-define=SENTRY_RELEASE="${SENTRY_RELEASE}" \
+  --dart-define=SENTRY_ENVIRONMENT="${SENTRY_ENVIRONMENT}"
 
 echo "[build-web] Web build complete → app/build/web/"
