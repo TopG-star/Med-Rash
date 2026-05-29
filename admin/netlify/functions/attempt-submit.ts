@@ -3,60 +3,14 @@ import { PostgrestError } from "@supabase/supabase-js";
 import { EmailTakenError, getSupabaseAdminClient, isUniqueViolation, parseIdentityInput, resolveOrCreateUserId, resolveQuiz } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { validateOrRespond } from "./_shared/validate";
+import { attemptSubmitSchema } from "../../src/lib/schemas/attempt";
 import { extractRemoteIp } from "./_shared/turnstile";
 import {
   enforceRateLimit,
   formatLockoutMessage,
   rateLimitConfig,
 } from "../../src/lib/rate-limit";
-
-type Mode = "learning" | "ranked";
-type Origin = "qr_session" | "open_access";
-
-function parseMode(value: unknown): Mode {
-  if (value === "learning" || value === "ranked") {
-    return value;
-  }
-  throw new Error("mode must be either learning or ranked.");
-}
-
-function parseOrigin(value: unknown): Origin {
-  if (value === "qr_session" || value === "open_access") {
-    return value;
-  }
-  return "open_access";
-}
-
-function parsePositiveInt(value: unknown, fallback: number): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    return fallback;
-  }
-
-  const rounded = Math.floor(value);
-  if (rounded < 0) {
-    return 0;
-  }
-
-  return rounded;
-}
-
-function parseQuizRef(body: Record<string, unknown>): string {
-  const quizId = body.quizId;
-  if (typeof quizId !== "string" || quizId.trim().length === 0) {
-    throw new Error("quizId is required.");
-  }
-
-  return quizId.trim();
-}
-
-function parseSessionId(value: unknown): string | null {
-  if (typeof value !== "string") {
-    return null;
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
 
 type AnswerInput = {
   questionId: string;
@@ -65,35 +19,6 @@ type AnswerInput = {
   isCorrect: boolean;
   responseTimeMs: number;
 };
-
-function parseAnswers(body: Record<string, unknown>): AnswerInput[] {
-  const raw = body.answers;
-  if (!Array.isArray(raw)) return [];
-
-  return raw
-    .filter(
-      (item): item is Record<string, unknown> =>
-        item !== null && typeof item === "object" && !Array.isArray(item),
-    )
-    .filter(
-      (item) =>
-        typeof item.questionId === "string" &&
-        (item.questionId as string).trim().length > 0 &&
-        typeof item.selectedIndex === "number" &&
-        (item.selectedIndex as number) >= 0,
-    )
-    .map((item) => ({
-      questionId: (item.questionId as string).trim(),
-      selectedIndex: Math.floor(item.selectedIndex as number),
-      selectedOptionText:
-        typeof item.selectedOptionText === "string" ? (item.selectedOptionText as string) : "",
-      isCorrect: item.isCorrect === true,
-      responseTimeMs:
-        typeof item.responseTimeMs === "number"
-          ? Math.max(0, Math.floor(item.responseTimeMs as number))
-          : 0,
-    }));
-}
 
 export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
   const preflight = handlePreflight(event);
@@ -130,6 +55,11 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const body = parseJsonBody(event);
+    const validated = validateOrRespond(attemptSubmitSchema, body);
+    if (!validated.ok) return validated.response;
+    const data = validated.data;
+    // Apply shared identity fallbacks ("Pilot Participant", "Guest-XXXX", etc.)
+    // via the shared parser. Phase 3 retires this parser.
     const identity = parseIdentityInput(body);
 
     // A6 — per-participant bucket (60/60s). Plan default; lets one user
@@ -147,23 +77,17 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       });
     }
 
-    const quizRef = parseQuizRef(body);
-    const mode = parseMode(body.mode);
-    const origin = parseOrigin(body.origin);
-    const sessionId = parseSessionId(body.sessionId);
+    const quizRef = data.quizId;
+    const mode = data.mode;
+    const origin = data.origin;
+    const sessionId = data.sessionId ?? null;
 
-    if (origin === "qr_session" && !sessionId) {
-      throw new Error("sessionId is required when origin is qr_session.");
-    }
+    const score = data.score;
+    const totalQuestions = data.totalQuestions;
+    const timeTakenMs = data.timeTakenMs;
 
-    const score = parsePositiveInt(body.score, 0);
-    const totalQuestions = parsePositiveInt(body.totalQuestions, 5);
-    const timeTakenMs = parsePositiveInt(body.timeTakenMs, 0);
-
-    // Clamp time to a sane upper bound (2 hours) to defend against clock skew
-    // or a stuck attempt sending an obscene duration.
-    const MAX_TIME_TAKEN_MS = 2 * 60 * 60 * 1000;
-    const clampedTimeTakenMs = Math.min(timeTakenMs, MAX_TIME_TAKEN_MS);
+    // Schema already clamps to MAX_TIME_MS (2h). Local alias kept for clarity.
+    const clampedTimeTakenMs = timeTakenMs;
 
     const now = new Date();
 
@@ -197,7 +121,13 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       }
     }
 
-    const submittedAnswers = parseAnswers(body);
+    const submittedAnswers: AnswerInput[] = data.answers.map((a) => ({
+      questionId: a.questionId,
+      selectedIndex: a.selectedIndex,
+      selectedOptionText: a.selectedOptionText ?? "",
+      isCorrect: a.isCorrect === true,
+      responseTimeMs: a.responseTimeMs ?? 0,
+    }));
 
     // Filter answers down to ones whose questionId belongs to this quiz, then
     // recompute is_correct from the server's correct_index. Anything else is

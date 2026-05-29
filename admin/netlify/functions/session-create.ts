@@ -3,6 +3,8 @@ import {
   requireAdminUserSession,
   requireLegacyWriteKey,
 } from "./_shared/admin-user-session";
+import { validateOrRespond } from "./_shared/validate";
+import { createSessionSchema } from "../../src/lib/schemas/session";
 import { getSupabaseAdminClient } from "./_shared/supabase";
 import {
   createSessionRecord,
@@ -51,6 +53,12 @@ export async function handler(event: HandlerEvent) {
       message: err instanceof Error ? err.message : "Invalid request body.",
     });
   }
+
+  // A7 — zod front door. The shared parseCreateSessionInput below still
+  // applies fallback defaults; schema only validates shape + cross-field rules
+  // (endsAt >= startsAt) so callers get structured `issues[]` on bad input.
+  const validated = validateOrRespond(createSessionSchema, body);
+  if (!validated.ok) return validated.response;
 
   let input;
   try {

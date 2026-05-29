@@ -14,14 +14,14 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { validateOrRespond } from "./_shared/validate";
+import { leaderboardSchema } from "../../src/lib/schemas/leaderboard";
 import { extractRemoteIp } from "./_shared/turnstile";
 import {
   enforceRateLimit,
   formatLockoutMessage,
   rateLimitConfig,
 } from "../../src/lib/rate-limit";
-
-type LeaderboardType = "monthly" | "allTime";
 
 type LeaderboardRowResponse = {
   rank: number;
@@ -40,31 +40,6 @@ type RpcRow = {
   ranked_attempts: number | string | null;
   last_ranked_at: string | null;
 };
-
-function readType(body: Record<string, unknown>): LeaderboardType {
-  const raw = typeof body.type === "string" ? body.type.trim() : "";
-  if (raw === "monthly" || raw === "allTime") {
-    return raw as LeaderboardType;
-  }
-  return "allTime";
-}
-
-function readLimit(body: Record<string, unknown>): number {
-  const raw = body.limit;
-  const n = typeof raw === "number" ? raw : Number(raw);
-  if (!Number.isFinite(n) || n <= 0) {
-    return 50;
-  }
-  return Math.min(Math.max(Math.floor(n), 1), 100);
-}
-
-function readSeason(body: Record<string, unknown>): string | null {
-  const raw = typeof body.season === "string" ? body.season.trim() : "";
-  if (/^\d{4}-\d{2}$/.test(raw)) {
-    return raw;
-  }
-  return null;
-}
 
 function readIdentityOrNull(body: Record<string, unknown>): IdentityInput | null {
   const pid = body.participantId;
@@ -101,9 +76,11 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const body = parseJsonBody(event);
-    const type = readType(body);
-    const limit = readLimit(body);
-    const seasonOverride = type === "monthly" ? readSeason(body) : null;
+    const validated = validateOrRespond(leaderboardSchema, body);
+    if (!validated.ok) return validated.response;
+    const type = validated.data.type;
+    const limit = validated.data.limit;
+    const seasonOverride = type === "monthly" ? validated.data.season : null;
     const identity = readIdentityOrNull(body);
 
     const supabase = getSupabaseAdminClient();

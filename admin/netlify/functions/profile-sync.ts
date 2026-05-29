@@ -1,6 +1,8 @@
 import { EmailTakenError, getSupabaseAdminClient, parseIdentityInput, resolveOrCreateUserId } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { validateOrRespond } from "./_shared/validate";
+import { profileSyncSchema } from "../../src/lib/schemas/leaderboard";
 import {
   enforceRateLimit,
   formatLockoutMessage,
@@ -30,6 +32,12 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const body = parseJsonBody(event);
+    const validated = validateOrRespond(profileSyncSchema, body);
+    if (!validated.ok) return validated.response;
+    // Apply the existing fallback defaults ("Pilot Participant", "Guest-XXXX",
+    // "Unknown Facility", "General") via the shared parser — schema only
+    // validates shape, not fallbacks. Phase 3 retires this parser when the
+    // server-action wire-ins land.
     const identity = parseIdentityInput(body);
 
     const supabase = getSupabaseAdminClient();

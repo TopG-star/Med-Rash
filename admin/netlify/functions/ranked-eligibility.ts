@@ -1,19 +1,13 @@
 import { getSupabaseAdminClient, parseIdentityInput, resolveOrCreateUserId, resolveQuiz } from "./_shared/supabase";
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { validateOrRespond } from "./_shared/validate";
+import { rankedEligibilitySchema } from "../../src/lib/schemas/leaderboard";
 import {
   enforceRateLimit,
   formatLockoutMessage,
   rateLimitConfig,
 } from "../../src/lib/rate-limit";
-
-function readQuizRef(body: Record<string, unknown>): string {
-  const value = body.quizId;
-  if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error("quizId is required.");
-  }
-  return value.trim();
-}
 
 export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
   const preflight = handlePreflight(event);
@@ -33,8 +27,10 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const body = parseJsonBody(event);
+    const validated = validateOrRespond(rankedEligibilitySchema, body);
+    if (!validated.ok) return validated.response;
     const identity = parseIdentityInput(body);
-    const quizRef = readQuizRef(body);
+    const quizRef = validated.data.quizId;
 
     const supabase = getSupabaseAdminClient();
 

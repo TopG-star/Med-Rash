@@ -13,8 +13,10 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { validateOrRespond } from "./_shared/validate";
 import { extractRemoteIp } from "./_shared/turnstile";
 import { logAuthEvent } from "../../src/lib/audit";
+import { recoverRequestSchema } from "../../src/lib/schemas/recover";
 import {
   enforceRateLimit,
   formatLockoutMessage,
@@ -52,16 +54,9 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const body = parseJsonBody(event);
-    const rawEmail = typeof body.email === "string" ? body.email : "";
-    const email = rawEmail.trim().toLowerCase();
-
-    if (!email) {
-      return jsonResponse(400, {
-        ok: false,
-        code: "BAD_REQUEST",
-        message: "Enter the email you used when you created your profile.",
-      });
-    }
+    const validated = validateOrRespond(recoverRequestSchema, body);
+    if (!validated.ok) return validated.response;
+    const { email } = validated.data;
 
     const supabase = getSupabaseAdminClient();
     const ip = extractRemoteIp(event.headers);

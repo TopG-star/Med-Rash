@@ -1,6 +1,8 @@
 import { getSupabaseAdminClient } from './_shared/supabase';
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from './_shared/http';
 import { requireParticipantAuth } from './_shared/participant-auth';
+import { validateOrRespond } from './_shared/validate';
+import { sessionResolveSchema } from '../../src/lib/schemas/session';
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 30;
@@ -25,14 +27,6 @@ type ResolvedSessionPayload = {
   host: string;
   mode: 'ranked' | 'learning';
 };
-
-function parseJoinCode(body: Record<string, unknown>): string {
-  const value = body.joinCode;
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error('joinCode is required.');
-  }
-  return value.trim().toUpperCase();
-}
 
 type OptionalIdentity = {
   participantId: string;
@@ -182,7 +176,12 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const body = parseJsonBody(event);
-    const joinCode = parseJoinCode(body);
+    const validated = validateOrRespond(sessionResolveSchema, body);
+    if (!validated.ok) {
+      await applyMinimumLatency(startedAtMs);
+      return validated.response;
+    }
+    const joinCode = validated.data.joinCode;
     const supabase = getSupabaseAdminClient();
 
     const { data, error } = await supabase

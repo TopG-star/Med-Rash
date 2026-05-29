@@ -16,8 +16,10 @@ import {
   toV2Handler,
 } from "./_shared/http";
 import { requireParticipantAuth } from "./_shared/participant-auth";
+import { validateOrRespond } from "./_shared/validate";
 import { extractRemoteIp } from "./_shared/turnstile";
 import { logAuthEvent } from "../../src/lib/audit";
+import { recoverVerifySchema } from "../../src/lib/schemas/recover";
 import {
   enforceRateLimit,
   formatLockoutMessage,
@@ -60,20 +62,10 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
   try {
     const body = parseJsonBody(event);
-    const rawEmail = typeof body.email === "string" ? body.email : "";
-    const email = rawEmail.trim().toLowerCase();
-    const otp = typeof body.otp === "string" ? body.otp.trim() : "";
-    const deviceInstallId = typeof body.deviceInstallId === "string" ? body.deviceInstallId.trim() : "";
-    const currentParticipantId =
-      typeof body.currentParticipantId === "string" ? body.currentParticipantId.trim() : "";
-
-    if (!email || !otp || !deviceInstallId) {
-      return jsonResponse(400, {
-        ok: false,
-        code: "BAD_REQUEST",
-        message: "email, otp and deviceInstallId are required.",
-      });
-    }
+    const validated = validateOrRespond(recoverVerifySchema, body);
+    if (!validated.ok) return validated.response;
+    const { email, otp, deviceInstallId } = validated.data;
+    const currentParticipantId = validated.data.currentParticipantId ?? "";
 
     const supabase = getSupabaseAdminClient();
     const ip = extractRemoteIp(event.headers);

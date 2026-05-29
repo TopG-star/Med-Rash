@@ -3,6 +3,8 @@ import {
   requireAdminUserSession,
   requireLegacyWriteKey,
 } from "./_shared/admin-user-session";
+import { validateOrRespond } from "./_shared/validate";
+import { quizBankWriteSchema } from "../../src/lib/schemas/quiz";
 import { getSupabaseAdminClient } from "./_shared/supabase";
 import {
   bulkCreateQuestions,
@@ -93,6 +95,12 @@ export async function handler(event: HandlerEvent) {
       message: err instanceof Error ? err.message : "Invalid request body.",
     });
   }
+
+  // A7 — zod discriminated-union front door. Catches malformed op, missing
+  // payload, wrong payload shape, etc. with structured issues[]. The shared
+  // parseCreate*/parseUpdate* below still apply normalization + fallbacks.
+  const validated = validateOrRespond(quizBankWriteSchema, body);
+  if (!validated.ok) return validated.response;
 
   const op = body.op;
   if (!isOperation(op)) {
