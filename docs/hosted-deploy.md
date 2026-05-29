@@ -144,6 +144,18 @@ In order — each step gates the next.
    filters.
 6. **Functions** — `curl` the function endpoints with the right gate
    header. Expect 200s and JSON bodies, not 404s.
+7. **Security headers (Slice A4)** — `curl -sI https://<admin-origin>/` and
+   `curl -sI https://<app-origin>/` must both echo all 6 headers:
+   `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`,
+   `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`,
+   `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: …`,
+   and `Content-Security-Policy-Report-Only: …` (Phase 1) or
+   `Content-Security-Policy: …` (Phase 2). Open DevTools console on both
+   surfaces and browse the standard happy paths (admin: dashboard →
+   quiz-bank → sessions → reports → intelligence → admin-users;
+   participant: QR join → quiz → leaderboard) and confirm zero blocking
+   CSP violations. Optional: run [securityheaders.com](https://securityheaders.com)
+   against both origins — target grade A.
 
 Document any failures inline in the deploy ticket with HTTP status,
 endpoint, and Netlify deploy ID.

@@ -28,3 +28,39 @@
 # 404. Plugin auto-wires the SSR adapter + image CDN.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# -----------------------------------------------------------------------------
+# Slice A4 — Edge security headers (admin Next.js surface)
+#
+# Defence-in-depth: same headers also set in admin/next.config.ts
+# `async headers()` so a Netlify config drift cannot silently un-secure the
+# admin app, and vice versa.
+#
+# CSP ships as Content-Security-Policy-Report-Only on first deploy so the
+# browser console surfaces violations without blocking. After ~24h of clean
+# admin browsing (login, dashboard, quiz-bank, sessions, reports,
+# intelligence, admin-users), flip the header name to
+# `Content-Security-Policy` in this file AND in admin/next.config.ts in a
+# follow-up commit.
+#
+# Allowances explained:
+#   - script-src 'unsafe-inline': Next.js inlines its runtime + RSC payloads
+#     in <script> tags. Hashing/nonce-ing every Next inline is non-trivial;
+#     plan deferral.
+#   - style-src 'unsafe-inline': Tailwind v4 + Next.js fonts inject inline
+#     style blocks. Same trade-off as script-src.
+#   - connect-src wss://*.supabase.co: Supabase Realtime uses WebSocket.
+#   - font-src 'self': next/font/google self-hosts fonts at build time, so
+#     no third-party font origin is needed at runtime.
+# -----------------------------------------------------------------------------
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    X-Frame-Options           = "DENY"
+    X-Content-Type-Options    = "nosniff"
+    Referrer-Policy           = "strict-origin-when-cross-origin"
+    Permissions-Policy        = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    Content-Security-Policy-Report-Only = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+
