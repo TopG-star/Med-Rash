@@ -5,6 +5,8 @@ import { ScopeToggle, type ScopeValue } from "@/components/scope-toggle";
 import { requireAdminSession } from "@/lib/admin-session";
 import { listAdminQuizzes, type AdminQuizSummary } from "@/lib/quiz-bank-queries";
 
+import { CsvTemplateButton } from "./csv-template-button";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
@@ -68,14 +70,14 @@ export default async function QuizBankPage({
         ) : (
           <div className="vp-list">
             <div className="vp-list-utility-row">
-              <button
-                type="button"
+              <Link
+                href="/quiz-bank/new?bulk=1"
                 className="vp-link-ghost"
-                disabled
-                title="Bulk upload pipeline ships in a follow-up commit."
+                title="Create a quiz and bulk-import its questions from a CSV in one step."
               >
                 + Bulk import via CSV
-              </button>
+              </Link>
+              <CsvTemplateButton />
             </div>
             {quizzes.map((quiz) => {
               const canManage =

@@ -343,3 +343,89 @@ export async function importQuestionsAction(
     return fail(err, "Failed to import questions.");
   }
 }
+
+/**
+ * Result shape for the combined "create quiz + import CSV" action so the
+ * caller can distinguish a partial import (quiz row created but some rows
+ * failed) from a full failure (no quiz row at all).
+ */
+export type CreateQuizWithBulkResult = {
+  quiz: QuizRecord;
+  imported: number;
+  failed: number;
+  failures: Array<{ index: number; message: string }>;
+};
+
+/**
+ * Single-shot bulk create: validates quiz metadata, creates the quiz row,
+ * then bulk-imports the supplied CSV drafts. If the quiz row fails we
+ * return early. If question inserts fail after the quiz row exists, we
+ * return success with the partial counts so the UI can surface them and
+ * route the admin to the detail page to retry the remaining rows.
+ */
+export async function createQuizWithBulkAction(
+  rawPayload: Record<string, unknown>,
+  drafts: CsvQuestionDraft[],
+): Promise<QuizActionResult<CreateQuizWithBulkResult>> {
+  let session;
+  try {
+    session = await requireAnyAdminSession();
+  } catch (err) {
+    return fail(err, "Authorization failed.");
+  }
+  const validated = validateForAction(createQuizPayloadSchema, rawPayload);
+  if (!validated.ok) return { ok: false, message: validated.message };
+  if (!Array.isArray(drafts) || drafts.length === 0) {
+    return { ok: false, message: "Upload at least one valid CSV row before creating the quiz." };
+  }
+  const parsed = toCreateQuizInput(validated.data, session.userId);
+
+  let quiz: QuizRecord;
+  try {
+    quiz = await createQuizRecord(parsed);
+  } catch (err) {
+    return fail(err, "Failed to create quiz.");
+  }
+
+  // Quiz row landed. Run the bulk import; surface partial-failure counts
+  // rather than aborting — the admin can retry the failed rows on the
+  // detail page via the standard CSV import panel.
+  try {
+    const result = await bulkCreateQuestions(
+      quiz.id,
+      draftsToBulkInputs(drafts),
+      session.userId,
+    );
+    revalidatePath("/quiz-bank");
+    revalidatePath(`/quiz-bank/${quiz.slug}`);
+    return {
+      ok: true,
+      data: {
+        quiz,
+        imported: result.created.length,
+        failed: result.failures.length,
+        failures: result.failures,
+      },
+    };
+  } catch (err) {
+    // Quiz exists but bulk insert threw. Keep the quiz so the admin doesn't
+    // lose their metadata work; surface the error and let them retry from
+    // the detail page.
+    revalidatePath("/quiz-bank");
+    revalidatePath(`/quiz-bank/${quiz.slug}`);
+    return {
+      ok: true,
+      data: {
+        quiz,
+        imported: 0,
+        failed: drafts.length,
+        failures: [
+          {
+            index: 0,
+            message: err instanceof Error ? err.message : "Bulk import failed.",
+          },
+        ],
+      },
+    };
+  }
+}

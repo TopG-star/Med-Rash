@@ -149,7 +149,9 @@ export async function createQuizRecord(input: CreateQuizInput): Promise<QuizReco
       slug: input.slug,
       title: input.title,
       category: input.category,
-      product: input.product,
+      // app.quizzes.product is NOT NULL DEFAULT '' (migration 003). Coerce
+      // null to '' so admins can leave the field blank without tripping 23502.
+      product: input.product ?? "",
       summary: input.summary,
       question_count_default: input.questionCountDefault,
       is_active: input.isActive,
@@ -175,7 +177,7 @@ export async function updateQuizRecord(input: UpdateQuizInput): Promise<QuizReco
     .update({
       title: input.title,
       category: input.category,
-      product: input.product,
+      product: input.product ?? "",
       summary: input.summary,
       question_count_default: input.questionCountDefault,
       is_active: input.isActive,

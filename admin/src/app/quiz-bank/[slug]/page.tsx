@@ -12,10 +12,28 @@ import { QuizEditForm } from "./quiz-edit-form";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<{
+    focus?: string;
+    imported?: string;
+    failed?: string;
+  }>;
+};
 
-export default async function QuizDetailPage({ params }: PageProps) {
+function parseNonNegInt(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) return null;
+  return Math.floor(n);
+}
+
+export default async function QuizDetailPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const sp = (await searchParams) ?? {};
+  const focusQuestions = sp.focus === "questions";
+  const importedCount = parseNonNegInt(sp.imported);
+  const failedCount = parseNonNegInt(sp.failed);
   const session = await requireAdminSession({
     currentPath: `/quiz-bank/${slug}`,
   });
@@ -84,10 +102,47 @@ export default async function QuizDetailPage({ params }: PageProps) {
           <QuizEditForm quiz={quiz} />
         </section>
 
-        <section className="vp-panel">
+        <section className="vp-panel" id="questions">
           <div className="vp-panel-head">
             <h2 className="vp-panel-title">Questions</h2>
           </div>
+          {focusQuestions ? (
+            <div
+              className={
+                failedCount && failedCount > 0
+                  ? "vp-banner vp-banner-error"
+                  : "vp-banner vp-banner-info"
+              }
+              role="status"
+            >
+              {importedCount !== null ? (
+                failedCount && failedCount > 0 ? (
+                  <p>
+                    Quiz created. Imported {importedCount} question
+                    {importedCount === 1 ? "" : "s"}; {failedCount} row
+                    {failedCount === 1 ? "" : "s"} failed — retry the failed rows
+                    via the CSV Bulk Import panel below, or add questions
+                    individually.
+                  </p>
+                ) : (
+                  <p>
+                    Quiz created and {importedCount} question
+                    {importedCount === 1 ? "" : "s"} imported. Add or edit
+                    individual questions below.
+                  </p>
+                )
+              ) : questions.length === 0 ? (
+                <p>
+                  Quiz created. Add your first question below, or jump to the
+                  CSV Bulk Import panel to upload many at once.
+                </p>
+              ) : (
+                <p>
+                  Quiz created. Add more questions below or import a CSV.
+                </p>
+              )}
+            </div>
+          ) : null}
           <QuestionManager quizId={quiz.id} quizSlug={quiz.slug} questions={questions} />
         </section>
 

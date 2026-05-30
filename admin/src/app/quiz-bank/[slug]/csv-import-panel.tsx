@@ -14,6 +14,7 @@ import {
 } from "@/lib/quiz-csv";
 
 import { importQuestionsAction } from "../actions";
+import { CsvTemplateButton } from "../csv-template-button";
 
 type Props = {
   quizId: string;
@@ -101,6 +102,9 @@ export function CsvImportPanel({ quizId, quizSlug }: Props) {
           Required: <code>{CSV_REQUIRED_COLUMNS.join(", ")}</code>. Optional:{" "}
           <code>{CSV_OPTIONAL_COLUMNS.join(", ")}</code>.
         </p>
+        <div>
+          <CsvTemplateButton />
+        </div>
       </div>
 
       <label className="vp-field">

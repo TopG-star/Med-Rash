@@ -7,14 +7,26 @@ import { QuizCreateForm } from "./quiz-create-form";
 
 export const dynamic = "force-dynamic";
 
-export default async function NewQuizPage() {
+type SearchParams = { bulk?: string };
+
+export default async function NewQuizPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const session = await requireAdminSession({
     currentPath: "/quiz-bank/new",
   });
+  const sp = await searchParams;
+  const bulkMode = sp.bulk === "1";
   return (
     <AdminShell
-      title="Create Quiz"
-      subtitle="Define a new quiz container. Questions are added on the next screen."
+      title={bulkMode ? "Create Quiz · Bulk CSV Import" : "Create Quiz"}
+      subtitle={
+        bulkMode
+          ? "Fill the quiz metadata and attach a CSV of questions. Both land in one step."
+          : "Define a new quiz container. Questions are added on the next screen."
+      }
       titleSize="sm"
       user={{ email: session.email, role: session.role }}
       actions={
@@ -27,7 +39,7 @@ export default async function NewQuizPage() {
     >
       <div className="vp-scope">
         <div className="vp-card">
-          <QuizCreateForm />
+          <QuizCreateForm bulkMode={bulkMode} />
         </div>
       </div>
     </AdminShell>

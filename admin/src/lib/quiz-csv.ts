@@ -265,3 +265,54 @@ export const CSV_FORMAT_HINT = [
   `correct_index is 1-based (1..${PILOT_QUESTION_OPTION_COUNT}).`,
   `tags within a cell are pipe-separated, e.g. "guideline|product".`,
 ].join(" ");
+
+/** Default filename suggested when the admin downloads the CSV template. */
+export const CSV_TEMPLATE_FILENAME = "medrash-quiz-template.csv";
+
+function csvEscape(cell: string): string {
+  return /[",\n\r]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
+}
+
+/**
+ * Build a ready-to-edit CSV template: header row + two annotated example
+ * rows that exercise every required + optional column. Pairs with the
+ * "Download template" affordance on the bulk import surfaces so first-time
+ * admins don't have to assemble the schema from prose.
+ */
+export function buildCsvTemplate(): string {
+  const headers = [...CSV_REQUIRED_COLUMNS, ...CSV_OPTIONAL_COLUMNS];
+  const exampleRows: string[][] = [
+    [
+      "What is the first-line antibiotic for uncomplicated community-acquired pneumonia in a healthy adult?",
+      "Amoxicillin",
+      "Ciprofloxacin",
+      "Doxycycline",
+      "Vancomycin",
+      "1",
+      "Amoxicillin is first-line per IDSA/ATS guidelines for outpatient CAP without comorbidities.",
+      "Pulmonology",
+      "guidelines|antibiotics",
+      "1",
+      "true",
+    ],
+    [
+      "Which oral anticoagulant is contraindicated in pregnancy?",
+      "Apixaban",
+      "Warfarin",
+      "Enoxaparin (LMWH)",
+      "Heparin (UFH)",
+      "2",
+      "Warfarin crosses the placenta and is teratogenic; LMWH/UFH are preferred in pregnancy.",
+      "Hematology",
+      "contraindications|pregnancy",
+      "2",
+      "true",
+    ],
+  ];
+  const lines = [headers.join(",")];
+  for (const row of exampleRows) {
+    lines.push(row.map(csvEscape).join(","));
+  }
+  // Trailing newline so editors don't munge the last row.
+  return `${lines.join("\n")}\n`;
+}
