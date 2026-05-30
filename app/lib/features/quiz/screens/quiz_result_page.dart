@@ -21,6 +21,7 @@ import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../models/attempt.dart';
 import '../repositories/quiz_repository.dart';
+import '../../session/storage/last_session_store.dart';
 
 class QuizResultPage extends StatefulWidget {
   const QuizResultPage({super.key});
@@ -219,6 +220,23 @@ class _QuizResultPageState extends State<QuizResultPage> {
     context.go('/home');
   }
 
+  VoidCallback? _resolveSessionLeaderboardCallback() {
+    // Surface the per-session board only when the user reached the result
+    // page via a session-launched quiz (LastSessionStore was stamped with a
+    // sessionId on resolve). Falls back to null — the global leaderboard CTA
+    // is always present so the surface never loses a forward action.
+    final LastSessionStore store = getIt<LastSessionStore>();
+    final LastSessionRecord? last = store.read();
+    final String? sessionId = last?.sessionId;
+    if (sessionId == null || sessionId.isEmpty) {
+      return null;
+    }
+    return () {
+      Haptics.submit();
+      context.push('/session-leaderboard/$sessionId');
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
@@ -314,6 +332,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
                     context.go('/leaderboard');
                   },
                   onHome: _goHome,
+                  onSessionLeaderboard: _resolveSessionLeaderboardCallback(),
                 ),
               ],
             ),
@@ -904,10 +923,16 @@ class _WhatsNextCtas extends StatelessWidget {
   const _WhatsNextCtas({
     required this.onLeaderboard,
     required this.onHome,
+    this.onSessionLeaderboard,
   });
 
   final VoidCallback onLeaderboard;
   final VoidCallback onHome;
+
+  /// When the user just finished a quiz launched from a session, the caller
+  /// passes this to surface a dedicated "See how you ranked in this session"
+  /// CTA above the global leaderboard button. Null hides the CTA.
+  final VoidCallback? onSessionLeaderboard;
 
   @override
   Widget build(BuildContext context) {
@@ -924,6 +949,19 @@ class _WhatsNextCtas extends StatelessWidget {
               ),
         ),
         const SizedBox(height: MedRashSpace.md),
+        if (onSessionLeaderboard != null) ...<Widget>[
+          PressScale(
+            onTap: onSessionLeaderboard!,
+            child: ArenaButton(
+              label: 'See your session rank',
+              icon: Icons.emoji_events_rounded,
+              backgroundColor: tokens.primary,
+              foregroundColor: Colors.white,
+              onPressed: onSessionLeaderboard,
+            ),
+          ),
+          const SizedBox(height: MedRashSpace.md),
+        ],
         PressScale(
           onTap: onLeaderboard,
           child: ArenaButton(

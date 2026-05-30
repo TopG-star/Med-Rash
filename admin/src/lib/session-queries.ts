@@ -9,6 +9,7 @@ export type AdminSessionRow = {
   hostName: string | null;
   startsAt: string | null;
   endsAt: string | null;
+  closedAt: string | null;
   createdAt: string;
   createdBy: string | null;
   quizId: string;
@@ -40,6 +41,7 @@ type SessionRow = {
   host_name: string | null;
   starts_at: string | null;
   ends_at: string | null;
+  closed_at: string | null;
   created_at: string;
   created_by: string | null;
   quiz_id: string;
@@ -53,8 +55,10 @@ type SessionRow = {
 function isActiveNow(
   startsAt: string | null,
   endsAt: string | null,
+  closedAt: string | null,
   nowMs: number,
 ): boolean {
+  if (closedAt) return false;
   const startMs = startsAt ? Date.parse(startsAt) : Number.NEGATIVE_INFINITY;
   const endMs = endsAt ? Date.parse(endsAt) : Number.POSITIVE_INFINITY;
   return nowMs >= startMs && nowMs <= endMs;
@@ -73,7 +77,7 @@ export async function listAdminSessions(
   let query = supabase
     .from("sessions")
     .select(
-      "id, name, join_code, host_name, starts_at, ends_at, created_at, created_by, quiz_id, quizzes(title), attempts(id)",
+      "id, name, join_code, host_name, starts_at, ends_at, closed_at, created_at, created_by, quiz_id, quizzes(title), attempts(id)",
     )
     .order("created_at", { ascending: false })
     .limit(50);
@@ -101,12 +105,13 @@ export async function listAdminSessions(
       hostName: row.host_name,
       startsAt: row.starts_at,
       endsAt: row.ends_at,
+      closedAt: row.closed_at,
       createdAt: row.created_at,
       createdBy: row.created_by,
       quizId: row.quiz_id,
       quizTitle: quizRel?.title ?? "(unknown quiz)",
       attemptCount: (row.attempts ?? []).length,
-      isActiveNow: isActiveNow(row.starts_at, row.ends_at, nowMs),
+      isActiveNow: isActiveNow(row.starts_at, row.ends_at, row.closed_at, nowMs),
     };
   });
 }
@@ -167,6 +172,7 @@ export type SessionLiveSnapshot = {
   hostName: string | null;
   startsAt: string | null;
   endsAt: string | null;
+  closedAt: string | null;
   quizTitle: string;
   totalQuestions: number;
   isActiveNow: boolean;
@@ -210,6 +216,7 @@ type LiveSessionHeader = {
   quiz_id: string;
   starts_at: string | null;
   ends_at: string | null;
+  closed_at: string | null;
   quizzes: { title: string | null } | Array<{ title: string | null }> | null;
 };
 
@@ -240,7 +247,7 @@ export async function getSessionLiveSnapshot(
   const { data: headerData, error: headerError } = await supabase
     .from("sessions")
     .select(
-      "id, name, join_code, host_name, quiz_id, starts_at, ends_at, quizzes(title)",
+      "id, name, join_code, host_name, quiz_id, starts_at, ends_at, closed_at, quizzes(title)",
     )
     .eq("id", sessionId)
     .maybeSingle();
@@ -372,9 +379,10 @@ export async function getSessionLiveSnapshot(
     hostName: header.host_name,
     startsAt: header.starts_at,
     endsAt: header.ends_at,
+    closedAt: header.closed_at,
     quizTitle: quizRel?.title ?? "(unknown quiz)",
     totalQuestions: questions.length,
-    isActiveNow: isActiveNow(header.starts_at, header.ends_at, nowMs),
+    isActiveNow: isActiveNow(header.starts_at, header.ends_at, header.closed_at, nowMs),
     joined: uniqueUsers.size,
     scanned,
     submitted,

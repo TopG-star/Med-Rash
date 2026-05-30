@@ -3,7 +3,12 @@ import { validateBody } from "./_helpers";
 import { identityInputSchema, loginRequestOtpSchema, loginVerifyOtpSchema } from "./identity";
 import { recoverRequestSchema, recoverVerifySchema } from "./recover";
 import { attemptSubmitSchema } from "./attempt";
-import { createSessionSchema, sessionResolveSchema } from "./session";
+import {
+  createSessionSchema,
+  sessionResolveSchema,
+  sessionLeaderboardSchema,
+  sessionCloseSchema,
+} from "./session";
 import {
   inviteAdminSchema,
   setRoleSchema,
@@ -202,6 +207,57 @@ describe("session schemas", () => {
   });
   it("sessionResolve rejects missing joinCode", () => {
     expect(sessionResolveSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("sessionLeaderboard happy applies default limit", () => {
+    const r = sessionLeaderboardSchema.safeParse({
+      sessionId: "abc-123",
+      participantId: "p-1",
+      deviceInstallId: "d-1",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.limit).toBe(50);
+  });
+  it("sessionLeaderboard clamps limit into [1,100] range", () => {
+    const r = sessionLeaderboardSchema.safeParse({
+      sessionId: "abc-123",
+      participantId: "p-1",
+      deviceInstallId: "d-1",
+      limit: 500,
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.limit).toBe(100);
+  });
+  it("sessionLeaderboard rejects missing sessionId", () => {
+    const r = sessionLeaderboardSchema.safeParse({
+      participantId: "p-1",
+      deviceInstallId: "d-1",
+    });
+    expect(r.success).toBe(false);
+  });
+  it("sessionLeaderboard rejects missing identity fields", () => {
+    expect(
+      sessionLeaderboardSchema.safeParse({
+        sessionId: "abc",
+        participantId: "p-1",
+      }).success,
+    ).toBe(false);
+    expect(
+      sessionLeaderboardSchema.safeParse({
+        sessionId: "abc",
+        deviceInstallId: "d-1",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("sessionClose happy", () => {
+    const r = sessionCloseSchema.safeParse({ sessionId: " abc-123 " });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.data.sessionId).toBe("abc-123");
+  });
+  it("sessionClose rejects empty sessionId", () => {
+    expect(sessionCloseSchema.safeParse({ sessionId: "" }).success).toBe(false);
+    expect(sessionCloseSchema.safeParse({}).success).toBe(false);
   });
 });
 

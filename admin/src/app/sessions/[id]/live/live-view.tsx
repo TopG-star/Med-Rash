@@ -52,8 +52,12 @@ type CountdownState = {
 function deriveCountdown(
   startsAt: string | null,
   endsAt: string | null,
+  closedAt: string | null,
   nowMs: number,
 ): CountdownState {
+  if (closedAt) {
+    return { label: "Ended by host", value: "00:00", tone: "ended" };
+  }
   const startMs = startsAt ? Date.parse(startsAt) : null;
   const endMs = endsAt ? Date.parse(endsAt) : null;
 
@@ -137,7 +141,12 @@ export function LiveView({
     return () => clearInterval(tick);
   }, []);
 
-  const countdown = deriveCountdown(snapshot.startsAt, snapshot.endsAt, now);
+  const countdown = deriveCountdown(
+    snapshot.startsAt,
+    snapshot.endsAt,
+    snapshot.closedAt,
+    now,
+  );
   const completionPct =
     snapshot.joined > 0
       ? Math.round((snapshot.submitted / snapshot.joined) * 100)

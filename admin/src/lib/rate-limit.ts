@@ -32,6 +32,9 @@ export type RateLimitScope =
   | "quiz_list"
   | "quiz_bank_write"
   | "session_create"
+  // Slice — participant-facing session leaderboard polling. Bucketed by
+  // client IP so a single venue's burst doesn't lock out other rooms.
+  | "session_leaderboard"
   | "auth_mfa_verify"
   | "auth_mfa_recovery";
 
@@ -139,6 +142,10 @@ export const RATE_LIMITS: Record<RateLimitScope, Omit<RateLimitConfig, "scope" |
   quiz_list: { limit: 60, windowSeconds: 60, lockoutSeconds: 60 },
   quiz_bank_write: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
   session_create: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
+  // Participant polls every ~12s; 120/60s leaves comfortable headroom for
+  // multiple devices behind a single venue NAT while still stopping runaway
+  // clients (~10 req/s ceiling per IP).
+  session_leaderboard: { limit: 120, windowSeconds: 60, lockoutSeconds: 60 },
   // Slice B1 P2 — MFA scopes. Tight verify limit (matches OTP) since
   // each attempt is a TOTP guess; recovery scope is even tighter (3)
   // because a real owner only ever consumes one code at a time.

@@ -5,6 +5,7 @@ import '../dev/component_catalog_page.dart';
 import '../motion/shared_axis_page.dart';
 import '../../features/badges/screens/badges_page.dart';
 import '../../features/leaderboard/screens/world_rank_page.dart';
+import '../../features/leaderboard/screens/session_live_leaderboard_page.dart';
 import '../../features/profile/screens/profile_page.dart';
 import '../../features/quiz/models/quiz_detail_launch.dart';
 import '../../features/quiz/screens/explore_page.dart';
@@ -111,6 +112,15 @@ List<RouteBase> buildUserRoutes() {
       pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
         state: state,
         child: const WorldRankPage(),
+      ),
+    ),
+    GoRoute(
+      path: '/session-leaderboard/:sessionId',
+      pageBuilder: (_, GoRouterState state) => sharedAxisPage<void>(
+        state: state,
+        child: SessionLiveLeaderboardPage(
+          sessionId: state.pathParameters['sessionId']!,
+        ),
       ),
     ),
     GoRoute(

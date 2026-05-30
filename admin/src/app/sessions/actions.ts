@@ -8,11 +8,16 @@ import {
   type CreateSessionInput,
   type CreateSessionResult,
 } from "@/lib/session-create";
+import { closeSessionRecord, type CloseSessionResult } from "@/lib/session-close";
 import { validateForAction } from "@/lib/schemas/_helpers";
-import { createSessionSchema } from "@/lib/schemas/session";
+import { createSessionSchema, sessionCloseSchema } from "@/lib/schemas/session";
 
 export type CreateSessionActionResult =
   | { ok: true; data: CreateSessionResult }
+  | { ok: false; message: string };
+
+export type CloseSessionActionResult =
+  | { ok: true; data: CloseSessionResult }
   | { ok: false; message: string };
 
 /**
@@ -52,6 +57,39 @@ export async function createSessionAction(
     return {
       ok: false,
       message: err instanceof Error ? err.message : "Failed to create session.",
+    };
+  }
+}
+
+/**
+ * Server Action — flip a session into the "ended" state by stamping
+ * closed_at = now(). Idempotent (returns alreadyClosed=true if the row was
+ * already closed). The participant app's session leaderboard observes this
+ * flip on its next poll and freezes the board.
+ */
+export async function closeSessionAction(
+  rawInput: Record<string, unknown>,
+): Promise<CloseSessionActionResult> {
+  // Auth gate — requireAdminSession throws/redirects if the caller is not
+  // on the allowlist. We don't need session.userId here yet (audit-log
+  // slice will pick it up), but the call must stay so the action is gated.
+  await requireAdminSession({ currentPath: "/sessions" });
+
+  const validated = validateForAction(sessionCloseSchema, rawInput);
+  if (!validated.ok) {
+    return { ok: false, message: validated.message };
+  }
+
+  try {
+    const data = await closeSessionRecord({ sessionId: validated.data.sessionId });
+    revalidatePath("/sessions");
+    revalidatePath(`/sessions/${validated.data.sessionId}/live`);
+    revalidatePath(`/sessions/${validated.data.sessionId}/recap`);
+    return { ok: true, data };
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : "Failed to close session.",
     };
   }
 }

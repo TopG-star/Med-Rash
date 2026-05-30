@@ -13,6 +13,7 @@ import {
 
 import { SessionCreateForm } from "./session-create-form";
 import { SessionRowActions } from "./session-row-actions";
+import { CloseSessionButton } from "./close-session-button";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -127,6 +128,9 @@ export default async function SessionsPage({
                         {row.attemptCount} attempt
                         {row.attemptCount === 1 ? "" : "s"}
                         {row.hostName ? ` · host ${row.hostName}` : ""}
+                        {row.closedAt
+                          ? ` · ended ${formatDate(row.closedAt)}`
+                          : ""}
                       </p>
                     </div>
                     <div className="vp-row-card-actions">
@@ -136,6 +140,11 @@ export default async function SessionsPage({
                       >
                         Live view
                       </Link>
+                      <CloseSessionButton
+                        sessionId={row.id}
+                        sessionName={row.name}
+                        isClosed={row.closedAt !== null}
+                      />
                       {joinUrl ? (
                         <SessionRowActions
                           sessionName={row.name}

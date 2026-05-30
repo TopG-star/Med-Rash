@@ -1,4 +1,5 @@
 import '../models/leaderboard_row.dart';
+import '../models/session_leaderboard_row.dart';
 
 enum LeaderboardPeriod { monthly, allTime }
 
@@ -12,6 +13,14 @@ abstract class LeaderboardRepository {
   Future<LeaderboardRow?> fetchMyRank({
     required LeaderboardPeriod period,
     String? season,
+  });
+
+  /// Live (or recently-ended) leaderboard for a single session. Distinct
+  /// transport from the global leaderboard because access is gated to
+  /// participants who have at least one attempt row in this session.
+  Future<SessionLeaderboardResult> fetchSessionLeaderboard({
+    required String sessionId,
+    int limit = 50,
   });
 }
 
@@ -62,5 +71,22 @@ class InMemoryLeaderboardRepository implements LeaderboardRepository {
       }
     }
     return null;
+  }
+
+  @override
+  Future<SessionLeaderboardResult> fetchSessionLeaderboard({
+    required String sessionId,
+    int limit = 50,
+  }) async {
+    // The in-memory fallback intentionally returns the "not a participant"
+    // shape so screens degrade gracefully in offline/seed mode rather than
+    // pretending the user has a live session running.
+    return SessionLeaderboardResult(
+      sessionId: sessionId,
+      isLive: false,
+      rows: const <SessionLeaderboardRow>[],
+      requestingUserId: null,
+      notAParticipant: true,
+    );
   }
 }

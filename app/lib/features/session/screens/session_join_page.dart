@@ -91,7 +91,10 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
         ? session.joinCode!.trim()
         : (joinCode.isNotEmpty ? joinCode : null);
     if (recordedCode != null) {
-      await _lastSessionStore.record(recordedCode);
+      await _lastSessionStore.record(
+        recordedCode,
+        sessionId: session.sessionId,
+      );
       _eventBus.emit(LastSessionRecordedEvent(joinCode: recordedCode));
     }
     // Kick off best-effort ranked-eligibility preflight so the lobby renders
@@ -285,6 +288,16 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
               // relying on the app bar back arrow (which OS gesture + the
               // scaffold's PopScope also cover).
               const SizedBox(height: MedRashSpace.lg),
+              if (session.sessionId != null && session.sessionId!.isNotEmpty)
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () => context.push(
+                      '/session-leaderboard/${session.sessionId}',
+                    ),
+                    icon: const Icon(Icons.leaderboard_rounded, size: 18),
+                    label: const Text('View live session leaderboard'),
+                  ),
+                ),
               Center(
                 child: TextButton.icon(
                   onPressed: () => context.go('/home'),
