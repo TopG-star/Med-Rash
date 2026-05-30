@@ -15,6 +15,7 @@ export default async function NewQuizPage() {
     <AdminShell
       title="Create Quiz"
       subtitle="Define a new quiz container. Questions are added on the next screen."
+      titleSize="sm"
       user={{ email: session.email, role: session.role }}
       actions={
         <span className="vp-scope">

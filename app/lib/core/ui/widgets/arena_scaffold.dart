@@ -85,12 +85,34 @@ class ArenaScaffold extends StatelessWidget {
             child: SafeArea(
               child: Padding(
                 padding: EdgeInsets.all(tokens.pageMargin),
-                child: child,
+                child: ScrollConfiguration(
+                  behavior: const _ThinScrollBehavior(),
+                  child: child,
+                ),
               ),
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ThinScrollBehavior extends ScrollBehavior {
+  const _ThinScrollBehavior();
+
+  @override
+  Widget buildScrollbar(
+    BuildContext context,
+    Widget child,
+    ScrollableDetails details,
+  ) {
+    return Scrollbar(
+      controller: details.controller,
+      thickness: 4,
+      radius: const Radius.circular(8),
+      thumbVisibility: false,
+      child: child,
     );
   }
 }

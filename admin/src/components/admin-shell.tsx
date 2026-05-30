@@ -9,11 +9,21 @@ type AdminShellProps = {
   title: string;
   subtitle: string;
   actions?: ReactNode;
+  filters?: ReactNode;
+  titleSize?: "lg" | "sm";
   user: AdminSidebarUser;
   children: ReactNode;
 };
 
-export function AdminShell({ title, subtitle, actions, user, children }: AdminShellProps) {
+export function AdminShell({
+  title,
+  subtitle,
+  actions,
+  filters,
+  titleSize = "lg",
+  user,
+  children,
+}: AdminShellProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
 
@@ -63,7 +73,7 @@ export function AdminShell({ title, subtitle, actions, user, children }: AdminSh
                 <span aria-hidden="true" className="text-xl font-extrabold leading-none">≡</span>
               </button>
               <div className="min-w-0">
-                <h1 className="vp-display vp-display-accent">
+                <h1 className={titleSize === "sm" ? "vp-display-sm" : "vp-display vp-display-accent"}>
                   {title}
                 </h1>
                 <p className="vp-tagline vp-shell-subtitle">{subtitle}</p>
@@ -74,6 +84,7 @@ export function AdminShell({ title, subtitle, actions, user, children }: AdminSh
               <AdminUserMenu email={user.email} role={user.role} />
             </div>
           </header>
+          {filters ? <div className="vp-shell-filters">{filters}</div> : null}
           {children}
         </div>
       </main>

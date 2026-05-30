@@ -46,6 +46,7 @@ export default async function AdminUsersPage() {
     <AdminShell
       title="Team"
       subtitle="Invite teammates, manage roles, and revoke access. Only Owners can see this page."
+      titleSize="sm"
       user={{ email: session.email, role: session.role }}
     >
       <div className="vp-scope vp-vstack vp-vstack-lg">

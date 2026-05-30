@@ -125,6 +125,7 @@ export default async function SessionRecapPage({ params }: PageProps) {
     <AdminShell
       title={`Session Recap · ${snapshot.name}`}
       subtitle={`Final standings, knowledge gaps, and export for ${snapshot.quizTitle}.`}
+      titleSize="sm"
       user={{ email: session.email, role: session.role }}
     >
       <div className="host-room-dark space-y-6">
