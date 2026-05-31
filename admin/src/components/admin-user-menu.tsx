@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 export type AdminUserMenuProps = {
@@ -75,6 +76,16 @@ export function AdminUserMenu({ email, role }: AdminUserMenuProps) {
           <p className="vp-user-menu-meta">
             Role · {role}
           </p>
+          {role === "owner" ? (
+            <Link
+              href="/account/security"
+              role="menuitem"
+              className="vp-button vp-button-ghost vp-user-menu-link"
+              onClick={() => setOpen(false)}
+            >
+              Account security
+            </Link>
+          ) : null}
           <form action="/auth/signout" method="POST" className="vp-user-menu-form">
             <button
               ref={signOutButtonRef}

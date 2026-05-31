@@ -2300,6 +2300,16 @@ select {
   margin-top: 0.65rem;
 }
 
+.vp-user-menu-link {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  margin-top: 0.65rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
 .vp-user-menu-signout {
   width: 100%;
   justify-content: center;
