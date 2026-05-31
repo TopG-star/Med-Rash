@@ -158,14 +158,13 @@ export default async function SessionsPage({
                           Show QR.
                         </span>
                       )}
-                      <button
-                        type="button"
-                        className="vp-button vp-button-primary vp-button-sm vp-disabled-soft"
-                        disabled
-                        title="Export ships with Reports wiring."
+                      <Link
+                        href={`/reports?sessionId=${row.id}`}
+                        className="vp-button vp-button-primary vp-button-sm"
+                        title="Open Reports filtered to this session — download Attempts / Answers / Sessions CSV."
                       >
                         Export Data
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 );
