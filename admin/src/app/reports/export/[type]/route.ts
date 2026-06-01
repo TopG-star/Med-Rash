@@ -218,6 +218,9 @@ export async function GET(
             specialty: filters.specialty,
             facility: filters.facility,
             sessionId: filters.sessionId,
+            quizId: filters.quizId,
+            startsAt: filters.startsAt,
+            endsAt: filters.endsAt,
           },
           { createdBy },
         );
@@ -228,7 +231,18 @@ export async function GET(
       }
       case "facility-performance": {
         const limit = readLimit(req, 50, 500);
-        const rows = await getFacilityPerformance(limit, { createdBy });
+        const rows = await getFacilityPerformance(
+          limit,
+          { createdBy },
+          {
+            quizId: filters.quizId,
+            sessionId: filters.sessionId,
+            specialty: filters.specialty,
+            facility: filters.facility,
+            startsAt: filters.startsAt,
+            endsAt: filters.endsAt,
+          },
+        );
         return csvResponse(
           serializeCsv(rows, FACILITY_COLUMNS),
           `medrash-facility-performance-${suffix}`,
@@ -236,7 +250,18 @@ export async function GET(
       }
       case "treatment-perception": {
         const limit = readLimit(req, 50, 500);
-        const rows = await getTreatmentPerception(limit, { createdBy });
+        const rows = await getTreatmentPerception(
+          limit,
+          { createdBy },
+          {
+            quizId: filters.quizId,
+            sessionId: filters.sessionId,
+            specialty: filters.specialty,
+            facility: filters.facility,
+            startsAt: filters.startsAt,
+            endsAt: filters.endsAt,
+          },
+        );
         return csvResponse(
           serializeCsv(rows, TREATMENT_COLUMNS),
           `medrash-treatment-perception-${suffix}`,

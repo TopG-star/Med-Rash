@@ -80,11 +80,36 @@ export default async function ReportsPage({
           specialty: filters.specialty,
           facility: filters.facility,
           sessionId: filters.sessionId,
+          quizId: filters.quizId,
+          startsAt: filters.startsAt,
+          endsAt: filters.endsAt,
         },
         { createdBy },
       ),
-      getFacilityPerformance(15, { createdBy }),
-      getTreatmentPerception(10, { createdBy }),
+      getFacilityPerformance(
+        15,
+        { createdBy },
+        {
+          quizId: filters.quizId,
+          sessionId: filters.sessionId,
+          specialty: filters.specialty,
+          facility: filters.facility,
+          startsAt: filters.startsAt,
+          endsAt: filters.endsAt,
+        },
+      ),
+      getTreatmentPerception(
+        10,
+        { createdBy },
+        {
+          quizId: filters.quizId,
+          sessionId: filters.sessionId,
+          specialty: filters.specialty,
+          facility: filters.facility,
+          startsAt: filters.startsAt,
+          endsAt: filters.endsAt,
+        },
+      ),
     ]);
 
   const quizzes =

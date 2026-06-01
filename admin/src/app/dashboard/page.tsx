@@ -32,6 +32,7 @@ function facilityToneClass(avg: number | null): string {
 
 export default async function DashboardPage() {
   const session = await requireAdminSession({ currentPath: "/dashboard" });
+  const createdBy = session.role === "host" ? session.userId : null;
   let loadError: string | null = null;
   let kpis = {
     totalUsers: 0,
@@ -44,9 +45,9 @@ export default async function DashboardPage() {
 
   try {
     [kpis, mostMissed, facilityPerformance] = await Promise.all([
-      getOverviewKpis(),
-      getMostMissed(4),
-      getFacilityPerformance(3),
+      getOverviewKpis({ createdBy }),
+      getMostMissed(4, {}, { createdBy }),
+      getFacilityPerformance(3, { createdBy }),
     ]);
   } catch (error) {
     loadError = error instanceof Error ? error.message : "Failed to load dashboard data.";

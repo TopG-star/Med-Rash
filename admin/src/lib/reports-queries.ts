@@ -41,7 +41,10 @@ type MostMissedRpcRow = {
 
 export async function getMostMissed(
   limit: number,
-  filters: Pick<ReportFilters, "specialty" | "facility" | "sessionId"> = {},
+  filters: Pick<
+    ReportFilters,
+    "specialty" | "facility" | "sessionId" | "quizId" | "startsAt" | "endsAt"
+  > = {},
   scope: { createdBy?: string | null } = {},
 ): Promise<MostMissedRow[]> {
   const supabase = getAdminSupabaseClient();
@@ -51,6 +54,9 @@ export async function getMostMissed(
     facility_filter: filters.facility ?? null,
     session_filter: filters.sessionId ?? null,
     created_by_filter: scope.createdBy ?? null,
+    quiz_filter: filters.quizId ?? null,
+    starts_at_filter: filters.startsAt ?? null,
+    ends_at_filter: filters.endsAt ?? null,
   });
   if (error) {
     throw new Error(`Failed to load most-missed: ${error.message}`);
@@ -90,11 +96,21 @@ type FacilityPerformanceRpcRow = {
 export async function getFacilityPerformance(
   limit: number,
   scope: { createdBy?: string | null } = {},
+  filters: Pick<
+    ReportFilters,
+    "quizId" | "sessionId" | "specialty" | "facility" | "startsAt" | "endsAt"
+  > = {},
 ): Promise<FacilityPerformanceRow[]> {
   const supabase = getAdminSupabaseClient();
   const { data, error } = await supabase.rpc("facility_performance", {
     limit_count: limit,
     created_by_filter: scope.createdBy ?? null,
+    quiz_filter: filters.quizId ?? null,
+    session_filter: filters.sessionId ?? null,
+    specialty_filter: filters.specialty ?? null,
+    facility_filter: filters.facility ?? null,
+    starts_at_filter: filters.startsAt ?? null,
+    ends_at_filter: filters.endsAt ?? null,
   });
   if (error) {
     throw new Error(`Failed to load facility performance: ${error.message}`);
@@ -133,11 +149,21 @@ type TreatmentPerceptionRpcRow = {
 export async function getTreatmentPerception(
   limit: number,
   scope: { createdBy?: string | null } = {},
+  filters: Pick<
+    ReportFilters,
+    "quizId" | "sessionId" | "specialty" | "facility" | "startsAt" | "endsAt"
+  > = {},
 ): Promise<TreatmentPerceptionRow[]> {
   const supabase = getAdminSupabaseClient();
   const { data, error } = await supabase.rpc("treatment_perception_trends", {
     limit_count: limit,
     created_by_filter: scope.createdBy ?? null,
+    quiz_filter: filters.quizId ?? null,
+    session_filter: filters.sessionId ?? null,
+    specialty_filter: filters.specialty ?? null,
+    facility_filter: filters.facility ?? null,
+    starts_at_filter: filters.startsAt ?? null,
+    ends_at_filter: filters.endsAt ?? null,
   });
   if (error) {
     throw new Error(`Failed to load treatment perception: ${error.message}`);
