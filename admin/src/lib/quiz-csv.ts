@@ -6,7 +6,7 @@
  * commits, so a single contract governs both sides.
  */
 
-import { PILOT_QUESTION_OPTION_COUNT } from "./quiz-bank-types";
+import { PILOT_QUESTION_OPTION_COUNT, type QuestionRecord } from "./quiz-bank-types";
 
 export type CsvRowInput = Record<string, unknown>;
 
@@ -314,5 +314,49 @@ export function buildCsvTemplate(): string {
     lines.push(row.map(csvEscape).join(","));
   }
   // Trailing newline so editors don't munge the last row.
+  return `${lines.join("\n")}\n`;
+}
+
+/** Suggested filename for an exported quiz, given its slug. */
+export function csvExportFilename(quizSlug: string): string {
+  const safe = quizSlug
+    .replace(/[^a-z0-9-_]/gi, "-")
+    .toLowerCase()
+    .replace(/^[-_]+|[-_]+$/g, "");
+  return `${safe || "quiz"}-questions.csv`;
+}
+
+/**
+ * Serialize a list of `QuestionRecord`s into a CSV string that round-trips
+ * through `parseCsvQuestionRows`. Column order matches `buildCsvTemplate`
+ * (required columns first, then optional), so the output can be edited
+ * offline and re-imported without any column reshuffling.
+ *
+ * Notes:
+ * - `correct_index` is emitted 1-based to match the parser contract.
+ * - `tags` are joined with the canonical `|` separator.
+ * - `clinical_area` empty cell is preserved when null.
+ * - `position` is emitted as the stored integer; `is_active` as `true`/`false`.
+ */
+export function buildCsvFromQuestions(questions: readonly QuestionRecord[]): string {
+  const headers = [...CSV_REQUIRED_COLUMNS, ...CSV_OPTIONAL_COLUMNS];
+  const lines = [headers.join(",")];
+  for (const q of questions) {
+    const opts: string[] = [];
+    for (let i = 0; i < PILOT_QUESTION_OPTION_COUNT; i += 1) {
+      opts.push(q.options[i] ?? "");
+    }
+    const row = [
+      q.prompt,
+      ...opts,
+      String(q.correctIndex + 1),
+      q.explanation,
+      q.clinicalArea ?? "",
+      q.tags.join(TAG_SEPARATOR),
+      String(q.position),
+      q.isActive ? "true" : "false",
+    ];
+    lines.push(row.map(csvEscape).join(","));
+  }
   return `${lines.join("\n")}\n`;
 }

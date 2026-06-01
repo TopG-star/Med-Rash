@@ -5,6 +5,7 @@ import { AdminShell } from "@/components/admin-shell";
 import { requireAdminSession } from "@/lib/admin-session";
 import { getAdminQuizDetailBySlug, getQuizOwnerBySlug } from "@/lib/quiz-detail-queries";
 
+import { CsvExportButton } from "./csv-export-button";
 import { CsvImportPanel } from "./csv-import-panel";
 import { QuestionManager } from "./question-manager";
 import { QuizEditForm } from "./quiz-edit-form";
@@ -105,6 +106,7 @@ export default async function QuizDetailPage({ params, searchParams }: PageProps
         <section className="vp-panel" id="questions">
           <div className="vp-panel-head">
             <h2 className="vp-panel-title">Questions</h2>
+            <CsvExportButton quizSlug={quiz.slug} questions={questions} />
           </div>
           {focusQuestions ? (
             <div
