@@ -164,7 +164,7 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             const SizedBox(height: MedRashSpace.lg),
             if (_tabIndex == 0) ...<Widget>[
-              const _BadgeTabPlaceholder(),
+              _BadgeCollectionGrid(totalPoints: profile.totalPoints),
             ] else if (_tabIndex == 1) ...<Widget>[
               const _StatsTabContent(),
             ] else ...<Widget>[
@@ -998,56 +998,133 @@ class _SignOutOptionCard extends StatelessWidget {
   }
 }
 
-/// P8.b placeholder \u2014 the Badge tab destination. Replaced by the
-/// hex-badge collection grid in P8.f. Kept intentionally lean so the
-/// tab shell can ship without waiting for the badge taxonomy + asset
-/// pass.
-class _BadgeTabPlaceholder extends StatelessWidget {
-  const _BadgeTabPlaceholder();
+/// P8.f -- the Badge tab destination. Renders a 2x3 grid of hex
+/// badges across bronze / silver / gold tiers (career + season for
+/// each metal). Pilot-scoped: unlock state is derived from
+/// `UserProfile.totalPoints` against fixed thresholds so the grid
+/// reacts to the existing scoring loop without any new server work.
+/// Thresholds are constants here on purpose -- the badge taxonomy is
+/// still being designed and we want one obvious place to tune them.
+class _BadgeCollectionGrid extends StatelessWidget {
+  const _BadgeCollectionGrid({required this.totalPoints});
+
+  final int totalPoints;
+
+  static const List<_BadgeTier> _tiers = <_BadgeTier>[
+    _BadgeTier(label: 'Bronze', sublabel: 'Career', threshold: 100),
+    _BadgeTier(label: 'Bronze', sublabel: 'Season', threshold: 250),
+    _BadgeTier(label: 'Silver', sublabel: 'Career', threshold: 500),
+    _BadgeTier(label: 'Silver', sublabel: 'Season', threshold: 1000),
+    _BadgeTier(label: 'Gold', sublabel: 'Career', threshold: 2500),
+    _BadgeTier(label: 'Gold', sublabel: 'Season', threshold: 5000),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
     return ArenaCard(
-      padding: const EdgeInsets.all(MedRashSpace.xl),
+      padding: const EdgeInsets.all(MedRashSpace.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              HexBadge(
-                size: 56,
-                fillColor: tokens.rankGold,
-                borderColor: tokens.secondaryStrong,
-                child: const Icon(
-                  Icons.workspace_premium_rounded,
-                  color: Colors.white,
-                  size: MedRashIconSize.md,
+          Text(
+            'Badge collection',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w700,
+                  color: tokens.textPrimary,
                 ),
-              ),
-              const SizedBox(width: MedRashSpace.md),
-              Expanded(
-                child: Text(
-                  'Badge collection lands here',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        color: tokens.textPrimary,
-                      ),
+          ),
+          const SizedBox(height: MedRashSpace.xs),
+          Text(
+            'Earn ranked points to unlock each tier.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: tokens.textSecondary,
                 ),
-              ),
-            ],
           ),
           const SizedBox(height: MedRashSpace.md),
-          Text(
-            'Earn ranked attempts to unlock hex badges across bronze, silver, and gold tiers. The full collection grid arrives in the next pilot drop.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: tokens.textSecondary,
-                  height: 1.4,
-                ),
+          GridView.count(
+            crossAxisCount: 3,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: MedRashSpace.md,
+            crossAxisSpacing: MedRashSpace.md,
+            childAspectRatio: 0.78,
+            children: <Widget>[
+              for (final _BadgeTier tier in _tiers)
+                _BadgeTile(tier: tier, unlocked: totalPoints >= tier.threshold),
+            ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BadgeTier {
+  const _BadgeTier({
+    required this.label,
+    required this.sublabel,
+    required this.threshold,
+  });
+
+  final String label;
+  final String sublabel;
+  final int threshold;
+
+  Color metalFor(ArenaDesignTokens tokens) {
+    switch (label) {
+      case 'Gold':
+        return tokens.rankGold;
+      case 'Silver':
+        return tokens.rankSilver;
+      case 'Bronze':
+      default:
+        return tokens.rankBronze;
+    }
+  }
+}
+
+class _BadgeTile extends StatelessWidget {
+  const _BadgeTile({required this.tier, required this.unlocked});
+
+  final _BadgeTier tier;
+  final bool unlocked;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    final Color metal = tier.metalFor(tokens);
+    final Color fill = unlocked ? metal : tokens.surfaceMuted;
+    final Color border = unlocked ? metal : tokens.outlineMuted;
+    final IconData icon =
+        unlocked ? Icons.workspace_premium_rounded : Icons.lock_rounded;
+    final Color iconColor = unlocked ? Colors.white : tokens.textSecondary;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        HexBadge(
+          size: 64,
+          fillColor: fill,
+          borderColor: border,
+          child: Icon(icon, color: iconColor, size: MedRashIconSize.md),
+        ),
+        const SizedBox(height: MedRashSpace.xs),
+        Text(
+          tier.label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                color: unlocked ? tokens.textPrimary : tokens.textSecondary,
+              ),
+        ),
+        Text(
+          unlocked ? tier.sublabel : '${tier.threshold} pts',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: tokens.textSecondary,
+              ),
+        ),
+      ],
     );
   }
 }
