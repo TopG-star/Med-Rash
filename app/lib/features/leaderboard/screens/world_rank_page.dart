@@ -324,10 +324,17 @@ class _PodiumSlot extends StatelessWidget {
                     ),
                   ),
                 GamifiedAvatar(
-                  spec: MonogramAvatarSpec(
-                    source: row.name,
-                    tint: row.isCurrentUser ? tokens.primary : null,
-                  ),
+                  spec: (row.userId != null && row.userId!.isNotEmpty)
+                      ? NaviiAvatarSpec(
+                          seed: row.userId!,
+                          fallbackSource: row.name,
+                          fallbackTint:
+                              row.isCurrentUser ? tokens.primary : null,
+                        )
+                      : MonogramAvatarSpec(
+                          source: row.name,
+                          tint: row.isCurrentUser ? tokens.primary : null,
+                        ),
                   diameter: _Podium._avatarDiameter,
                   ringWidth: champion ? 3 : 2,
                   ringGradient: ringGradient,
@@ -391,10 +398,16 @@ class _LeaderRow extends StatelessWidget {
             ),
             const SizedBox(width: MedRashSpace.md),
             GamifiedAvatar(
-              spec: MonogramAvatarSpec(
-                source: row.name,
-                tint: you ? tokens.primary : tokens.secondary,
-              ),
+              spec: (row.userId != null && row.userId!.isNotEmpty)
+                  ? NaviiAvatarSpec(
+                      seed: row.userId!,
+                      fallbackSource: row.name,
+                      fallbackTint: you ? tokens.primary : tokens.secondary,
+                    )
+                  : MonogramAvatarSpec(
+                      source: row.name,
+                      tint: you ? tokens.primary : tokens.secondary,
+                    ),
               diameter: 44,
               ringWidth: 2,
               ringGradient: LinearGradient(
@@ -508,10 +521,16 @@ class _StickyYouCard extends StatelessWidget {
               ),
               const SizedBox(width: MedRashSpace.md),
               GamifiedAvatar(
-                spec: MonogramAvatarSpec(
-                  source: row.name,
-                  tint: tokens.secondary,
-                ),
+                spec: (row.userId != null && row.userId!.isNotEmpty)
+                    ? NaviiAvatarSpec(
+                        seed: row.userId!,
+                        fallbackSource: row.name,
+                        fallbackTint: tokens.secondary,
+                      )
+                    : MonogramAvatarSpec(
+                        source: row.name,
+                        tint: tokens.secondary,
+                      ),
                 diameter: 44,
                 ringWidth: 2,
                 ringGradient: const LinearGradient(

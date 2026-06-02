@@ -123,7 +123,10 @@ class _ProfilePageState extends State<ProfilePage> {
       child: MedRashConstrainedBody(
         child: ListView(
           children: <Widget>[
-            _ProfileHero(profile: profile),
+            _ProfileHero(
+              profile: profile,
+              participantId: getIt<AuthStateManager>().participantId,
+            ),
             const SizedBox(height: MedRashSpace.lg),
             _StatsRow(profile: profile),
             if (profile.totalPoints <= 0 && profile.rank <= 0) ...<Widget>[
@@ -239,9 +242,13 @@ class _ProfilePageState extends State<ProfilePage> {
 enum _SignOutChoice { keepDevice, rotateDevice }
 
 class _ProfileHero extends StatelessWidget {
-  const _ProfileHero({required this.profile});
+  const _ProfileHero({required this.profile, this.participantId});
 
   final UserProfile profile;
+
+  /// Stable per-user seed used to render the Navii mascot when the
+  /// `enableNaviiAvatars` flag is on. Null → monogram fallback.
+  final String? participantId;
 
   @override
   Widget build(BuildContext context) {
@@ -279,12 +286,20 @@ class _ProfileHero extends StatelessWidget {
           child: Column(
             children: <Widget>[
               GamifiedAvatar(
-                spec: MonogramAvatarSpec(
-                  source: profile.nickname.isEmpty
-                      ? profile.fullName
-                      : profile.nickname,
-                  tint: Colors.white,
-                ),
+                spec: (participantId != null && participantId!.isNotEmpty)
+                    ? NaviiAvatarSpec(
+                        seed: participantId!,
+                        fallbackSource: profile.nickname.isEmpty
+                            ? profile.fullName
+                            : profile.nickname,
+                        fallbackTint: Colors.white,
+                      )
+                    : MonogramAvatarSpec(
+                        source: profile.nickname.isEmpty
+                            ? profile.fullName
+                            : profile.nickname,
+                        tint: Colors.white,
+                      ),
                 diameter: 116,
                 ringWidth: 4,
                 ringGradient: MedRashGradient.primaryHeader(tokens),

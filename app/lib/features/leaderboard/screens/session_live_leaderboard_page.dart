@@ -345,6 +345,7 @@ class _SessionRow extends StatelessWidget {
         const SizedBox(width: MedRashSpace.sm),
         _AvatarRing(
           name: row.name,
+          userId: row.userId,
           topRank: topRank,
           isCurrentUser: me,
         ),
@@ -492,11 +493,16 @@ class _RankBadge extends StatelessWidget {
 class _AvatarRing extends StatelessWidget {
   const _AvatarRing({
     required this.name,
+    required this.userId,
     required this.topRank,
     required this.isCurrentUser,
   });
 
   final String name;
+
+  /// Stable per-user seed used for the Navii mascot. Empty/null falls back
+  /// to the monogram of [name].
+  final String? userId;
   final bool topRank;
   final bool isCurrentUser;
 
@@ -507,8 +513,11 @@ class _AvatarRing extends StatelessWidget {
         ? Colors.white
         : (topRank ? tokens.tertiary : tokens.outlineMuted);
     final double ringWidth = (isCurrentUser || topRank) ? 2 : 1;
+    final String? seed = userId;
     return GamifiedAvatar(
-      spec: MonogramAvatarSpec(source: name),
+      spec: (seed != null && seed.isNotEmpty)
+          ? NaviiAvatarSpec(seed: seed, fallbackSource: name)
+          : MonogramAvatarSpec(source: name),
       diameter: 44,
       ringWidth: ringWidth,
       ringGradient: LinearGradient(
