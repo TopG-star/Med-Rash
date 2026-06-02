@@ -70,31 +70,15 @@ class ArenaScaffold extends StatelessWidget {
             child: Container(color: tokens.outline, height: 3),
           ),
         ),
-<<<<<<< HEAD
         bottomNavigationBar:
             bottomNav ? ArenaBottomNav(location: location) : null,
-        body: Container(
-          decoration: BoxDecoration(
-            color: tokens.background,
-            image: DecorationImage(
-              image: const AssetImage(''),
-              onError: (_, __) {},
-            ),
-          ),
-          child: CustomPaint(
-            painter: _DotGridPainter(color: tokens.outlineMuted),
-            child: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.all(tokens.pageMargin),
-=======
-        child: CustomPaint(
+        body: CustomPaint(
           painter: _DotGridPainter(color: tokens.outlineMuted),
           child: SafeArea(
             child: Padding(
               padding: EdgeInsets.all(tokens.pageMargin),
               child: ScrollConfiguration(
                 behavior: const _ThinScrollBehavior(),
->>>>>>> 7ddf1e1 (style(ui): consistency pass - admin density, podium medals, nav indicator, scrollbars)
                 child: child,
               ),
             ),
