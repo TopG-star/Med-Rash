@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 /// Sealed contract for what fills the body of a `GamifiedAvatar`.
 ///
 /// MedRash currently ships nickname-only profiles (no PII photos), so the
-/// default body is a `MonogramAvatarSpec` rendering 1–2 initials.
-/// `NaviiAvatarSpec` is the foundation for the future Navii customizable
-/// character system — its fields describe color tokens and expression so the
-/// avatar widget can render a placeholder today and swap in real Navii art
-/// later without changing the call-sites.
+/// fallback body is a `MonogramAvatarSpec` rendering 1–2 initials.
+/// `NaviiAvatarSpec` carries a deterministic seed (Supabase
+/// `participantId`); the rendering widget fetches the matching mascot SVG
+/// from the self-hosted Navii endpoint and falls back to monogram on
+/// network failure, missing seed, or disabled feature flag.
 sealed class AvatarSpec {
   const AvatarSpec();
 }
@@ -21,21 +21,25 @@ class MonogramAvatarSpec extends AvatarSpec {
   final Color? tint;
 }
 
-/// Placeholder spec for the upcoming Navii customizable character. Stores the
-/// color tokens and expression chosen by the player. Until the Navii art
-/// pipeline lands, the rendering widget falls back to a stylized circle.
+/// Seed-based Navii mascot spec. `seed` is the stable per-user identifier
+/// (Supabase `participantId`); same seed always produces the same avatar.
+/// `fallbackSource` is the monogram source used when the Navii SVG cannot
+/// be loaded (offline, 4xx/5xx, feature flag off).
 class NaviiAvatarSpec extends AvatarSpec {
   const NaviiAvatarSpec({
-    required this.bodyColor,
-    required this.accentColor,
-    this.expression = NaviiExpression.smile,
+    required this.seed,
+    required this.fallbackSource,
+    this.fallbackTint,
   });
 
-  final Color bodyColor;
-  final Color accentColor;
-  final NaviiExpression expression;
-}
+  /// Stable per-user seed. Trimmed at the call site; lowercased only when
+  /// it matches a UUID shape (server-side normalization mirrors this).
+  final String seed;
 
-/// Discrete expression poses for `NaviiAvatarSpec`. Maps to a single asset
-/// frame today; later phases may animate transitions between poses.
-enum NaviiExpression { smile, focus, cheer, idle }
+  /// Nickname (or free string) used to render the monogram fallback so the
+  /// avatar is never empty.
+  final String fallbackSource;
+
+  /// Optional tint forwarded to the monogram fallback.
+  final Color? fallbackTint;
+}

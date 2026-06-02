@@ -23,19 +23,19 @@ void main() {
       expect(find.text('JK'), findsOneWidget);
     });
 
-    testWidgets('NaviiAvatarSpec renders placeholder glyph for expression',
+    testWidgets('NaviiAvatarSpec falls back to monogram when flag is off',
         (tester) async {
       await tester.pumpWidget(_host(const GamifiedAvatar(
         spec: NaviiAvatarSpec(
-          bodyColor: Color(0xFF6C5CE7),
-          accentColor: Color(0xFFFFC329),
-          expression: NaviiExpression.cheer,
+          seed: '11111111-2222-3333-4444-555555555555',
+          fallbackSource: 'Ada Lovelace',
         ),
         diameter: 80,
       )));
-      // Cheer maps to the party-popper glyph; presence confirms the switch.
-      expect(find.text('\u{1F389}'), findsOneWidget);
-      expect(find.byType(MonogramAvatar), findsNothing);
+      // Feature flag defaults to off in the test binary, so the Navii
+      // branch short-circuits to the monogram fallback.
+      expect(find.byType(MonogramAvatar), findsOneWidget);
+      expect(find.text('AL'), findsOneWidget);
     });
 
     testWidgets('flagEmoji renders only when provided', (tester) async {

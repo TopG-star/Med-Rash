@@ -22,5 +22,14 @@ class AppConfig {
     'MEDRASH_QR_FAST_JOIN',
     defaultValue: false,
   );
+
+  /// P7 — Navii avatars. Off by default; flip per build with
+  /// `--dart-define=MEDRASH_ENABLE_NAVII_AVATARS=true` once the backend
+  /// function is deployed and a smoke test passes. When false, every
+  /// `NaviiAvatarSpec` short-circuits to its monogram fallback.
+  static const bool enableNaviiAvatars = bool.fromEnvironment(
+    'MEDRASH_ENABLE_NAVII_AVATARS',
+    defaultValue: false,
+  );
 }
 

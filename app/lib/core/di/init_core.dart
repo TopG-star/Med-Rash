@@ -8,6 +8,7 @@ import '../infra/event_bus.dart';
 import '../infra/medrash_http_client.dart';
 import '../infra/overlay_manager.dart';
 import '../infra/turnstile_token_provider.dart';
+import '../ui/widgets/navii_svg_loader.dart';
 import '../../features/leaderboard/repositories/leaderboard_repository.dart';
 import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_repository.dart';
 import '../../features/profile/repositories/profile_repository.dart';
@@ -25,6 +26,11 @@ import 'get_it.dart';
 
 Future<void> initCore() async {
   final SharedPreferences preferences = await SharedPreferences.getInstance();
+
+  // P7 — Navii avatars. Loader is wired unconditionally; the widget itself
+  // gates rendering on `AppConfig.enableNaviiAvatars`, so leaving the
+  // singleton in place when the flag is off costs nothing at runtime.
+  globalNaviiSvgLoader ??= HttpNaviiSvgLoader();
 
   getIt.registerLazySingleton<EventBus>(EventBus.new);
   getIt.registerLazySingleton<OverlayController>(OverlayController.new);
