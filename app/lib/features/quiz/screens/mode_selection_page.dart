@@ -13,6 +13,7 @@ import '../../../core/motion/stagger_list.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/identity_badge.dart';
+import '../../../core/ui/responsive.dart';
 import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/ui/widgets/gradient_card.dart';
@@ -23,6 +24,7 @@ import '../../profile/storage/streak_store.dart';
 import '../../profile/widgets/complete_profile_banner.dart';
 import '../../session/events/last_session_recorded_event.dart';
 import '../../session/storage/last_session_store.dart';
+import '../storage/quiz_attempt_store.dart';
 
 /// MedRash home dashboard (Slice 2b — "Vibrant Pulse" rebuild). Three bands:
 ///   1. Greeting + hero featured card. The hero promotes the participant's
@@ -54,6 +56,12 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
   StreakSnapshot _streak = StreakSnapshot.empty;
   UserProfile? _profile;
 
+  /// P8.d — last completed quiz attempt surfaced as a "Recent quiz"
+  /// recap card directly under the stats row. Sourced synchronously
+  /// from `QuizAttemptStore.loadCompleted()` so the card paints with
+  /// the first frame instead of after an async hop.
+  PersistedCompletedAttempt? _recentQuiz;
+
   @override
   void initState() {
     super.initState();
@@ -64,6 +72,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
 
     _lastSession = _lastSessionStore.read();
     _streak = _streakStore.read();
+    _recentQuiz = getIt<QuizAttemptStore>().loadCompleted();
     _loadProfile();
 
     _lastSessionSub = _eventBus
@@ -118,41 +127,50 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
       title: MedRashStrings.appTitle,
       bottomNav: true,
       actions: const <Widget>[IdentityBadge()],
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: <Widget>[
-          const CompleteProfileBanner(),
-          _Greeting(greeting: greeting),
-          const SizedBox(height: MedRashSpace.lg),
-          _HeroFeaturedCard(
-            lastSession: _lastSession,
-            onResume: (String joinCode) =>
-                _go('/session/${Uri.encodeComponent(joinCode)}'),
-            onRanked: () => _go('/ranked'),
-          ),
-          const SizedBox(height: MedRashSpace.xl),
-          _StatsHeading(
-            title: MedRashStrings.homeStatsHeading,
-            actionLabel: MedRashStrings.homeStatsViewAll,
-            onActionTap: () => _go('/profile'),
-          ),
-          const SizedBox(height: MedRashSpace.sm),
-          _StatsRow(
-            streak: _streak.currentStreak,
-            careerPoints: _profile?.totalPoints ?? 0,
-            worldRank: _profile?.rank ?? 0,
-          ),
-          const SizedBox(height: MedRashSpace.xl),
-          Text(
-            MedRashStrings.homeModesHeading,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontFamily: 'Poppins',
-                  fontWeight: FontWeight.w800,
-                  color: tokens.textPrimary,
-                ),
-          ),
-          const SizedBox(height: MedRashSpace.sm),
-          _ModeGrid(
+      child: MedRashConstrainedBody(
+        maxWidth: 1080,
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: <Widget>[
+            const CompleteProfileBanner(),
+            _Greeting(greeting: greeting),
+            const SizedBox(height: MedRashSpace.lg),
+            _HeroFeaturedCard(
+              lastSession: _lastSession,
+              onResume: (String joinCode) =>
+                  _go('/session/${Uri.encodeComponent(joinCode)}'),
+              onRanked: () => _go('/ranked'),
+            ),
+            const SizedBox(height: MedRashSpace.xl),
+            _StatsHeading(
+              title: MedRashStrings.homeStatsHeading,
+              actionLabel: MedRashStrings.homeStatsViewAll,
+              onActionTap: () => _go('/profile'),
+            ),
+            const SizedBox(height: MedRashSpace.sm),
+            _StatsRow(
+              streak: _streak.currentStreak,
+              careerPoints: _profile?.totalPoints ?? 0,
+              worldRank: _profile?.rank ?? 0,
+            ),
+            if (_recentQuiz != null) ...<Widget>[
+              const SizedBox(height: MedRashSpace.lg),
+              _RecentQuizCard(
+                attempt: _recentQuiz!,
+                onTap: () => _go('/profile'),
+              ),
+            ],
+            const SizedBox(height: MedRashSpace.xl),
+            Text(
+              MedRashStrings.homeModesHeading,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontFamily: 'Poppins',
+                    fontWeight: FontWeight.w800,
+                    color: tokens.textPrimary,
+                  ),
+            ),
+            const SizedBox(height: MedRashSpace.sm),
+            _ModeGrid(
             tiles: <_ModeTileData>[
               _ModeTileData(
                 label: MedRashStrings.modeLiveLabel,
@@ -194,6 +212,7 @@ class _ModeSelectionPageState extends State<ModeSelectionPage> {
           ),
           const SizedBox(height: MedRashSpace.lg),
         ],
+      ),
       ),
     );
   }
@@ -374,6 +393,97 @@ class _HeroFeaturedCard extends StatelessWidget {
     }
     final int h = diff.inHours;
     return '$h hour${h == 1 ? '' : 's'} ago';
+  }
+}
+
+/// P8.d — surfaces the participant's most recent completed attempt as a
+/// recap card directly below the stats row. Tapping it routes to
+/// `/profile` so the participant can see the longer history. Uses only
+/// the data already persisted in `PersistedCompletedAttempt` so no
+/// extra network hop or repository lookup is required.
+class _RecentQuizCard extends StatelessWidget {
+  const _RecentQuizCard({required this.attempt, required this.onTap});
+
+  final PersistedCompletedAttempt attempt;
+  final VoidCallback onTap;
+
+  String get _percentLabel {
+    if (attempt.totalQuestions <= 0) return '0%';
+    final int pct = ((attempt.score / attempt.totalQuestions) * 100).round();
+    return '$pct%';
+  }
+
+  String _modeLabel() {
+    switch (attempt.modeName) {
+      case 'ranked':
+        return 'RANKED';
+      case 'live':
+        return 'LIVE';
+      case 'learn':
+        return 'LEARN';
+      default:
+        return attempt.modeName.toUpperCase();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    return PressScale(
+      onTap: onTap,
+      child: GradientCard(
+        color: tokens.surface,
+        padding: const EdgeInsets.all(MedRashSpace.md),
+        borderColor: tokens.outlineMuted,
+        child: Row(
+          children: <Widget>[
+            HexBadge(
+              size: 48,
+              fillColor: tokens.primarySoft,
+              borderColor: tokens.primary,
+              child: Icon(
+                Icons.replay_rounded,
+                color: tokens.primary,
+                size: MedRashIconSize.md,
+              ),
+            ),
+            const SizedBox(width: MedRashSpace.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'RECENT QUIZ \u00b7 ${_modeLabel()}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: tokens.textSecondary,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.1,
+                        ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Scored ${attempt.score} / ${attempt.totalQuestions}  \u00b7  $_percentLabel',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontFamily: 'Poppins',
+                          fontWeight: FontWeight.w700,
+                          color: tokens.textPrimary,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: MedRashSpace.sm),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: tokens.textSecondary,
+              size: MedRashIconSize.md,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -567,7 +677,6 @@ class _ModeGrid extends StatelessWidget {
   const _ModeGrid({required this.tiles});
 
   final List<_ModeTileData> tiles;
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -583,7 +692,7 @@ class _ModeGrid extends StatelessWidget {
                 crossAxisCount: cols,
                 mainAxisSpacing: MedRashSpace.md,
                 crossAxisSpacing: MedRashSpace.md,
-                childAspectRatio: cols == 2 ? 1.05 : 0.95,
+                childAspectRatio: cols == 2 ? 1.05 : 1.0,
               ),
               itemBuilder: (BuildContext context, int i) =>
                   _ModeTile(data: tiles[i]),
