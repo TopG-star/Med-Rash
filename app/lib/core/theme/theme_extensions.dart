@@ -53,6 +53,31 @@ class ArenaTheme extends ThemeExtension<ArenaTheme> {
         rankGold: blend(tokens.rankGold, other.tokens.rankGold),
         rankSilver: blend(tokens.rankSilver, other.tokens.rankSilver),
         rankBronze: blend(tokens.rankBronze, other.tokens.rankBronze),
+        primaryGradientStart: blend(
+            tokens.primaryGradientStart, other.tokens.primaryGradientStart),
+        primaryGradientEnd: blend(
+            tokens.primaryGradientEnd, other.tokens.primaryGradientEnd),
+        surfaceElevatedSheet: blend(
+            tokens.surfaceElevatedSheet, other.tokens.surfaceElevatedSheet),
+        highlightStrip:
+            blend(tokens.highlightStrip, other.tokens.highlightStrip),
+        onHighlightStrip:
+            blend(tokens.onHighlightStrip, other.tokens.onHighlightStrip),
+        podiumGoldStart:
+            blend(tokens.podiumGoldStart, other.tokens.podiumGoldStart),
+        podiumGoldEnd: blend(tokens.podiumGoldEnd, other.tokens.podiumGoldEnd),
+        podiumSilverStart:
+            blend(tokens.podiumSilverStart, other.tokens.podiumSilverStart),
+        podiumSilverEnd:
+            blend(tokens.podiumSilverEnd, other.tokens.podiumSilverEnd),
+        podiumBronzeStart:
+            blend(tokens.podiumBronzeStart, other.tokens.podiumBronzeStart),
+        podiumBronzeEnd:
+            blend(tokens.podiumBronzeEnd, other.tokens.podiumBronzeEnd),
+        cardPeach: blend(tokens.cardPeach, other.tokens.cardPeach),
+        cardLavender: blend(tokens.cardLavender, other.tokens.cardLavender),
+        cardMint: blend(tokens.cardMint, other.tokens.cardMint),
+        cardGold: blend(tokens.cardGold, other.tokens.cardGold),
         borderWidth: mix(tokens.borderWidth, other.tokens.borderWidth),
         shadowOffset: mix(tokens.shadowOffset, other.tokens.shadowOffset),
         radiusLarge: mix(tokens.radiusLarge, other.tokens.radiusLarge),

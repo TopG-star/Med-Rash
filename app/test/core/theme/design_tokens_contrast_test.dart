@@ -19,6 +19,27 @@ void main() {
     _runSuite('light', ArenaDesignTokens.light, isDark: false);
     _runSuite('dark', ArenaDesignTokens.dark, isDark: true);
   });
+
+  group('MedRashGradient builders', () {
+    test('primaryHeader uses token start/end in order', () {
+      final LinearGradient g =
+          MedRashGradient.primaryHeader(ArenaDesignTokens.light);
+      expect(g.colors.first, ArenaDesignTokens.light.primaryGradientStart);
+      expect(g.colors.last, ArenaDesignTokens.light.primaryGradientEnd);
+      expect(g.begin, Alignment.topCenter);
+      expect(g.end, Alignment.bottomCenter);
+    });
+
+    test('podium builders pair correct token tiers', () {
+      const ArenaDesignTokens t = ArenaDesignTokens.light;
+      expect(MedRashGradient.podiumGold(t).colors,
+          <Color>[t.podiumGoldStart, t.podiumGoldEnd]);
+      expect(MedRashGradient.podiumSilver(t).colors,
+          <Color>[t.podiumSilverStart, t.podiumSilverEnd]);
+      expect(MedRashGradient.podiumBronze(t).colors,
+          <Color>[t.podiumBronzeStart, t.podiumBronzeEnd]);
+    });
+  });
 }
 
 void _runSuite(String label, ArenaDesignTokens t, {required bool isDark}) {
@@ -53,6 +74,40 @@ void _runSuite(String label, ArenaDesignTokens t, {required bool isDark}) {
     _expectAALarge('primary glyph on surface', t.primary, t.surface);
     _expectAALarge(
         'white glyph on dark accent CTA fill', Colors.white, darkAccent);
+
+    // ---------- P0 gamified rebrand additions ----------
+    // Header gradient: white display text sits on top of the gradient. Assert
+    // AA-large against the lighter (worst-case) stop in light mode and AA-body
+    // against the darker stop in dark mode.
+    _expectAALarge('white display on primaryGradientStart', Colors.white,
+        t.primaryGradientStart);
+    _expectAALarge('white display on primaryGradientEnd', Colors.white,
+        t.primaryGradientEnd);
+
+    // Highlight strip carries white bold text ("doing better than 60%").
+    _expectAALarge(
+        'onHighlightStrip on highlightStrip', t.onHighlightStrip,
+        t.highlightStrip);
+
+    // Pastel cards carry textPrimary in body sizes — AA body required.
+    _expectAA('textPrimary on cardPeach', t.textPrimary, t.cardPeach);
+    _expectAA('textPrimary on cardLavender', t.textPrimary, t.cardLavender);
+    _expectAA('textPrimary on cardMint', t.textPrimary, t.cardMint);
+    _expectAA('textPrimary on cardGold', t.textPrimary, t.cardGold);
+
+    // Podium tier labels: per reference, gold/silver use dark numerals on the
+    // lighter top stop, and bronze uses white numerals on the deeper bottom
+    // stop. Gold/silver are decorative metallic colors that look the same in
+    // light and dark modes, so the numeral foreground is a fixed dark color
+    // (not theme-following textPrimary). Podium block widgets must use the
+    // same fixed color asserted here.
+    const Color podiumDarkNumeral = Color(0xFF1E1A2E);
+    _expectAALarge('dark numeral on podiumGoldStart', podiumDarkNumeral,
+        t.podiumGoldStart);
+    _expectAALarge('dark numeral on podiumSilverStart', podiumDarkNumeral,
+        t.podiumSilverStart);
+    _expectAALarge(
+        'white numeral on podiumBronzeEnd', Colors.white, t.podiumBronzeEnd);
   });
 }
 
