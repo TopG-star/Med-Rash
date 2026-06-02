@@ -22,6 +22,7 @@ import '../../../core/ui/widgets/empty_state.dart';
 import '../../../core/ui/widgets/gamified_avatar.dart';
 import '../../../core/ui/widgets/gradient_card.dart';
 import '../../../core/ui/widgets/hex_badge.dart';
+import '../../../core/ui/widgets/pill_segmented_control.dart';
 import '../../quiz/storage/quiz_attempt_store.dart';
 import '../models/avatar_spec.dart';
 import '../models/user_profile.dart';
@@ -41,6 +42,11 @@ class _ProfilePageState extends State<ProfilePage> {
   late final TextEditingController _facilityController = TextEditingController();
   String _specialty = 'Emergency Medicine';
   bool _saving = false;
+
+  /// P8.b — 0 = Badge, 1 = Stats, 2 = Details. Default to Badge so the
+  /// participant lands on the destination/character feel of the profile
+  /// instead of an identity form.
+  int _tabIndex = 0;
   StreamSubscription<ProfilePointsUpdatedEvent>? _pointsSubscription;
 
   @override
@@ -141,43 +147,62 @@ class _ProfilePageState extends State<ProfilePage> {
               ),
             ],
             const SizedBox(height: MedRashSpace.xl),
-            const _SectionLabel(label: 'IDENTITY'),
-            const SizedBox(height: MedRashSpace.sm),
-            _ProfileField(
-              label: 'Nickname',
-              icon: Icons.alternate_email_rounded,
-              controller: _nicknameController,
-              hintText: '@yourname',
-              maxLength: 32,
+            PillSegmentedControl<int>(
+              value: _tabIndex,
+              segments: const <PillSegment<int>>[
+                PillSegment<int>(value: 0, label: 'Badge'),
+                PillSegment<int>(value: 1, label: 'Stats'),
+                PillSegment<int>(value: 2, label: 'Details'),
+              ],
+              onChanged: (int v) {
+                Haptics.selection();
+                setState(() => _tabIndex = v);
+              },
             ),
-            const SizedBox(height: MedRashSpace.md),
-            _ProfileField(
-              label: 'Facility',
-              icon: Icons.local_hospital_rounded,
-              controller: _facilityController,
-              hintText: 'Where you train or practice',
-            ),
-            const SizedBox(height: MedRashSpace.md),
-            _SpecialtyField(
-              value: _specialty,
-              onChanged: (String value) => setState(() => _specialty = value),
-            ),
-            const SizedBox(height: MedRashSpace.xl),
-            PressScale(
-              enabled: !_saving,
-              onTap: _saving ? null : _saveProfile,
-              child: ArenaButton(
-                label: _saving ? 'Saving\u2026' : 'Save Profile',
-                icon: Icons.check_circle_rounded,
-                backgroundColor: context.arenaTokens.secondary,
-                foregroundColor: context.arenaTokens.onSecondary,
-                onPressed: _saving ? null : _saveProfile,
-              ),
-            ),
-            const SizedBox(height: MedRashSpace.xl),
-            const _ClaimAccountCard(),
             const SizedBox(height: MedRashSpace.lg),
-            _SignOutCard(onSignOut: _showSignOutSheet),
+            if (_tabIndex == 0) ...<Widget>[
+              const _BadgeTabPlaceholder(),
+            ] else if (_tabIndex == 1) ...<Widget>[
+              const _StatsTabPlaceholder(),
+            ] else ...<Widget>[
+              const _SectionLabel(label: 'IDENTITY'),
+              const SizedBox(height: MedRashSpace.sm),
+              _ProfileField(
+                label: 'Nickname',
+                icon: Icons.alternate_email_rounded,
+                controller: _nicknameController,
+                hintText: '@yourname',
+                maxLength: 32,
+              ),
+              const SizedBox(height: MedRashSpace.md),
+              _ProfileField(
+                label: 'Facility',
+                icon: Icons.local_hospital_rounded,
+                controller: _facilityController,
+                hintText: 'Where you train or practice',
+              ),
+              const SizedBox(height: MedRashSpace.md),
+              _SpecialtyField(
+                value: _specialty,
+                onChanged: (String value) => setState(() => _specialty = value),
+              ),
+              const SizedBox(height: MedRashSpace.xl),
+              PressScale(
+                enabled: !_saving,
+                onTap: _saving ? null : _saveProfile,
+                child: ArenaButton(
+                  label: _saving ? 'Saving\u2026' : 'Save Profile',
+                  icon: Icons.check_circle_rounded,
+                  backgroundColor: context.arenaTokens.secondary,
+                  foregroundColor: context.arenaTokens.onSecondary,
+                  onPressed: _saving ? null : _saveProfile,
+                ),
+              ),
+              const SizedBox(height: MedRashSpace.xl),
+              const _ClaimAccountCard(),
+              const SizedBox(height: MedRashSpace.lg),
+              _SignOutCard(onSignOut: _showSignOutSheet),
+            ],
           ],
         ),
       ),
@@ -965,6 +990,109 @@ class _SignOutOptionCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// P8.b placeholder \u2014 the Badge tab destination. Replaced by the
+/// hex-badge collection grid in P8.f. Kept intentionally lean so the
+/// tab shell can ship without waiting for the badge taxonomy + asset
+/// pass.
+class _BadgeTabPlaceholder extends StatelessWidget {
+  const _BadgeTabPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    return ArenaCard(
+      padding: const EdgeInsets.all(MedRashSpace.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              HexBadge(
+                size: 56,
+                fillColor: tokens.rankGold,
+                borderColor: tokens.secondaryStrong,
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Colors.white,
+                  size: MedRashIconSize.md,
+                ),
+              ),
+              const SizedBox(width: MedRashSpace.md),
+              Expanded(
+                child: Text(
+                  'Badge collection lands here',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        color: tokens.textPrimary,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: MedRashSpace.md),
+          Text(
+            'Earn ranked attempts to unlock hex badges across bronze, silver, and gold tiers. The full collection grid arrives in the next pilot drop.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: tokens.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// P8.b placeholder \u2014 the Stats tab destination. Donut + per-category
+/// bar chart land here in P8.c via the `participant-stats` Netlify
+/// function. Kept text-only for now so the tab shell can ship without
+/// waiting for the server endpoint.
+class _StatsTabPlaceholder extends StatelessWidget {
+  const _StatsTabPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    return ArenaCard(
+      padding: const EdgeInsets.all(MedRashSpace.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                Icons.insights_rounded,
+                color: tokens.primary,
+                size: MedRashIconSize.lg,
+              ),
+              const SizedBox(width: MedRashSpace.md),
+              Expanded(
+                child: Text(
+                  'Monthly stats land here next',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        color: tokens.textPrimary,
+                      ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: MedRashSpace.md),
+          Text(
+            'A monthly attempts donut and per-category accuracy bar chart arrive in the next pilot drop \u2014 sourced from your ranked attempt history.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: tokens.textSecondary,
+                  height: 1.4,
+                ),
+          ),
+        ],
       ),
     );
   }
