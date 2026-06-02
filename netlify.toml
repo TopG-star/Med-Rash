@@ -40,6 +40,27 @@
   package = "@netlify/plugin-nextjs"
 
 # -----------------------------------------------------------------------------
+# P7 — Navii avatar pretty URL.
+#
+# Public asset endpoint used by the Flutter participant client. The
+# function lives at admin/netlify/functions/avatar.ts (so it ships with
+# the same Netlify site as the rest of the admin functions). The
+# redirect gives us a stable, CDN-friendly URL shape that survives any
+# future re-host without touching the client.
+#
+# Examples:
+#   /avatar/<seed>.svg              → 96×96, seed-derived background
+#   /avatar/<seed>.svg?size=160     → 160×160
+#   /avatar/<seed>.svg?background=ring
+# -----------------------------------------------------------------------------
+
+[[redirects]]
+  from   = "/avatar/:seed.svg"
+  to     = "/.netlify/functions/avatar?seed=:seed"
+  status = 200
+  force  = true
+
+# -----------------------------------------------------------------------------
 # Slice A4 — Edge security headers (admin Next.js surface)
 #
 # Defence-in-depth: same headers also set in admin/next.config.ts
