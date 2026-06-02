@@ -11,6 +11,7 @@ import '../infra/turnstile_token_provider.dart';
 import '../ui/widgets/navii_svg_loader.dart';
 import '../../features/leaderboard/repositories/leaderboard_repository.dart';
 import '../../features/leaderboard/repositories/netlify_supabase_leaderboard_repository.dart';
+import '../../features/profile/repositories/participant_stats_repository.dart';
 import '../../features/profile/repositories/profile_repository.dart';
 import '../../features/profile/repositories/recovery_repository.dart';
 import '../../features/profile/storage/guest_profile_prompt_store.dart';
@@ -62,6 +63,16 @@ Future<void> initCore() async {
       eventBus: getIt<EventBus>(),
       httpClient: getIt<MedRashHttpClient>(),
       authStateManager: getIt<AuthStateManager>(),
+    ),
+  );
+  // P8.c — participant analytics (donut + per-category bars). Registered
+  // after ProfileRepository because it depends on it for the request
+  // payload's `profile` snapshot.
+  getIt.registerLazySingleton<ParticipantStatsRepository>(
+    () => ParticipantStatsRepository(
+      httpClient: getIt<MedRashHttpClient>(),
+      authStateManager: getIt<AuthStateManager>(),
+      profileRepository: getIt<ProfileRepository>(),
     ),
   );
   getIt.registerLazySingleton<QuizAttemptStore>(

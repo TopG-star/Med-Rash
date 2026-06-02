@@ -25,8 +25,11 @@ import '../../../core/ui/widgets/hex_badge.dart';
 import '../../../core/ui/widgets/pill_segmented_control.dart';
 import '../../quiz/storage/quiz_attempt_store.dart';
 import '../models/avatar_spec.dart';
+import '../models/participant_stats.dart';
 import '../models/user_profile.dart';
+import '../repositories/participant_stats_repository.dart';
 import '../repositories/profile_repository.dart';
+import '../widgets/stats_charts.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -163,7 +166,7 @@ class _ProfilePageState extends State<ProfilePage> {
             if (_tabIndex == 0) ...<Widget>[
               const _BadgeTabPlaceholder(),
             ] else if (_tabIndex == 1) ...<Widget>[
-              const _StatsTabPlaceholder(),
+              const _StatsTabContent(),
             ] else ...<Widget>[
               const _SectionLabel(label: 'IDENTITY'),
               const SizedBox(height: MedRashSpace.sm),
@@ -1049,51 +1052,42 @@ class _BadgeTabPlaceholder extends StatelessWidget {
   }
 }
 
-/// P8.b placeholder \u2014 the Stats tab destination. Donut + per-category
-/// bar chart land here in P8.c via the `participant-stats` Netlify
-/// function. Kept text-only for now so the tab shell can ship without
-/// waiting for the server endpoint.
-class _StatsTabPlaceholder extends StatelessWidget {
-  const _StatsTabPlaceholder();
+/// P8.c — the Stats tab destination. Loads the participant's monthly
+/// attempts + per-category accuracy from the `participant-stats`
+/// Netlify function and renders the donut + bar chart via
+/// [StatsCharts]. Self-contained: the parent profile page does not have
+/// to plumb the repo through state since this widget owns its own
+/// future and rebuild lifecycle.
+class _StatsTabContent extends StatefulWidget {
+  const _StatsTabContent();
+
+  @override
+  State<_StatsTabContent> createState() => _StatsTabContentState();
+}
+
+class _StatsTabContentState extends State<_StatsTabContent> {
+  late final Future<ParticipantStats> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = getIt<ParticipantStatsRepository>().fetchMonthly();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.arenaTokens;
-    return ArenaCard(
-      padding: const EdgeInsets.all(MedRashSpace.xl),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(
-                Icons.insights_rounded,
-                color: tokens.primary,
-                size: MedRashIconSize.lg,
-              ),
-              const SizedBox(width: MedRashSpace.md),
-              Expanded(
-                child: Text(
-                  'Monthly stats land here next',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w700,
-                        color: tokens.textPrimary,
-                      ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: MedRashSpace.md),
-          Text(
-            'A monthly attempts donut and per-category accuracy bar chart arrive in the next pilot drop \u2014 sourced from your ranked attempt history.',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: tokens.textSecondary,
-                  height: 1.4,
-                ),
-          ),
-        ],
-      ),
+    return FutureBuilder<ParticipantStats>(
+      future: _future,
+      builder: (BuildContext context, AsyncSnapshot<ParticipantStats> snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const StatsCharts(
+            stats: ParticipantStats.empty,
+            isLoading: true,
+          );
+        }
+        final ParticipantStats stats = snap.data ?? ParticipantStats.empty;
+        return StatsCharts(stats: stats);
+      },
     );
   }
 }
