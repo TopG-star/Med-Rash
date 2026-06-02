@@ -118,6 +118,19 @@ class _WorldRankPageState extends State<WorldRankPage> {
                       allTime: _allTime,
                       onSelect: _switchPeriod,
                     ),
+                    if (currentUser != null &&
+                        currentUser.rank > 1 &&
+                        rows.length >= 5) ...<Widget>[
+                      const SizedBox(height: MedRashSpace.lg),
+                      _PersonalRankBanner(
+                        rank: currentUser.rank,
+                        totalPlayers: rows.length,
+                      ),
+                    ],
+                    if (!_allTime) ...<Widget>[
+                      const SizedBox(height: MedRashSpace.md),
+                      const _SeasonCountdown(),
+                    ],
                     const SizedBox(height: MedRashSpace.xl),
                     if (podium.isNotEmpty)
                       _Podium(podium: podium)
@@ -233,6 +246,7 @@ class _Podium extends StatelessWidget {
                     rank: 2,
                     tier: PodiumTier.silver,
                     blockHeight: _secondHeight,
+                    medalColor: null, // set inside slot from tokens
                   )
                 : const SizedBox.shrink(),
           ),
@@ -256,6 +270,7 @@ class _Podium extends StatelessWidget {
                     rank: 3,
                     tier: PodiumTier.bronze,
                     blockHeight: _thirdHeight,
+                    medalColor: null,
                   )
                 : const SizedBox.shrink(),
           ),
@@ -272,6 +287,7 @@ class _PodiumSlot extends StatelessWidget {
     required this.tier,
     required this.blockHeight,
     this.champion = false,
+    this.medalColor,
   });
 
   final LeaderboardRow row;
@@ -279,6 +295,12 @@ class _PodiumSlot extends StatelessWidget {
   final PodiumTier tier;
   final double blockHeight;
   final bool champion;
+
+  /// P8.a — optional override for the small medal icon rendered above
+  /// non-champion avatars. When null the slot resolves silver for rank 2
+  /// and bronze for rank 3 from `ArenaDesignTokens`; ignored for the
+  /// champion (which uses its own gold workspace-premium glyph).
+  final Color? medalColor;
 
   @override
   Widget build(BuildContext context) {
@@ -321,6 +343,16 @@ class _PodiumSlot extends StatelessWidget {
                       Icons.workspace_premium_rounded,
                       size: 22,
                       color: tokens.rankGold,
+                    ),
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Icon(
+                      Icons.workspace_premium_rounded,
+                      size: 18,
+                      color: medalColor ??
+                          (rank == 2 ? tokens.rankSilver : tokens.rankBronze),
                     ),
                   ),
                 GamifiedAvatar(
@@ -610,6 +642,169 @@ class _EmptyState extends StatelessWidget {
       title: 'Be the first on the podium',
       body:
           'No ranked attempts have synced for this pilot yet. Finish a ranked attempt to claim the inaugural top spot.',
+    );
+  }
+}
+
+/// P8.a — peach personal-rank banner sourced from the reference podium
+/// screen. Surfaces "#N you are doing better than X% of other players"
+/// above the period toggle so a participant always knows their relative
+/// standing without scrolling through the contender list to find their
+/// row. Hidden when the participant is #1 or the sample is too small
+/// (<5 ranked players) for the percentile to mean anything.
+class _PersonalRankBanner extends StatelessWidget {
+  const _PersonalRankBanner({
+    required this.rank,
+    required this.totalPlayers,
+  });
+
+  final int rank;
+  final int totalPlayers;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    // Percentile = share of players the current user is ahead of.
+    final int percentile = totalPlayers <= 1
+        ? 0
+        : (((totalPlayers - rank) / (totalPlayers - 1)) * 100).round();
+    return Semantics(
+      container: true,
+      label:
+          'Rank $rank, you are doing better than $percentile percent of other players',
+      child: ArenaCard(
+        color: tokens.warningSurface,
+        padding: const EdgeInsets.symmetric(
+          horizontal: MedRashSpace.md,
+          vertical: MedRashSpace.md,
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 48,
+              height: 48,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: tokens.secondaryStrong,
+                borderRadius: BorderRadius.circular(tokens.radiusMedium),
+              ),
+              child: Text(
+                '#$rank',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: 0.4,
+                    ),
+              ),
+            ),
+            const SizedBox(width: MedRashSpace.md),
+            Expanded(
+              child: Text(
+                'You are doing better than $percentile% of other players!',
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      color: tokens.onSecondary,
+                      height: 1.3,
+                    ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// P8.a — countdown chip rendered only on the Monthly board. The world
+/// rank for All-Time has no expiry so the chip is hidden there. Self
+/// re-renders every minute via an internal Timer so the parent stays
+/// stateless w.r.t. clock ticks. Format: `Dd HHh MMm` (mirrors the
+/// Stitch reference "06d 23h 00m").
+class _SeasonCountdown extends StatefulWidget {
+  const _SeasonCountdown();
+
+  @override
+  State<_SeasonCountdown> createState() => _SeasonCountdownState();
+}
+
+class _SeasonCountdownState extends State<_SeasonCountdown> {
+  Timer? _ticker;
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!mounted) return;
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    super.dispose();
+  }
+
+  Duration _untilEndOfMonth() {
+    final DateTime now = DateTime.now();
+    // Last instant of the current month — the first day of next month
+    // minus one second. UTC drift is acceptable for a display-only chip.
+    final DateTime firstOfNextMonth = (now.month == 12)
+        ? DateTime(now.year + 1, 1, 1)
+        : DateTime(now.year, now.month + 1, 1);
+    return firstOfNextMonth.subtract(const Duration(seconds: 1)).difference(now);
+  }
+
+  String _format(Duration d) {
+    final int days = d.inDays;
+    final int hours = d.inHours.remainder(24);
+    final int minutes = d.inMinutes.remainder(60);
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(days)}d ${two(hours)}h ${two(minutes)}m';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    final String text = _format(_untilEndOfMonth());
+    return Center(
+      child: Semantics(
+        container: true,
+        label: 'Monthly season ends in $text',
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: MedRashSpace.md,
+            vertical: MedRashSpace.xs,
+          ),
+          decoration: BoxDecoration(
+            color: tokens.surface,
+            borderRadius: BorderRadius.circular(tokens.radiusLarge),
+            border: Border.all(color: tokens.outlineMuted, width: 1),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.schedule_rounded,
+                size: 16,
+                color: tokens.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                text,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                      color: tokens.textPrimary,
+                      letterSpacing: 0.4,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
