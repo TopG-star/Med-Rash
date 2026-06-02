@@ -67,9 +67,13 @@ class HttpNaviiSvgLoader implements NaviiSvgLoader {
 
   String _buildUrl(String seed, int size) {
     final String sep = _baseUrl.endsWith('/') ? '' : '/';
+    final String versionQuery = AppConfig.naviiVersion.isEmpty
+        ? ''
+        : '&v=${Uri.encodeQueryComponent(AppConfig.naviiVersion)}';
     return '$_baseUrl${sep}avatar'
         '?seed=${Uri.encodeQueryComponent(seed)}'
-        '&size=$size';
+        '&size=$size'
+        '$versionQuery';
   }
 
   void _putMemory(String url, Uint8List bytes) {

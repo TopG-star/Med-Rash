@@ -1,3 +1,4 @@
+import { SupabaseClient } from "@supabase/supabase-js";
 import {
   getSupabaseAdminClient,
   parseIdentityInput,
@@ -25,6 +26,13 @@ import {
 type SessionLeaderboardRowResponse = {
   rank: number;
   userId: string;
+  /**
+   * P7.5 — stable per-user seed for deterministic Navii avatars. Equals
+   * the client-minted `identity_spine_id` (a.k.a. participantId) stored in
+   * `users.metadata`. May be null for legacy rows; clients fall back to
+   * `userId` for those.
+   */
+  seed: string | null;
   nickname: string;
   sessionScore: number;
   timeTakenMs: number;
@@ -51,11 +59,45 @@ function mapRow(row: RpcRow): SessionLeaderboardRowResponse {
   return {
     rank: Number(row.rank_position),
     userId: String(row.user_id),
+    seed: null,
     nickname: String(row.nickname ?? ""),
     sessionScore: Number(row.session_score ?? 0),
     timeTakenMs: Number(row.time_taken_ms ?? 0),
     completedAt: row.completed_at ?? null,
   };
+}
+
+/**
+ * P7.5 — see leaderboard.ts for the rationale. Single roundtrip per
+ * session-leaderboard call; users.id is the PK.
+ */
+async function fetchSeedsByUserId(
+  supabase: SupabaseClient,
+  userIds: ReadonlySet<string>,
+): Promise<Map<string, string>> {
+  const seedById = new Map<string, string>();
+  if (userIds.size === 0) return seedById;
+  const { data, error } = await supabase
+    .from("users")
+    .select("id, metadata")
+    .in("id", [...userIds]);
+  if (error) return seedById;
+  for (const row of (data ?? []) as Array<{ id: string; metadata: unknown }>) {
+    const meta = row.metadata as Record<string, unknown> | null;
+    const seed = meta?.identity_spine_id;
+    if (typeof seed === "string" && seed.length > 0) {
+      seedById.set(String(row.id), seed);
+    }
+  }
+  return seedById;
+}
+
+function attachSeed<T extends { userId: string; seed: string | null }>(
+  row: T,
+  seedById: Map<string, string>,
+): T {
+  const found = seedById.get(row.userId);
+  return found ? { ...row, seed: found } : row;
 }
 
 function deriveIsLive(header: SessionHeaderRow, nowMs: number): boolean {
@@ -195,7 +237,17 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       });
     }
     const meRows = (meData as RpcRow[] | null) ?? [];
-    const meRow = meRows.length > 0 ? mapRow(meRows[0]) : null;
+    let meRow = meRows.length > 0 ? mapRow(meRows[0]) : null;
+
+    // P7.5 — hydrate the Navii avatar seed for every distinct user_id in
+    // the response (top-N + optional "me" row) in one batched fetch.
+    const topMappedRaw = topRows.map(mapRow);
+    const distinctIds = new Set<string>();
+    topMappedRaw.forEach((r) => distinctIds.add(r.userId));
+    if (meRow) distinctIds.add(meRow.userId);
+    const seedById = await fetchSeedsByUserId(supabase, distinctIds);
+    const topMapped = topMappedRaw.map((r) => attachSeed(r, seedById));
+    if (meRow) meRow = attachSeed(meRow, seedById);
 
     return jsonResponse(200, {
       ok: true,
@@ -205,7 +257,7 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       closedAt: header.closed_at,
       requestingUserId,
       limit,
-      top: topRows.map(mapRow),
+      top: topMapped,
       me: meRow,
       generatedAt: new Date().toISOString(),
     });

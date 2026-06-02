@@ -345,7 +345,7 @@ class _SessionRow extends StatelessWidget {
         const SizedBox(width: MedRashSpace.sm),
         _AvatarRing(
           name: row.name,
-          userId: row.userId,
+          seed: row.seed ?? row.userId,
           topRank: topRank,
           isCurrentUser: me,
         ),
@@ -493,16 +493,17 @@ class _RankBadge extends StatelessWidget {
 class _AvatarRing extends StatelessWidget {
   const _AvatarRing({
     required this.name,
-    required this.userId,
+    required this.seed,
     required this.topRank,
     required this.isCurrentUser,
   });
 
   final String name;
 
-  /// Stable per-user seed used for the Navii mascot. Empty/null falls back
-  /// to the monogram of [name].
-  final String? userId;
+  /// P7.5 — stable Navii avatar seed (= identity_spine_id, falls back to
+  /// `users.id` when the server omits it on legacy rows). Empty/null
+  /// renders the monogram fallback.
+  final String? seed;
   final bool topRank;
   final bool isCurrentUser;
 
@@ -513,10 +514,10 @@ class _AvatarRing extends StatelessWidget {
         ? Colors.white
         : (topRank ? tokens.tertiary : tokens.outlineMuted);
     final double ringWidth = (isCurrentUser || topRank) ? 2 : 1;
-    final String? seed = userId;
+    final String? s = seed;
     return GamifiedAvatar(
-      spec: (seed != null && seed.isNotEmpty)
-          ? NaviiAvatarSpec(seed: seed, fallbackSource: name)
+      spec: (s != null && s.isNotEmpty)
+          ? NaviiAvatarSpec(seed: s, fallbackSource: name)
           : MonogramAvatarSpec(source: name),
       diameter: 44,
       ringWidth: ringWidth,

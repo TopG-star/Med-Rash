@@ -391,3 +391,27 @@ This document should be read alongside:
 - the implementation roadmap for delivery order
 
 All future screens should extend this design system unless there is a deliberate and documented reason to introduce a new pattern.
+
+## Navii Avatar Seed Rule (P7.5)
+Every Navii mascot must be deterministic per real person across every surface
+(profile hero, world leaderboard, session leaderboard, future arena chrome,
+etc.). To guarantee that, the seed is **always** the stable
+`identity_spine_id` (a.k.a. participantId), never `users.id`.
+
+- **Server (Netlify functions):** any endpoint that returns rows for an
+  avatar-rendering surface must emit a `seed` field by joining
+  `users.metadata->>identity_spine_id` on `users.id`. See
+  [`leaderboard.ts`](../admin/netlify/functions/leaderboard.ts) and
+  [`session-leaderboard.ts`](../admin/netlify/functions/session-leaderboard.ts)
+  as the reference implementations.
+- **Client (Flutter):** prefer `row.seed` for `NaviiAvatarSpec.seed`; fall
+  back to `row.userId` only for legacy responses pre-P7.5. The current
+  device's own avatar reads from `getIt<AuthStateManager>().participantId`
+  (see [`IdentitySpine`](../app/lib/core/auth/identity_spine.dart)).
+- **OTP claim / device recovery:** these flows must never mutate
+  `users.metadata` or `identity_spine_id` — that invariant is pinned at
+  [`setClaimedAuthUserId`](../admin/netlify/functions/_shared/supabase.ts).
+- **Deferred (F6):** if avatar URLs ever ship to anonymous external
+  surfaces, swap the raw seed for an HMAC of `(participantId, server
+  secret)` so the participantId is not leaked in cache URLs.
+

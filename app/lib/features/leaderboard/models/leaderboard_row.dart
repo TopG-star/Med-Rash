@@ -5,6 +5,7 @@ class LeaderboardRow {
     required this.score,
     this.isCurrentUser = false,
     this.userId,
+    this.seed,
     this.rankedAttempts,
     this.lastRankedAt,
   });
@@ -14,6 +15,12 @@ class LeaderboardRow {
   final int score;
   final bool isCurrentUser;
   final String? userId;
+
+  /// P7.5 — stable Navii avatar seed (= `identity_spine_id` /
+  /// participantId). Distinct from [userId] (which is the server-side
+  /// `users.id` PK). When null the avatar widget falls back to [userId]
+  /// to preserve mascot determinism on legacy rows.
+  final String? seed;
   final int? rankedAttempts;
   final DateTime? lastRankedAt;
 
@@ -24,6 +31,7 @@ class LeaderboardRow {
       score: score,
       isCurrentUser: isCurrentUser ?? this.isCurrentUser,
       userId: userId,
+      seed: seed,
       rankedAttempts: rankedAttempts,
       lastRankedAt: lastRankedAt,
     );

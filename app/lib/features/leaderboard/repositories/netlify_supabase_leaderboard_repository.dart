@@ -194,6 +194,7 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
       name: name,
       score: score,
       userId: (userId != null && userId.isNotEmpty) ? userId : null,
+      seed: _readSeed(row),
       rankedAttempts: attempts,
       lastRankedAt: lastAt,
     );
@@ -370,7 +371,19 @@ class NetlifySupabaseLeaderboardRepository implements LeaderboardRepository {
       sessionScore: score,
       timeTakenMs: timeMs,
       completedAt: _readDateTime(row['completedAt']),
+      seed: _readSeed(row),
     );
+  }
+
+  /// P7.5 — trims and null-coalesces the optional `seed` field emitted by
+  /// `leaderboard` / `session-leaderboard` (= identity_spine_id). Returns
+  /// null when the server omits it (legacy rows pre-P7.5) so the avatar
+  /// widget falls back to [userId].
+  static String? _readSeed(Map<String, dynamic> row) {
+    final Object? raw = row['seed'];
+    if (raw is! String) return null;
+    final String trimmed = raw.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   bool _readBool(Object? value) {

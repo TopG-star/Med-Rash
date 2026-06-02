@@ -12,6 +12,7 @@ class SessionLeaderboardRow {
     required this.timeTakenMs,
     this.completedAt,
     this.isCurrentUser = false,
+    this.seed,
   });
 
   final int rank;
@@ -22,6 +23,10 @@ class SessionLeaderboardRow {
   final DateTime? completedAt;
   final bool isCurrentUser;
 
+  /// P7.5 — stable Navii avatar seed (= identity_spine_id). Falls back to
+  /// [userId] on the client when null.
+  final String? seed;
+
   SessionLeaderboardRow copyWith({bool? isCurrentUser}) {
     return SessionLeaderboardRow(
       rank: rank,
@@ -31,6 +36,7 @@ class SessionLeaderboardRow {
       timeTakenMs: timeTakenMs,
       completedAt: completedAt,
       isCurrentUser: isCurrentUser ?? this.isCurrentUser,
+      seed: seed,
     );
   }
 
@@ -43,6 +49,7 @@ class SessionLeaderboardRow {
       score: sessionScore,
       isCurrentUser: isCurrentUser,
       userId: userId,
+      seed: seed,
     );
   }
 }

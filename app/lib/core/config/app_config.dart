@@ -31,5 +31,15 @@ class AppConfig {
     'MEDRASH_ENABLE_NAVII_AVATARS',
     defaultValue: false,
   );
+
+  /// P7.5 — cache-bust key appended to the avatar URL (`&v=<value>`).
+  /// Bump this on every `@usenavii/core` upgrade (or any change that alters
+  /// the rendered SVG) so existing devices fetch fresh bytes instead of
+  /// serving stale entries from `flutter_cache_manager`. Empty value
+  /// disables the `v=` query param entirely.
+  static const String naviiVersion = String.fromEnvironment(
+    'MEDRASH_NAVII_VERSION',
+    defaultValue: '0.7.0',
+  );
 }
 

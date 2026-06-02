@@ -351,6 +351,14 @@ export async function findUserByRecoveryEmail(
 // claimed_auth_user_id is UNIQUE on app.users (migration 001), so attempting
 // to bind a Supabase Auth user that already claims a different profile is
 // surfaced as a 23505 the caller can map to a clean error.
+//
+// P7.5 INVARIANT — this function MUST only update `claimed_auth_user_id`.
+// It must NEVER touch `users.metadata` or `users.metadata->>identity_spine_id`.
+// The deterministic Navii avatar seed is derived from identity_spine_id, so
+// any mutation here (especially during OTP claim or device recovery) would
+// silently rotate every existing user's mascot. Profile-edit fields
+// (full_name / nickname / facility / specialty / email) belong on the
+// `resolveOrCreateUserId` upsert path, NOT here.
 export async function setClaimedAuthUserId(
   supabase: SupabaseClient,
   userId: string,
