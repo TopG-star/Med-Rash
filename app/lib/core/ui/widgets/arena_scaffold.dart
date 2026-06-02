@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../theme/theme_extensions.dart';
-import 'arena_bottom_nav.dart';
+import 'medrash_bottom_nav.dart';
 
 class ArenaScaffold extends StatelessWidget {
   const ArenaScaffold({
@@ -71,7 +71,7 @@ class ArenaScaffold extends StatelessWidget {
           ),
         ),
         bottomNavigationBar:
-            bottomNav ? ArenaBottomNav(location: location) : null,
+            bottomNav ? MedRashBottomNav(location: location) : null,
         body: CustomPaint(
           painter: _DotGridPainter(color: tokens.outlineMuted),
           child: SafeArea(

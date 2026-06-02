@@ -196,7 +196,7 @@ class _SessionJoinPageState extends State<SessionJoinPage> {
     return ArenaScaffold(
       title: 'Join Session',
       showBack: true,
-      bottomNav: true,
+      bottomNav: false,
       child: FutureBuilder<SessionInfo>(
         future: _futureSession,
         builder: (BuildContext context, AsyncSnapshot<SessionInfo> snapshot) {
