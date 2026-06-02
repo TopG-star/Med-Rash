@@ -7,10 +7,10 @@ import '../../../core/di/get_it.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/strings.dart';
-import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/ui/widgets/empty_state.dart';
+import '../../../core/ui/widgets/gradient_card.dart';
 import '../models/quiz.dart';
 import '../repositories/quiz_repository.dart';
 import '../storage/ranked_best_score_store.dart';
@@ -82,39 +82,38 @@ class _RankedPageState extends State<RankedPage> {
                     best == null ? RankedTier.none : rankedTierFromPercent(best);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: InkWell(
+                  child: GradientCard(
+                    color: context.arenaTokens.cardGold,
                     onTap: () => context.go('/quiz-detail', extra: quiz.id),
-                    child: ArenaCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              ArenaChip(label: quiz.category),
-                              const Spacer(),
-                              Text(quiz.durationLabel),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Expanded(
-                                child: Text(
-                                  quiz.title,
-                                  style: Theme.of(context).textTheme.headlineMedium,
-                                ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            ArenaChip(label: quiz.category),
+                            const Spacer(),
+                            Text(quiz.durationLabel),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Expanded(
+                              child: Text(
+                                quiz.title,
+                                style: Theme.of(context).textTheme.headlineMedium,
                               ),
-                              if (tier != RankedTier.none) ...<Widget>[
-                                const SizedBox(width: 12),
-                                _RankedTierBadge(tier: tier, percent: best!),
-                              ],
+                            ),
+                            if (tier != RankedTier.none) ...<Widget>[
+                              const SizedBox(width: 12),
+                              _RankedTierBadge(tier: tier, percent: best!),
                             ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text('${quiz.questionCount} Questions \u2022 ${quiz.difficulty}'),
-                        ],
-                      ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text('${quiz.questionCount} Questions \u2022 ${quiz.difficulty}'),
+                      ],
                     ),
                   ),
                 );

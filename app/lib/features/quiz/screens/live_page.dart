@@ -5,8 +5,8 @@ import '../../../core/motion/press_scale.dart';
 import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_button.dart';
-import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../../core/ui/widgets/gradient_card.dart';
 import 'qr_scanner_page.dart';
 
 /// Live tab. Offers both the manual "Enter code" path that drives the
@@ -66,7 +66,8 @@ class _LivePageState extends State<LivePage> {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 24),
-          ArenaCard(
+          GradientCard(
+            color: tokens.cardLavender,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -113,8 +114,8 @@ class _LivePageState extends State<LivePage> {
             ),
           ),
           const SizedBox(height: 16),
-          ArenaCard(
-            color: tokens.surface,
+          GradientCard(
+            color: tokens.cardPeach,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[

@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/di/get_it.dart';
+import '../../../core/theme/theme_extensions.dart';
 import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/strings.dart';
-import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
+import '../../../core/ui/widgets/gradient_card.dart';
 import '../models/quiz.dart';
 import '../repositories/quiz_repository.dart';
 
@@ -58,34 +59,33 @@ class _ExplorePageState extends State<ExplorePage> {
               ...quizzes.map(
                 (Quiz quiz) => Padding(
                   padding: const EdgeInsets.only(bottom: 20),
-                  child: InkWell(
+                  child: GradientCard(
+                    color: context.arenaTokens.cardPeach,
                     onTap: () => context.go('/quiz-detail', extra: quiz.id),
-                    child: ArenaCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              ArenaChip(label: quiz.category),
-                              const Spacer(),
-                              Text(quiz.durationLabel),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text('Product: ${quiz.product}'),
-                          const SizedBox(height: 20),
-                          Text(quiz.title, style: Theme.of(context).textTheme.headlineMedium),
-                          const SizedBox(height: 12),
-                          Text(quiz.description),
-                          const SizedBox(height: 20),
-                          Row(
-                            children: <Widget>[
-                              Expanded(child: Text('${quiz.questionCount} Questions')),
-                              Expanded(child: Text(quiz.difficulty)),
-                            ],
-                          ),
-                        ],
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Row(
+                          children: <Widget>[
+                            ArenaChip(label: quiz.category),
+                            const Spacer(),
+                            Text(quiz.durationLabel),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Product: ${quiz.product}'),
+                        const SizedBox(height: 20),
+                        Text(quiz.title, style: Theme.of(context).textTheme.headlineMedium),
+                        const SizedBox(height: 12),
+                        Text(quiz.description),
+                        const SizedBox(height: 20),
+                        Row(
+                          children: <Widget>[
+                            Expanded(child: Text('${quiz.questionCount} Questions')),
+                            Expanded(child: Text(quiz.difficulty)),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
