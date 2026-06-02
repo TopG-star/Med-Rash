@@ -7,7 +7,6 @@ import '../../../core/events/medrash_events.dart';
 import '../../../core/infra/event_bus.dart';
 import '../../../core/motion/count_up_number.dart';
 import '../../../core/motion/haptics.dart';
-import '../../../core/motion/press_scale.dart';
 import '../../../core/motion/stagger_list.dart';
 import '../../../core/theme/design_tokens.dart';
 import '../../../core/theme/theme_extensions.dart';
@@ -18,7 +17,10 @@ import '../../../core/ui/strings.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/ui/widgets/empty_state.dart';
-import '../../../core/ui/widgets/monogram_avatar.dart';
+import '../../../core/ui/widgets/gamified_avatar.dart';
+import '../../../core/ui/widgets/pill_segmented_control.dart';
+import '../../../core/ui/widgets/podium_block.dart';
+import '../../profile/models/avatar_spec.dart';
 import '../models/leaderboard_row.dart';
 import '../repositories/leaderboard_repository.dart';
 
@@ -183,84 +185,19 @@ class _PeriodToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = context.arenaTokens;
-    return Container(
-      padding: const EdgeInsets.all(MedRashSpace.xs + 2),
-      decoration: BoxDecoration(
-        color: tokens.primarySoft,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: tokens.outline, width: tokens.borderWidth),
-      ),
-      child: Row(
-        children: <Widget>[
-          Expanded(
-            child: _SegmentPill(
-              label: MedRashStrings.leaderboardMonthly,
-              selected: !allTime,
-              onTap: () => onSelect(false),
-            ),
-          ),
-          Expanded(
-            child: _SegmentPill(
-              label: MedRashStrings.leaderboardAllTime,
-              selected: allTime,
-              onTap: () => onSelect(true),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SegmentPill extends StatelessWidget {
-  const _SegmentPill({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.arenaTokens;
-    final bool reducedMotion = MediaQuery.of(context).disableAnimations;
-    return PressScale(
-      enabled: !selected,
-      onTap: selected ? null : onTap,
-      child: AnimatedContainer(
-        duration: reducedMotion
-            ? Duration.zero
-            : const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.symmetric(vertical: MedRashSpace.sm + 2),
-        decoration: BoxDecoration(
-          color: selected ? tokens.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
-          boxShadow: selected
-              ? <BoxShadow>[
-                  BoxShadow(
-                    color: tokens.primary.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : const <BoxShadow>[],
+    return PillSegmentedControl<bool>(
+      segments: const <PillSegment<bool>>[
+        PillSegment<bool>(
+          value: false,
+          label: MedRashStrings.leaderboardMonthly,
         ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : tokens.primaryStrong,
-                letterSpacing: 0.4,
-              ),
+        PillSegment<bool>(
+          value: true,
+          label: MedRashStrings.leaderboardAllTime,
         ),
-      ),
+      ],
+      value: allTime,
+      onChanged: (bool v) => onSelect(v),
     );
   }
 }
@@ -270,245 +207,146 @@ class _Podium extends StatelessWidget {
 
   final List<LeaderboardRow> podium;
 
+  // Riser heights (per reference UI 5): #1 tallest in the middle, #2 left,
+  // #3 right. Avatars float above the risers and visually overlap the top
+  // edge by half their diameter via Stack.
+  static const double _firstHeight = 180;
+  static const double _secondHeight = 140;
+  static const double _thirdHeight = 110;
+  static const double _avatarDiameter = 72;
+  static const double _avatarOverlap = 28;
+
   @override
   Widget build(BuildContext context) {
     final LeaderboardRow? first = podium.isNotEmpty ? podium[0] : null;
     final LeaderboardRow? second = podium.length >= 2 ? podium[1] : null;
     final LeaderboardRow? third = podium.length >= 3 ? podium[2] : null;
-    final tokens = context.arenaTokens;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Expanded(
-          child: second != null
-              ? _PodiumColumn(
-                  row: second,
-                  rank: 2,
-                  surface: tokens.rankSilver.withValues(alpha: 0.18),
-                  accent: tokens.textPrimary,
-                  avatarBg: tokens.rankSilver,
-                  avatarFg: Colors.white,
-                  medalColor: tokens.rankSilver,
-                )
-              : const SizedBox.shrink(),
-        ),
-        const SizedBox(width: MedRashSpace.md),
-        Expanded(
-          child: first != null
-              ? _PodiumColumn(
-                  row: first,
-                  rank: 1,
-                  surface: tokens.rankGold.withValues(alpha: 0.22),
-                  accent: tokens.textPrimary,
-                  champion: true,
-                  avatarBg: tokens.rankGold,
-                  avatarFg: Colors.white,
-                  medalColor: tokens.rankGold,
-                )
-              : const SizedBox.shrink(),
-        ),
-        const SizedBox(width: MedRashSpace.md),
-        Expanded(
-          child: third != null
-              ? _PodiumColumn(
-                  row: third,
-                  rank: 3,
-                  surface: tokens.rankBronze.withValues(alpha: 0.18),
-                  accent: tokens.textPrimary,
-                  avatarBg: tokens.rankBronze,
-                  avatarFg: Colors.white,
-                  medalColor: tokens.rankBronze,
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
+    return SizedBox(
+      height: _firstHeight + _avatarDiameter + 12,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          Expanded(
+            child: second != null
+                ? _PodiumSlot(
+                    row: second,
+                    rank: 2,
+                    tier: PodiumTier.silver,
+                    blockHeight: _secondHeight,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(width: MedRashSpace.md),
+          Expanded(
+            child: first != null
+                ? _PodiumSlot(
+                    row: first,
+                    rank: 1,
+                    tier: PodiumTier.gold,
+                    blockHeight: _firstHeight,
+                    champion: true,
+                  )
+                : const SizedBox.shrink(),
+          ),
+          const SizedBox(width: MedRashSpace.md),
+          Expanded(
+            child: third != null
+                ? _PodiumSlot(
+                    row: third,
+                    rank: 3,
+                    tier: PodiumTier.bronze,
+                    blockHeight: _thirdHeight,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _PodiumColumn extends StatelessWidget {
-  const _PodiumColumn({
+class _PodiumSlot extends StatelessWidget {
+  const _PodiumSlot({
     required this.row,
     required this.rank,
-    required this.surface,
-    required this.accent,
-    required this.avatarBg,
-    required this.avatarFg,
-    required this.medalColor,
+    required this.tier,
+    required this.blockHeight,
     this.champion = false,
   });
 
-  static const double _height = 180;
-
   final LeaderboardRow row;
   final int rank;
-  final Color surface;
-  final Color accent;
+  final PodiumTier tier;
+  final double blockHeight;
   final bool champion;
-  final Color avatarBg;
-  final Color avatarFg;
-  final Color medalColor;
 
   @override
   Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    // Avatar ring gradient: champion gets the gold podium gradient as a
+    // crown-like halo; others get a tier-tinted solid "gradient".
+    final Gradient ringGradient = champion
+        ? MedRashGradient.podiumGold(tokens)
+        : LinearGradient(
+            colors: <Color>[tokens.primary, tokens.primary],
+          );
+
     return Semantics(
       container: true,
       label: row.isCurrentUser
           ? 'Rank $rank, you, ${row.name}'
           : 'Rank $rank, ${row.name}',
       value: '${row.score} points',
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: _height),
-        child: ArenaCard(
-          color: surface,
-          padding: const EdgeInsets.fromLTRB(
-            MedRashSpace.sm,
-            MedRashSpace.md,
-            MedRashSpace.sm,
-            MedRashSpace.md,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: <Widget>[
+          // The riser — tier-gradient block with rank numeral on the face.
+          PodiumBlock(
+            tier: tier,
+            height: blockHeight,
+            rankNumeral: rank,
+            label: _formatScore(row.score, row.name),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: <Widget>[
-              Icon(
-                champion
-                    ? Icons.workspace_premium_rounded
-                    : Icons.military_tech_rounded,
-                color: medalColor,
-                size: champion ? 26 : 22,
-              ),
-              const SizedBox(height: MedRashSpace.xs),
-              _PodiumAvatar(
-                source: row.name,
-                avatarBg: avatarBg,
-                avatarFg: avatarFg,
-                ringColor: medalColor,
-                champion: champion,
-              ),
-              const SizedBox(height: MedRashSpace.xs),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: MedRashSpace.sm + 2,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: medalColor.withValues(alpha: 0.22),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '#$rank',
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontFamily: 'Poppins',
-                        fontWeight: FontWeight.w800,
-                        color: accent,
-                        letterSpacing: 0.4,
-                      ),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                row.name,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w700,
-                      color: accent,
+          // Avatar floats above the riser, overlapping the top edge.
+          Positioned(
+            bottom: blockHeight - _Podium._avatarOverlap,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                if (champion)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 2),
+                    child: Icon(
+                      Icons.workspace_premium_rounded,
+                      size: 22,
+                      color: tokens.rankGold,
                     ),
-              ),
-              const SizedBox(height: 2),
-              champion
-                  ? CountUpNumber(
-                      value: row.score,
-                      duration: const Duration(milliseconds: 900),
-                      curve: Curves.easeOutCubic,
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w800,
-                            color: accent,
-                            height: 1,
-                          ),
-                    )
-                  : Text(
-                      '${row.score}',
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(
-                            fontFamily: 'Poppins',
-                            fontWeight: FontWeight.w800,
-                            color: accent,
-                            height: 1,
-                          ),
-                    ),
-              Text(
-                'pts',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: accent.withValues(alpha: 0.75),
-                      letterSpacing: 0.6,
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-            ],
+                  ),
+                GamifiedAvatar(
+                  spec: MonogramAvatarSpec(
+                    source: row.name,
+                    tint: row.isCurrentUser ? tokens.primary : null,
+                  ),
+                  diameter: _Podium._avatarDiameter,
+                  ringWidth: champion ? 3 : 2,
+                  ringGradient: ringGradient,
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
-}
 
-class _PodiumAvatar extends StatelessWidget {
-  const _PodiumAvatar({
-    required this.source,
-    required this.avatarBg,
-    required this.avatarFg,
-    required this.ringColor,
-    required this.champion,
-  });
-
-  final String source;
-  final Color avatarBg;
-  final Color avatarFg;
-  final Color ringColor;
-  final bool champion;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = context.arenaTokens;
-    final double outerDiameter = champion ? 56 : 48;
-    return Container(
-      width: outerDiameter,
-      height: outerDiameter,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white,
-        border: Border.all(
-          color: ringColor,
-          width: champion ? 2.5 : tokens.borderWidth,
-        ),
-        boxShadow: champion
-            ? <BoxShadow>[
-                BoxShadow(
-                  color: ringColor.withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  spreadRadius: 0,
-                  offset: const Offset(0, 3),
-                ),
-              ]
-            : null,
-      ),
-      alignment: Alignment.center,
-      child: MonogramAvatar(
-        source: source,
-        diameter: champion ? 46 : 40,
-        backgroundColor: avatarBg,
-        foregroundColor: avatarFg,
-      ),
-    );
+  // Compose the riser label: "NAME • {score} pts" — kept compact so it
+  // fits the 96 dp riser width without ellipsis on common nicknames.
+  String _formatScore(int score, String name) {
+    final String trimmedName = name.length > 10
+        ? '${name.substring(0, 9)}\u2026'
+        : name;
+    return '$trimmedName\n$score pts';
   }
 }
 
@@ -552,11 +390,19 @@ class _LeaderRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: MedRashSpace.md),
-            MonogramAvatar(
-              source: row.name,
-              diameter: 40,
-              backgroundColor: you ? tokens.primary : tokens.secondary,
-              foregroundColor: you ? Colors.white : tokens.onSecondary,
+            GamifiedAvatar(
+              spec: MonogramAvatarSpec(
+                source: row.name,
+                tint: you ? tokens.primary : tokens.secondary,
+              ),
+              diameter: 44,
+              ringWidth: 2,
+              ringGradient: LinearGradient(
+                colors: <Color>[
+                  you ? tokens.primary : tokens.outline,
+                  you ? tokens.primary : tokens.outline,
+                ],
+              ),
             ),
             const SizedBox(width: MedRashSpace.md),
             Expanded(
@@ -661,11 +507,16 @@ class _StickyYouCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: MedRashSpace.md),
-              MonogramAvatar(
-                source: row.name,
-                diameter: 40,
-                backgroundColor: tokens.secondary,
-                foregroundColor: tokens.onSecondary,
+              GamifiedAvatar(
+                spec: MonogramAvatarSpec(
+                  source: row.name,
+                  tint: tokens.secondary,
+                ),
+                diameter: 44,
+                ringWidth: 2,
+                ringGradient: const LinearGradient(
+                  colors: <Color>[Colors.white, Colors.white],
+                ),
               ),
               const SizedBox(width: MedRashSpace.md),
               Expanded(

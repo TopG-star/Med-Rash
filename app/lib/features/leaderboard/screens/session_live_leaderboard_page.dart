@@ -13,7 +13,8 @@ import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/ui/widgets/empty_state.dart';
-import '../../../core/ui/widgets/monogram_avatar.dart';
+import '../../../core/ui/widgets/gamified_avatar.dart';
+import '../../profile/models/avatar_spec.dart';
 import '../models/session_leaderboard_row.dart';
 import '../repositories/leaderboard_repository.dart';
 
@@ -506,13 +507,13 @@ class _AvatarRing extends StatelessWidget {
         ? Colors.white
         : (topRank ? tokens.tertiary : tokens.outlineMuted);
     final double ringWidth = (isCurrentUser || topRank) ? 2 : 1;
-    return Container(
-      padding: EdgeInsets.all(ringWidth),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: ringColor, width: ringWidth),
+    return GamifiedAvatar(
+      spec: MonogramAvatarSpec(source: name),
+      diameter: 44,
+      ringWidth: ringWidth,
+      ringGradient: LinearGradient(
+        colors: <Color>[ringColor, ringColor],
       ),
-      child: MonogramAvatar(source: name, diameter: 40),
     );
   }
 }
