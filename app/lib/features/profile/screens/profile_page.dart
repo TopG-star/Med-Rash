@@ -19,8 +19,11 @@ import '../../../core/ui/widgets/arena_button.dart';
 import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/ui/widgets/empty_state.dart';
-import '../../../core/ui/widgets/monogram_avatar.dart';
+import '../../../core/ui/widgets/gamified_avatar.dart';
+import '../../../core/ui/widgets/gradient_card.dart';
+import '../../../core/ui/widgets/hex_badge.dart';
 import '../../quiz/storage/quiz_attempt_store.dart';
+import '../models/avatar_spec.dart';
 import '../models/user_profile.dart';
 import '../repositories/profile_repository.dart';
 
@@ -275,32 +278,16 @@ class _ProfileHero extends StatelessWidget {
           padding: const EdgeInsets.all(MedRashSpace.xl),
           child: Column(
             children: <Widget>[
-              Container(
-                width: 116,
-                height: 116,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: tokens.primarySoft,
-                  border: Border.all(color: tokens.secondary, width: 3),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: tokens.secondary.withValues(alpha: 0.4),
-                      blurRadius: 18,
-                      spreadRadius: 1,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: MonogramAvatar(
+              GamifiedAvatar(
+                spec: MonogramAvatarSpec(
                   source: profile.nickname.isEmpty
                       ? profile.fullName
                       : profile.nickname,
-                  diameter: 100,
-                  backgroundColor: tokens.primary,
-                  foregroundColor: Colors.white,
-                  textStyle: Theme.of(context).textTheme.headlineSmall,
+                  tint: Colors.white,
                 ),
+                diameter: 116,
+                ringWidth: 4,
+                ringGradient: MedRashGradient.primaryHeader(tokens),
               ),
               const SizedBox(height: MedRashSpace.md),
               Text(
@@ -420,6 +407,7 @@ class _StatsRow extends StatelessWidget {
             icon: Icons.military_tech_rounded,
             iconColor: tokens.primary,
             iconSurface: tokens.primarySoft,
+            surfaceColor: tokens.cardLavender,
           ),
         ),
         const SizedBox(width: MedRashSpace.md),
@@ -430,6 +418,7 @@ class _StatsRow extends StatelessWidget {
             icon: Icons.emoji_events_rounded,
             iconColor: tokens.onSecondary,
             iconSurface: tokens.secondary,
+            surfaceColor: tokens.cardPeach,
             formatter: (int v) => v <= 0 ? '\u2014' : '#$v',
           ),
         ),
@@ -445,6 +434,7 @@ class _StatTile extends StatelessWidget {
     required this.icon,
     required this.iconColor,
     required this.iconSurface,
+    required this.surfaceColor,
     this.formatter,
   });
 
@@ -453,24 +443,22 @@ class _StatTile extends StatelessWidget {
   final IconData icon;
   final Color iconColor;
   final Color iconSurface;
+  final Color surfaceColor;
   final String Function(int v)? formatter;
 
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
-    return ArenaCard(
+    return GradientCard(
+      color: surfaceColor,
       padding: const EdgeInsets.all(MedRashSpace.md),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: iconSurface,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
+          HexBadge(
+            size: 48,
+            fillColor: iconSurface,
+            borderColor: iconColor,
             child: Icon(icon, color: iconColor, size: MedRashIconSize.md),
           ),
           const SizedBox(height: MedRashSpace.sm),
