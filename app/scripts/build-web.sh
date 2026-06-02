@@ -54,10 +54,23 @@ else
   echo "[build-web] Sentry disabled (no SENTRY_DSN set)"
 fi
 
+# P7 — Navii avatars. Feature flag defaults to ON for deployed builds
+# (every avatar surface short-circuits to a monogram when this is false,
+# which is what produced the "no mascot" regression in prod). Override in
+# the Netlify UI by setting MEDRASH_ENABLE_NAVII_AVATARS=false to roll
+# back without a redeploy. MEDRASH_NAVII_VERSION participates in the
+# avatar URL cache key (HttpNaviiSvgLoader appends &v=<version>); bump it
+# whenever @usenavii/core is upgraded so devices fetch fresh SVGs.
+MEDRASH_ENABLE_NAVII_AVATARS="${MEDRASH_ENABLE_NAVII_AVATARS:-true}"
+MEDRASH_NAVII_VERSION="${MEDRASH_NAVII_VERSION:-0.7.0}"
+echo "[build-web] Navii avatars: ${MEDRASH_ENABLE_NAVII_AVATARS} (version=${MEDRASH_NAVII_VERSION})"
+
 flutter build web --release \
   --base-href=/ \
   --dart-define=MEDRASH_FUNCTIONS_BASE_URL="${MEDRASH_FUNCTIONS_BASE_URL}" \
   --dart-define=MEDRASH_TURNSTILE_SITE_KEY="${MEDRASH_TURNSTILE_SITE_KEY}" \
+  --dart-define=MEDRASH_ENABLE_NAVII_AVATARS="${MEDRASH_ENABLE_NAVII_AVATARS}" \
+  --dart-define=MEDRASH_NAVII_VERSION="${MEDRASH_NAVII_VERSION}" \
   --dart-define=SENTRY_DSN="${SENTRY_DSN}" \
   --dart-define=SENTRY_RELEASE="${SENTRY_RELEASE}" \
   --dart-define=SENTRY_ENVIRONMENT="${SENTRY_ENVIRONMENT}"
