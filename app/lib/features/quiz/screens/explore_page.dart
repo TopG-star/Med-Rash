@@ -8,7 +8,6 @@ import '../../../core/ui/identity_badge.dart';
 import '../../../core/ui/responsive.dart';
 import '../../../core/ui/skeleton.dart';
 import '../../../core/ui/strings.dart';
-import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/ui/widgets/gradient_card.dart';
 import '../../../core/ui/widgets/pill_segmented_control.dart';
@@ -212,38 +211,104 @@ class _QuizCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
-    final Color surface = _tintForProduct(tokens, quiz.product, quiz.category);
+    final Color tint = _tintForProduct(tokens, quiz.product, quiz.category);
     return GradientCard(
-      color: surface,
+      color: tokens.surface,
+      borderColor: tokens.outlineMuted,
+      padding: const EdgeInsets.all(MedRashSpace.sm),
       onTap: () => context.go('/quiz-detail', extra: quiz.id),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: <Widget>[
-          Row(
-            children: <Widget>[
-              ArenaChip(label: quiz.category),
-              const Spacer(),
-              Text(quiz.durationLabel),
-            ],
+          _QuizThumbnail(tint: tint, icon: _iconForCategory(quiz.category)),
+          const SizedBox(width: MedRashSpace.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Text(
+                  quiz.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                        color: tokens.textPrimary,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${quiz.category} \u00b7 ${quiz.questionCount} Questions',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: tokens.textSecondary,
+                      ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Text('Product: ${quiz.product}'),
-          const SizedBox(height: 20),
-          Text(quiz.title,
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 12),
-          Text(quiz.description),
-          const SizedBox(height: 20),
-          Row(
-            children: <Widget>[
-              Expanded(child: Text('${quiz.questionCount} Questions')),
-              Expanded(child: Text(quiz.difficulty)),
-            ],
-          ),
+          const SizedBox(width: MedRashSpace.sm),
+          Icon(Icons.chevron_right_rounded, color: tokens.primary),
         ],
       ),
     );
   }
+}
+
+class _QuizThumbnail extends StatelessWidget {
+  const _QuizThumbnail({required this.tint, required this.icon});
+
+  final Color tint;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    return Container(
+      width: 56,
+      height: 56,
+      decoration: BoxDecoration(
+        color: tint,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: tokens.outlineMuted),
+      ),
+      alignment: Alignment.center,
+      child: Icon(icon, color: tokens.textPrimary, size: MedRashIconSize.md),
+    );
+  }
+}
+
+/// Maps a quiz category to a representative glyph for the compact list
+/// thumbnail. Falls back to a generic library icon so unknown categories
+/// still render a recognisable tile.
+IconData _iconForCategory(String category) {
+  final String key = category.toLowerCase();
+  if (key.contains('cardio') || key.contains('heart')) {
+    return Icons.favorite_rounded;
+  }
+  if (key.contains('neuro') || key.contains('brain')) {
+    return Icons.psychology_rounded;
+  }
+  if (key.contains('pharm') || key.contains('drug')) {
+    return Icons.medication_rounded;
+  }
+  if (key.contains('onco') || key.contains('cancer')) {
+    return Icons.biotech_rounded;
+  }
+  if (key.contains('derma') || key.contains('skin')) {
+    return Icons.spa_rounded;
+  }
+  if (key.contains('respir') || key.contains('lung') || key.contains('pulm')) {
+    return Icons.air_rounded;
+  }
+  if (key.contains('endo') || key.contains('diab')) {
+    return Icons.bloodtype_rounded;
+  }
+  if (key.contains('pedia') || key.contains('child')) {
+    return Icons.child_care_rounded;
+  }
+  return Icons.menu_book_rounded;
 }
 
 class _EmptyResult extends StatelessWidget {
