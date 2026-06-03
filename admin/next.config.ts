@@ -6,9 +6,17 @@ import { withSentryConfig } from "@sentry/nextjs";
 // `netlify.toml`. Both layers exist so a drift in either configuration
 // cannot silently un-secure the admin app.
 //
-// CSP ships as `Content-Security-Policy-Report-Only` on first deploy;
-// after ~24h of clean browsing the key flips to `Content-Security-Policy`
-// (must change in both this file AND `netlify.toml` in the same commit).
+// CSP enforce/report-only toggle (P0.9):
+//   MEDRASH_CSP_REPORT_ONLY=true  -> ship as Content-Security-Policy-Report-Only
+//   anything else                 -> enforce (default; matches netlify.toml)
+// Flip BOTH this flag AND the netlify.toml header in the same commit when
+// loosening for a temporary investigation; otherwise the edge keeps
+// enforcing while the framework reports.
+//
+// `report-uri` points at the in-app collector at /api/csp-report so a
+// violation lands in our logs (and Sentry, when wired) instead of a black
+// hole. `report-to` is the modern replacement but requires a top-level
+// `Report-To` header; we keep both for browser coverage.
 //
 // Slice B7 — connect-src allowance for Sentry's browser SDK to POST
 // envelopes to its public ingest endpoint (`https://<region>.ingest.sentry.io`
@@ -25,7 +33,24 @@ const ADMIN_CSP_DIRECTIVES = [
   "base-uri 'self'",
   "form-action 'self'",
   "object-src 'none'",
+  "report-uri /api/csp-report",
+  "report-to csp-endpoint",
 ].join("; ");
+
+const CSP_REPORT_ONLY =
+  (process.env.MEDRASH_CSP_REPORT_ONLY ?? "").toLowerCase() === "true";
+
+const CSP_HEADER_KEY = CSP_REPORT_ONLY
+  ? "Content-Security-Policy-Report-Only"
+  : "Content-Security-Policy";
+
+// Reporting API endpoint group so modern browsers know where to POST
+// violation reports. Lives on the same origin as the admin app.
+const REPORT_TO_VALUE = JSON.stringify({
+  group: "csp-endpoint",
+  max_age: 10886400,
+  endpoints: [{ url: "/api/csp-report" }],
+});
 
 const SECURITY_HEADERS = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
@@ -36,7 +61,8 @@ const SECURITY_HEADERS = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
   },
-  { key: "Content-Security-Policy", value: ADMIN_CSP_DIRECTIVES },
+  { key: "Report-To", value: REPORT_TO_VALUE },
+  { key: CSP_HEADER_KEY, value: ADMIN_CSP_DIRECTIVES },
 ];
 
 const nextConfig: NextConfig = {

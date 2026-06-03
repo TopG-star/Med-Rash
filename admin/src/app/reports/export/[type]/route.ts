@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import {
   csvFilenameSegment,
   serializeCsv,
+  streamCsv,
   type CsvColumn,
 } from "@/lib/csv-export";
 import { requireAdminSession } from "@/lib/admin-session";
@@ -77,6 +78,34 @@ function csvResponse(body: string, filename: string): Response {
       "Cache-Control": "no-store",
     },
   });
+}
+
+// P0.7 — streaming variant. The CSV body is emitted row-by-row via a
+// ReadableStream so the function process never holds the whole document
+// in memory. Opt-in via `?stream=1` to keep the existing buffered path
+// (and its tests) as the default. Production exports of >5k attempts
+// should pass `stream=1`.
+function csvStreamResponse(
+  stream: ReadableStream<Uint8Array>,
+  filename: string,
+): Response {
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="${csvFilenameSegment(filename)}.csv"`,
+      "Cache-Control": "no-store",
+      // Hint to intermediaries: do not buffer the chunked body.
+      "X-Accel-Buffering": "no",
+    },
+  });
+}
+
+function readStreamFlag(req: NextRequest): boolean {
+  const raw = req.nextUrl.searchParams.get("stream");
+  if (!raw) return false;
+  const norm = raw.trim().toLowerCase();
+  return norm === "1" || norm === "true" || norm === "yes";
 }
 
 function timestampSuffix(): string {
@@ -192,23 +221,24 @@ export async function GET(
   try {
     const filters = readFilters(req);
     const suffix = timestampSuffix();
+    const useStream = readStreamFlag(req);
 
     switch (type) {
       case "attempts": {
         const limit = readLimit(req, 5000, 50000);
         const rows = await getAttemptsExport(filters, limit, { createdBy });
-        return csvResponse(
-          serializeCsv(rows, ATTEMPTS_COLUMNS),
-          `medrash-attempts-${suffix}`,
-        );
+        const filename = `medrash-attempts-${suffix}`;
+        return useStream
+          ? csvStreamResponse(streamCsv(rows, ATTEMPTS_COLUMNS), filename)
+          : csvResponse(serializeCsv(rows, ATTEMPTS_COLUMNS), filename);
       }
       case "answers": {
         const limit = readLimit(req, 10000, 100000);
         const rows = await getAnswersExport(filters, limit, { createdBy });
-        return csvResponse(
-          serializeCsv(rows, ANSWERS_COLUMNS),
-          `medrash-answers-${suffix}`,
-        );
+        const filename = `medrash-answers-${suffix}`;
+        return useStream
+          ? csvStreamResponse(streamCsv(rows, ANSWERS_COLUMNS), filename)
+          : csvResponse(serializeCsv(rows, ANSWERS_COLUMNS), filename);
       }
       case "most-missed": {
         const limit = readLimit(req, 50, 500);
@@ -224,10 +254,10 @@ export async function GET(
           },
           { createdBy },
         );
-        return csvResponse(
-          serializeCsv(rows, MOST_MISSED_COLUMNS),
-          `medrash-most-missed-${suffix}`,
-        );
+        const filename = `medrash-most-missed-${suffix}`;
+        return useStream
+          ? csvStreamResponse(streamCsv(rows, MOST_MISSED_COLUMNS), filename)
+          : csvResponse(serializeCsv(rows, MOST_MISSED_COLUMNS), filename);
       }
       case "facility-performance": {
         const limit = readLimit(req, 50, 500);
@@ -243,10 +273,10 @@ export async function GET(
             endsAt: filters.endsAt,
           },
         );
-        return csvResponse(
-          serializeCsv(rows, FACILITY_COLUMNS),
-          `medrash-facility-performance-${suffix}`,
-        );
+        const filename = `medrash-facility-performance-${suffix}`;
+        return useStream
+          ? csvStreamResponse(streamCsv(rows, FACILITY_COLUMNS), filename)
+          : csvResponse(serializeCsv(rows, FACILITY_COLUMNS), filename);
       }
       case "treatment-perception": {
         const limit = readLimit(req, 50, 500);
@@ -262,10 +292,10 @@ export async function GET(
             endsAt: filters.endsAt,
           },
         );
-        return csvResponse(
-          serializeCsv(rows, TREATMENT_COLUMNS),
-          `medrash-treatment-perception-${suffix}`,
-        );
+        const filename = `medrash-treatment-perception-${suffix}`;
+        return useStream
+          ? csvStreamResponse(streamCsv(rows, TREATMENT_COLUMNS), filename)
+          : csvResponse(serializeCsv(rows, TREATMENT_COLUMNS), filename);
       }
     }
   } catch (err) {

@@ -185,3 +185,62 @@ Once verification §4 is green:
 - Auto-applied migrations via CI.
 
 These get sequenced after the pilot is observed running.
+
+---
+
+## 7. Audit retention purge (scheduled)
+
+Function: [admin/netlify/functions/audit-retention-purge.ts](../admin/netlify/functions/audit-retention-purge.ts)
+Schedule: `"17 3 * * *"` UTC (daily, 03:17 UTC — quiet hours globally).
+Invocation: scheduled by Netlify infrastructure. Manual HTTP invocations
+are tolerated because the function is idempotent (only deletes
+already-expired rows) and needs the server-only service-role key to do
+anything destructive.
+
+### What it drains
+
+Each run deletes expired rows (where `expire_at <= now()`) from:
+
+| Table | Retention | Notes |
+| --- | --- | --- |
+| `app.auth_events` | 90 days | Login / logout / failure audit trail. |
+| `admin_audit.events` | 730 days | Admin writes, identity-claim trigger, etc. |
+| `app.idempotency_keys` | 24 hours | Per-request replay cache (Slice P0.2). |
+
+The function returns JSON of shape `PurgeOutcome`:
+
+```json
+{
+  "ok": true,
+  "purgedAt": "2026-01-15T03:17:42.812Z",
+  "authEventsDeleted": 17,
+  "adminAuditDeleted": 0,
+  "idempotencyKeysDeleted": 412,
+  "errors": []
+}
+```
+
+A `5xx` body with `ok: false` populates `errors` with one string per
+table that failed. Each table is purged in its own statement; a failure
+on one table does not skip the others.
+
+### Manual verification
+
+After deploy, run once to confirm the path works end-to-end:
+
+```pwsh
+curl -sS -X POST https://<admin-origin>/.netlify/functions/audit-retention-purge
+```
+
+Expected response: `200` with `ok: true` and per-table counts (zeroes
+on a fresh project; non-zero once traffic has aged past each retention
+window). A `5xx` body with `ok: false` lists per-table error strings in
+`errors` — investigate each one before promoting to scheduled.
+
+### Monitoring
+
+- The scheduled run is visible in **Netlify → Functions → Scheduled**.
+- Success logs one line: `[audit-retention-purge] ok <payload>`.
+- Failures log `[audit-retention-purge] failed <payload>` and surface
+  in Sentry under tag `function:audit-retention-purge`.
+

@@ -73,6 +73,74 @@ export function serializeCsv<TRow>(
 }
 
 /**
+ * P0.7 — single-row serialiser used by the streaming export. Renders one
+ * row WITHOUT a trailing newline so the caller controls separators.
+ */
+export function serializeCsvRow<TRow>(
+  row: TRow,
+  columns: readonly CsvColumn<TRow>[],
+): string {
+  return columns.map((c) => escapeCell(renderCell(c.select(row)))).join(",");
+}
+
+/**
+ * P0.7 — header line for streaming exports. Excludes the trailing CRLF so
+ * the caller appends `\r\n` (or nothing if no rows follow yet).
+ */
+export function serializeCsvHeader<TRow>(
+  columns: readonly CsvColumn<TRow>[],
+): string {
+  return columns.map((c) => escapeCell(c.header)).join(",");
+}
+
+/**
+ * P0.7 — wrap a row collection in a ReadableStream of UTF-8 bytes prefixed
+ * with the BOM (so Excel opens the file in the right encoding). The header
+ * row is always emitted, even when `rows` is empty.
+ *
+ * Streaming response avoids buffering the entire CSV in memory before the
+ * Response object materialises — important for large /reports exports
+ * (50k attempts × 26 columns can exceed Netlify's 6 MB response limit when
+ * buffered).
+ */
+export function streamCsv<TRow>(
+  rows: Iterable<TRow> | AsyncIterable<TRow>,
+  columns: readonly CsvColumn<TRow>[],
+): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        // BOM + header line.
+        controller.enqueue(encoder.encode("\uFEFF"));
+        controller.enqueue(encoder.encode(serializeCsvHeader(columns)));
+
+        const iterable = rows as AsyncIterable<TRow> & Iterable<TRow>;
+        const isAsync =
+          typeof (iterable as AsyncIterable<TRow>)[Symbol.asyncIterator] ===
+          "function";
+        if (isAsync) {
+          for await (const row of iterable as AsyncIterable<TRow>) {
+            controller.enqueue(
+              encoder.encode("\r\n" + serializeCsvRow(row, columns)),
+            );
+          }
+        } else {
+          for (const row of iterable as Iterable<TRow>) {
+            controller.enqueue(
+              encoder.encode("\r\n" + serializeCsvRow(row, columns)),
+            );
+          }
+        }
+        controller.close();
+      } catch (err) {
+        controller.error(err);
+      }
+    },
+  });
+}
+
+/**
  * Sanitize a filename segment to safe ASCII for `Content-Disposition`.
  * Defensive — keeps Latin letters/digits/dash/underscore/dot only.
  */
