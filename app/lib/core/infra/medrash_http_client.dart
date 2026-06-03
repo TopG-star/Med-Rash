@@ -1,7 +1,45 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
+import 'dart:math' as math;
 
 import 'package:http/http.dart' as http;
+
+/// Retry policy for [MedRashHttpClient.postJson]. Default is no retry, which
+/// preserves the existing single-shot behaviour for every caller that doesn't
+/// opt in. Repositories that must survive a flaky cell tower (attempt-submit,
+/// profile-sync) pass [RetryPolicy.standard].
+///
+/// Retries fire only on network exceptions, timeouts, and 5xx responses. 4xx
+/// failures are deterministic and rethrown immediately — retrying a 400 just
+/// burns the user's battery.
+class RetryPolicy {
+  const RetryPolicy({
+    required this.maxAttempts,
+    this.initialBackoff = const Duration(milliseconds: 500),
+    this.maxBackoff = const Duration(seconds: 4),
+  });
+
+  static const RetryPolicy none = RetryPolicy(maxAttempts: 1);
+
+  /// Pilot default: 3 total attempts (1 initial + 2 retries), 500 ms → 1 s → 2 s
+  /// with ±20% jitter.
+  static const RetryPolicy standard = RetryPolicy(maxAttempts: 3);
+
+  final int maxAttempts;
+  final Duration initialBackoff;
+  final Duration maxBackoff;
+
+  Duration backoffFor(int attemptIndex, math.Random rng) {
+    final int baseMs =
+        (initialBackoff.inMilliseconds * (1 << attemptIndex)).clamp(
+      initialBackoff.inMilliseconds,
+      maxBackoff.inMilliseconds,
+    );
+    final double jitter = 0.8 + rng.nextDouble() * 0.4; // [0.8, 1.2)
+    return Duration(milliseconds: (baseMs * jitter).round());
+  }
+}
 
 /// Thrown by [MedRashHttpClient] whenever a Netlify function responds with a
 /// non-2xx status. Wraps the parsed JSON body (if any) and the status code so
@@ -40,13 +78,19 @@ class MedRashHttpClient {
     required String functionsBaseUrl,
     http.Client? httpClient,
     Future<String?> Function()? tokenProvider,
+    Duration defaultTimeout = const Duration(seconds: 10),
+    math.Random? random,
   })  : _baseFunctionsUri = _normalizeFunctionsUri(functionsBaseUrl),
         _httpClient = httpClient ?? http.Client(),
-        _tokenProvider = tokenProvider;
+        _tokenProvider = tokenProvider,
+        _defaultTimeout = defaultTimeout,
+        _random = random ?? math.Random();
 
   final Uri _baseFunctionsUri;
   final http.Client _httpClient;
   final Future<String?> Function()? _tokenProvider;
+  final Duration _defaultTimeout;
+  final math.Random _random;
 
   static Uri _normalizeFunctionsUri(String raw) {
     final String normalized = raw.endsWith('/') ? raw : '$raw/';
@@ -88,47 +132,103 @@ class MedRashHttpClient {
   /// non-2xx, after logging the failure. Network-layer exceptions (timeouts,
   /// DNS, etc.) are logged and rethrown verbatim so callers can decide their
   /// own recovery.
+  ///
+  /// [timeout] caps each individual HTTP attempt (default 10s). [retryPolicy]
+  /// controls inline retries on network failures, timeouts, and 5xx responses;
+  /// defaults to [RetryPolicy.none] to preserve single-shot behaviour for
+  /// callers that don't opt in. [idempotencyKey], when provided, is sent as
+  /// the `Idempotency-Key` request header so the server can dedupe retries.
   Future<Map<String, dynamic>> postJson(
     String functionName,
-    Map<String, Object?> payload,
-  ) async {
+    Map<String, Object?> payload, {
+    Duration? timeout,
+    RetryPolicy retryPolicy = RetryPolicy.none,
+    String? idempotencyKey,
+  }) async {
     final Uri uri = _functionUri(functionName);
+    final Duration perAttemptTimeout = timeout ?? _defaultTimeout;
+    final int maxAttempts = math.max(1, retryPolicy.maxAttempts);
 
-    http.Response response;
-    try {
-      response = await _httpClient.post(
-        uri,
-        headers: await _buildHeaders(),
-        body: jsonEncode(payload),
-      );
-    } catch (error, stack) {
-      developer.log(
-        'network failure',
-        name: 'MedRashHttpClient.$functionName',
-        error: error,
-        stackTrace: stack,
-      );
-      rethrow;
-    }
+    Object? lastError;
+    StackTrace? lastStack;
 
-    Map<String, dynamic> body = <String, dynamic>{};
-    if (response.body.trim().isNotEmpty) {
-      try {
-        final Object? decoded = jsonDecode(response.body);
-        if (decoded is Map<String, dynamic>) {
-          body = decoded;
-        }
-      } catch (error, stack) {
+    for (int attempt = 0; attempt < maxAttempts; attempt += 1) {
+      if (attempt > 0) {
+        final Duration delay = retryPolicy.backoffFor(attempt - 1, _random);
         developer.log(
-          'response body not JSON',
+          'retry $attempt/${maxAttempts - 1} after ${delay.inMilliseconds}ms',
+          name: 'MedRashHttpClient.$functionName',
+        );
+        await Future<void>.delayed(delay);
+      }
+
+      final Map<String, String> headers = await _buildHeaders();
+      if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
+        headers['idempotency-key'] = idempotencyKey;
+      }
+
+      http.Response response;
+      try {
+        response = await _httpClient
+            .post(uri, headers: headers, body: jsonEncode(payload))
+            .timeout(perAttemptTimeout);
+      } on TimeoutException catch (error, stack) {
+        lastError = error;
+        lastStack = stack;
+        developer.log(
+          'timeout after ${perAttemptTimeout.inMilliseconds}ms (attempt ${attempt + 1}/$maxAttempts)',
+          name: 'MedRashHttpClient.$functionName',
+          error: error,
+        );
+        continue;
+      } catch (error, stack) {
+        lastError = error;
+        lastStack = stack;
+        developer.log(
+          'network failure (attempt ${attempt + 1}/$maxAttempts)',
           name: 'MedRashHttpClient.$functionName',
           error: error,
           stackTrace: stack,
         );
+        continue;
       }
-    }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
+      Map<String, dynamic> body = <String, dynamic>{};
+      if (response.body.trim().isNotEmpty) {
+        try {
+          final Object? decoded = jsonDecode(response.body);
+          if (decoded is Map<String, dynamic>) {
+            body = decoded;
+          }
+        } catch (error, stack) {
+          developer.log(
+            'response body not JSON',
+            name: 'MedRashHttpClient.$functionName',
+            error: error,
+            stackTrace: stack,
+          );
+        }
+      }
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return body;
+      }
+
+      // 5xx is retriable; 4xx is deterministic — fail fast.
+      if (response.statusCode >= 500 && attempt + 1 < maxAttempts) {
+        lastError = MedRashGateException(
+          functionName: functionName,
+          statusCode: response.statusCode,
+          body: body,
+        );
+        developer.log(
+          'gate returned ${response.statusCode} (attempt ${attempt + 1}/$maxAttempts) — will retry',
+          name: 'MedRashHttpClient.$functionName',
+          error: body['code'] ?? body['error'] ?? response.body,
+        );
+        continue;
+      }
+
       developer.log(
         'gate returned ${response.statusCode}',
         name: 'MedRashHttpClient.$functionName',
@@ -141,6 +241,11 @@ class MedRashHttpClient {
       );
     }
 
-    return body;
+    // Exhausted retries on network/timeout/5xx. Rethrow the last error so
+    // callers can route it to the outbox or surface a banner.
+    if (lastError is Exception) {
+      Error.throwWithStackTrace(lastError as Object, lastStack ?? StackTrace.current);
+    }
+    throw lastError ?? StateError('postJson failed without an error');
   }
 }

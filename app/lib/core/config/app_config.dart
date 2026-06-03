@@ -41,5 +41,32 @@ class AppConfig {
     'MEDRASH_NAVII_VERSION',
     defaultValue: '0.7.0',
   );
+
+  /// P0.3 — fail-fast at boot for hosted builds.
+  ///
+  /// In `development` we accept the localhost defaults so `flutter run` keeps
+  /// working out of the box. In any other Sentry environment we require
+  /// production-grade values to be baked in via `--dart-define=...` (see
+  /// `app/scripts/build-web.sh`). Missing values throw [StateError] before
+  /// the first widget is built, which is loud and obvious in Sentry rather
+  /// than silently 5xx-ing on the first network call.
+  static void validateOrThrow(String sentryEnvironment) {
+    if (sentryEnvironment == 'development') return;
+    final List<String> missing = <String>[];
+    if (functionsBaseUrl.isEmpty ||
+        functionsBaseUrl.startsWith('http://localhost')) {
+      missing.add('MEDRASH_FUNCTIONS_BASE_URL');
+    }
+    if (turnstileSiteKey.isEmpty) {
+      missing.add('MEDRASH_TURNSTILE_SITE_KEY');
+    }
+    if (missing.isNotEmpty) {
+      throw StateError(
+        'MedRash AppConfig is missing required build-time defines for '
+        '"$sentryEnvironment": ${missing.join(', ')}. Re-run the build with '
+        '--dart-define for each.',
+      );
+    }
+  }
 }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
+import 'core/config/app_config.dart';
 import 'core/di/init_core.dart';
 import 'core/observability/sentry_scrubber.dart';
 import 'core/ui/arena_app.dart';
@@ -17,6 +18,10 @@ const String _sentryEnv =
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // P0.3 — crash loud and early on a hosted build that's missing required
+  // env vars instead of silently 5xx-ing on the first network call. Dev
+  // builds keep the localhost defaults.
+  AppConfig.validateOrThrow(_sentryEnv);
   // Path-based URLs on web so clean QR/deep links like /session/ABCD reach
   // go_router instead of being stripped by the default hash strategy.
   usePathUrlStrategy();

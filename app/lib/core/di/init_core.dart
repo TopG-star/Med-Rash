@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/app_config.dart';
@@ -6,7 +8,9 @@ import '../infra/device_identity_service.dart';
 import '../infra/device_token_store.dart';
 import '../infra/event_bus.dart';
 import '../infra/medrash_http_client.dart';
+import '../infra/outbox_flusher.dart';
 import '../infra/overlay_manager.dart';
+import '../infra/request_outbox.dart';
 import '../infra/turnstile_token_provider.dart';
 import '../ui/widgets/navii_svg_loader.dart';
 import '../../features/leaderboard/repositories/leaderboard_repository.dart';
@@ -57,12 +61,22 @@ Future<void> initCore() async {
       tokenProvider: () => getIt<DeviceTokenStore>().currentToken(),
     ),
   );
+  getIt.registerLazySingleton<RequestOutbox>(
+    () => RequestOutbox(preferences),
+  );
+  getIt.registerLazySingleton<OutboxFlusher>(
+    () => OutboxFlusher(
+      outbox: getIt<RequestOutbox>(),
+      httpClient: getIt<MedRashHttpClient>(),
+    ),
+  );
   getIt.registerLazySingleton<ProfileRepository>(
     () => LocalProfileRepository(
       preferences,
       eventBus: getIt<EventBus>(),
       httpClient: getIt<MedRashHttpClient>(),
       authStateManager: getIt<AuthStateManager>(),
+      outbox: getIt<RequestOutbox>(),
     ),
   );
   // P8.c — participant analytics (donut + per-category bars). Registered
@@ -142,4 +156,9 @@ Future<void> initCore() async {
   // Same rationale: StreakStore must observe AttemptSubmittedEvent even when
   // the participant hasn't opened Home yet (e.g. QR-deep-link → quiz → result).
   getIt<StreakStore>();
+
+  // P0.1 — fire-and-forget drain of any writes that were queued by a
+  // previous session (offline at the time of profile-sync, etc.). Failure
+  // here is silent by design: the next online write will retry the queue.
+  unawaited(getIt<OutboxFlusher>().flush());
 }

@@ -9,6 +9,7 @@ import '../../../core/infra/auth_state_manager.dart';
 import '../../../core/infra/event_bus.dart';
 import '../../../core/infra/identity_snapshot.dart';
 import '../../../core/infra/medrash_http_client.dart';
+import '../../../core/infra/request_outbox.dart';
 import '../models/user_profile.dart';
 
 /// Raised when the server rejects a profile sync because another `app.users`
@@ -87,9 +88,11 @@ class LocalProfileRepository implements ProfileRepository {
     EventBus? eventBus,
     MedRashHttpClient? httpClient,
     AuthStateManager? authStateManager,
+    RequestOutbox? outbox,
   })  : _eventBus = eventBus,
         _httpClient = httpClient,
-        _authStateManager = authStateManager {
+        _authStateManager = authStateManager,
+        _outbox = outbox {
     // Singleton-scoped subscription: the repo lives for the whole app
     // lifetime so no explicit cancellation is needed.
     eventBus?.on<AttemptSubmittedEvent>().listen(_onAttemptSubmitted);
@@ -99,6 +102,7 @@ class LocalProfileRepository implements ProfileRepository {
   final EventBus? _eventBus;
   final MedRashHttpClient? _httpClient;
   final AuthStateManager? _authStateManager;
+  final RequestOutbox? _outbox;
 
   static const String _keyFullName = 'medrash.profile.full_name';
   static const String _keyNickname = 'medrash.profile.nickname';
@@ -367,20 +371,24 @@ class LocalProfileRepository implements ProfileRepository {
     }
 
     try {
-      await httpClient.postJson('profile-sync', <String, Object?>{
-        'participantId': participantId,
-        'deviceInstallId': deviceInstallId,
-        'profile': <String, Object?>{
-          'fullName': profile.fullName,
-          'nickname': profile.nickname,
-          'facility': profile.facility,
-          'specialty': profile.specialty,
-          // Only include `email` when the local profile actually carries one
-          // so an unrelated profile edit (e.g. nickname change) never clears
-          // a previously-saved recovery email server-side.
-          if (profile.email != null && profile.email!.isNotEmpty) 'email': profile.email,
+      await httpClient.postJson(
+        'profile-sync',
+        <String, Object?>{
+          'participantId': participantId,
+          'deviceInstallId': deviceInstallId,
+          'profile': <String, Object?>{
+            'fullName': profile.fullName,
+            'nickname': profile.nickname,
+            'facility': profile.facility,
+            'specialty': profile.specialty,
+            // Only include `email` when the local profile actually carries one
+            // so an unrelated profile edit (e.g. nickname change) never clears
+            // a previously-saved recovery email server-side.
+            if (profile.email != null && profile.email!.isNotEmpty) 'email': profile.email,
+          },
         },
-      });
+        retryPolicy: RetryPolicy.standard,
+      );
     } on MedRashGateException catch (error, stack) {
       if (rethrowTaken && error.code == 'EMAIL_TAKEN') {
         final String? serverMessage = error.body['message']?.toString();
@@ -396,11 +404,52 @@ class LocalProfileRepository implements ProfileRepository {
         error: error,
         stackTrace: stack,
       );
+      // 4xx is deterministic — don't queue (retrying won't help). 5xx already
+      // exhausted retries inside the http client, so queue for later flush.
+      if (error.statusCode >= 500) {
+        await _enqueueProfileSync(profile, participantId, deviceInstallId);
+      }
     } catch (error, stack) {
-      // Best-effort: failure here just leaves app.users stale until the next
-      // attempt-submit refreshes it. The local profile is already persisted.
+      // Network / timeout failure after exhausted inline retries. The local
+      // profile is already persisted; queue the sync so the next online
+      // boot (OutboxFlusher in initCore) replays it.
       developer.log(
         'profile-sync failed; server-side users row will refresh on next attempt-submit',
+        name: 'LocalProfileRepository',
+        error: error,
+        stackTrace: stack,
+      );
+      await _enqueueProfileSync(profile, participantId, deviceInstallId);
+    }
+  }
+
+  Future<void> _enqueueProfileSync(
+    UserProfile profile,
+    String participantId,
+    String deviceInstallId,
+  ) async {
+    final RequestOutbox? outbox = _outbox;
+    if (outbox == null) return;
+    try {
+      await outbox.enqueue(
+        type: 'profile-sync',
+        // One pending sync per participant — the latest payload wins.
+        idempotencyKey: 'profile-sync:$participantId',
+        payload: <String, Object?>{
+          'participantId': participantId,
+          'deviceInstallId': deviceInstallId,
+          'profile': <String, Object?>{
+            'fullName': profile.fullName,
+            'nickname': profile.nickname,
+            'facility': profile.facility,
+            'specialty': profile.specialty,
+            if (profile.email != null && profile.email!.isNotEmpty) 'email': profile.email,
+          },
+        },
+      );
+    } catch (error, stack) {
+      developer.log(
+        'outbox enqueue failed for profile-sync',
         name: 'LocalProfileRepository',
         error: error,
         stackTrace: stack,

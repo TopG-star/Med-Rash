@@ -216,7 +216,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
         )
         .toList();
 
-    await _postJson(
+    await _httpClient.postJson(
       'attempt-submit',
       <String, Object?>{
         ...identityPayload,
@@ -231,6 +231,12 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
         'sessionId': activeAttempt.sessionId,
         'answers': answers,
       },
+      // P0.1 — a flaky cell tower must not turn a ranked attempt into a
+      // lost score. The server already dedupes ranked attempts via the
+      // unique index (migration 001), so a successful retry after a lost
+      // 200 surfaces as RANKED_ATTEMPT_ALREADY_EXISTS (handled in
+      // finishAttempt) and the persisted snapshot still flips to 'synced'.
+      retryPolicy: RetryPolicy.standard,
     );
   }
 
