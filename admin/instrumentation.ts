@@ -10,6 +10,10 @@
  */
 export async function register() {
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // P0.3 \u2014 fail-fast on missing prod secrets. No-op in dev / during
+    // `next build`; throws a single human-readable error otherwise.
+    const { validateProductionEnv } = await import("./src/lib/env-validation");
+    validateProductionEnv();
     await import("./sentry.server.config");
   }
 

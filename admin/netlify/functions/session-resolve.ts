@@ -2,18 +2,14 @@ import { getSupabaseAdminClient } from './_shared/supabase';
 import { HandlerEvent, HandlerResponse, handlePreflight, jsonResponse, parseJsonBody, requirePost, toV2Handler } from './_shared/http';
 import { requireParticipantAuth } from './_shared/participant-auth';
 import { validateOrRespond } from './_shared/validate';
+import {
+  enforceRateLimit,
+  formatLockoutMessage,
+  rateLimitConfig,
+} from '../../src/lib/rate-limit';
 import { sessionResolveSchema } from '../../src/lib/schemas/session';
 
-const RATE_LIMIT_WINDOW_MS = 60_000;
-const RATE_LIMIT_MAX_REQUESTS = 30;
 const MIN_RESPONSE_LATENCY_MS = 220;
-
-type RateLimitBucket = {
-  windowStartMs: number;
-  requestCount: number;
-};
-
-const sessionResolveRateLimitBuckets = new Map<string, RateLimitBucket>();
 
 type ResolvedSessionPayload = {
   sessionId: string;
@@ -74,21 +70,11 @@ function readClientFingerprint(event: HandlerEvent): string {
   return 'ip:unknown';
 }
 
-function isRateLimited(clientFingerprint: string): boolean {
-  const nowMs = Date.now();
-  const existing = sessionResolveRateLimitBuckets.get(clientFingerprint);
-
-  if (!existing || nowMs - existing.windowStartMs >= RATE_LIMIT_WINDOW_MS) {
-    sessionResolveRateLimitBuckets.set(clientFingerprint, {
-      windowStartMs: nowMs,
-      requestCount: 1,
-    });
-    return false;
-  }
-
-  existing.requestCount += 1;
-  sessionResolveRateLimitBuckets.set(clientFingerprint, existing);
-  return existing.requestCount > RATE_LIMIT_MAX_REQUESTS;
+function isRateLimitedSync(): false {
+  // P0.5 — in-memory bucket removed. The DB-backed limiter lives in the
+  // handler below so it survives Netlify cold starts and multiple function
+  // instances.
+  return false;
 }
 
 async function applyMinimumLatency(startedAtMs: number): Promise<void> {
@@ -165,14 +151,35 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
   const startedAtMs = Date.now();
   const clientFingerprint = readClientFingerprint(event);
 
-  if (isRateLimited(clientFingerprint)) {
+  // P0.5 — DB-backed limiter (matches the previous 30/60s behaviour but
+  // shared across Netlify function instances). Bucket by client IP so a
+  // single venue's burst doesn't lock out other rooms.
+  const supabase = getSupabaseAdminClient();
+  let limitDecision;
+  try {
+    limitDecision = await enforceRateLimit(
+      supabase,
+      rateLimitConfig('session_resolve', clientFingerprint),
+    );
+  } catch (err) {
+    // Fail open on limiter-infrastructure errors so the public join flow
+    // does not hard-break if the rate_limit table is briefly unavailable.
+    console.error('[session-resolve] rate-limit check failed:', err);
+    limitDecision = { allowed: true, retryAfterSeconds: 0 } as const;
+  }
+  if (!limitDecision.allowed) {
     await applyMinimumLatency(startedAtMs);
     return jsonResponse(429, {
       ok: false,
       code: 'RATE_LIMITED',
-      message: 'Too many requests. Please retry shortly.',
+      message:
+        formatLockoutMessage(limitDecision as never) ||
+        'Too many requests. Please retry shortly.',
+      retryAfterSeconds: limitDecision.retryAfterSeconds ?? 0,
     });
   }
+  // Suppress unused symbol; previous in-memory check is now a no-op.
+  void isRateLimitedSync;
 
   try {
     const body = parseJsonBody(event);
@@ -182,7 +189,6 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       return validated.response;
     }
     const joinCode = validated.data.joinCode;
-    const supabase = getSupabaseAdminClient();
 
     const { data, error } = await supabase
       .from('sessions')

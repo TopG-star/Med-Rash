@@ -26,6 +26,7 @@ type PurgeOutcome = {
   purgedAt: string;
   authEventsDeleted: number;
   adminAuditDeleted: number;
+  idempotencyKeysDeleted: number;
   errors: string[];
 };
 
@@ -47,11 +48,20 @@ export default async (_req: Request): Promise<Response> => {
     .lte("expire_at", purgedAt);
   if (auditErr) errors.push(`admin_audit: ${auditErr.message}`);
 
+  // P0.2 \u2014 idempotency cache rows expire after 24h (migration 019). Same
+  // purge cadence keeps the table small without a separate cron.
+  const { count: idempotencyKeysDeleted, error: idemErr } = await supabase
+    .from("idempotency_keys")
+    .delete({ count: "exact" })
+    .lte("expire_at", purgedAt);
+  if (idemErr) errors.push(`idempotency_keys: ${idemErr.message}`);
+
   const payload: PurgeOutcome = {
     ok: errors.length === 0,
     purgedAt,
     authEventsDeleted: authEventsDeleted ?? 0,
     adminAuditDeleted: adminAuditDeleted ?? 0,
+    idempotencyKeysDeleted: idempotencyKeysDeleted ?? 0,
     errors,
   };
 

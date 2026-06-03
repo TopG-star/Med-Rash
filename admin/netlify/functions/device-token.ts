@@ -8,8 +8,12 @@ import {
   requirePost,
   toV2Handler,
 } from "./_shared/http";
-import { consume } from "./_shared/rate-limit-bucket";
+import { getSupabaseAdminClient } from "./_shared/supabase";
 import { extractRemoteIp, verifyTurnstileToken } from "./_shared/turnstile";
+import {
+  enforceRateLimit,
+  rateLimitConfig,
+} from "../../src/lib/rate-limit";
 
 // Slice A2 — mint a per-device bearer token.
 //
@@ -76,7 +80,24 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
   // ---- Bootstrap auth (Turnstile + rate-limit) ---------------------------
   const remoteIp = extractRemoteIp(event.headers);
 
-  const limit = consume(`${remoteIp ?? "anon"}::${deviceInstallId}`);
+  // P0.5 \u2014 DB-backed limiter (was in-memory token bucket). Bucket by
+  // (ip, deviceInstallId) so a single device can't burn another device's
+  // budget on the same NAT. Default 10/60s matches the previous burst/refill.
+  let limit;
+  try {
+    limit = await enforceRateLimit(
+      getSupabaseAdminClient(),
+      rateLimitConfig(
+        "device_token",
+        `${remoteIp ?? "anon"}::${deviceInstallId}`,
+      ),
+    );
+  } catch (err) {
+    // Fail open on limiter-infrastructure errors so a Postgres blip does
+    // not lock every new device out of the system. Logged for review.
+    console.error("[device-token] rate-limit check failed:", err);
+    limit = { allowed: true, retryAfterSeconds: 0 } as const;
+  }
   if (!limit.allowed) {
     return {
       statusCode: 429,

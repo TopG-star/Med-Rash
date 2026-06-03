@@ -3,6 +3,11 @@ import {
   requireAdminUserSession,
   requireLegacyWriteKey,
 } from "./_shared/admin-user-session";
+import {
+  hashRequestBody,
+  readIdempotencyKey,
+  withIdempotency,
+} from "./_shared/idempotency";
 import { validateOrRespond } from "./_shared/validate";
 import { createSessionSchema } from "../../src/lib/schemas/session";
 import { getSupabaseAdminClient } from "./_shared/supabase";
@@ -70,36 +75,59 @@ export async function handler(event: HandlerEvent) {
     createdBy: authResult.auth.userId,
   };
 
-  try {
-    const result = await createSessionRecord(input);
-    void logAdminAction(getSupabaseAdminClient(), {
+  // P0.2 — idempotency. Caller supplies `Idempotency-Key` header; a
+  // second submit (refresh / Netlify retry / double-click) replays the
+  // first 2xx response instead of creating a second session.
+  const idemKey = readIdempotencyKey(event.headers);
+  const idemHash = hashRequestBody({ scope: "session_create", input });
+  const cached = await withIdempotency(
+    getSupabaseAdminClient(),
+    {
+      scope: "session_create",
+      key: idemKey,
+      requestHash: idemHash,
       actorUserId: authResult.auth.userId,
-      actorRole: authResult.auth.role,
-      action: "session_create",
-      targetType: "session",
-      targetId: result.session.id,
-      payload: input,
-      metadata: { via: authResult.auth.via },
-    });
-    return jsonResponse(201, {
-      ok: true,
-      session: result.session,
-      joinUrl: result.joinUrl,
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Failed to create session.";
-    const isNotFound = /not found/i.test(message);
-    const isConflict = /unique join code|inactive quiz/i.test(message);
-    return jsonResponse(isNotFound ? 404 : isConflict ? 409 : 500, {
-      ok: false,
-      code: isNotFound
-        ? "QUIZ_NOT_FOUND"
-        : isConflict
-          ? "SESSION_CONFLICT"
-          : "SESSION_CREATE_FAILED",
-      message,
-    });
-  }
+    },
+    async () => {
+      try {
+        const result = await createSessionRecord(input);
+        void logAdminAction(getSupabaseAdminClient(), {
+          actorUserId: authResult.auth.userId,
+          actorRole: authResult.auth.role,
+          action: "session_create",
+          targetType: "session",
+          targetId: result.session.id,
+          payload: input,
+          metadata: { via: authResult.auth.via },
+        });
+        return {
+          statusCode: 201,
+          body: {
+            ok: true,
+            session: result.session,
+            joinUrl: result.joinUrl,
+          },
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to create session.";
+        const isNotFound = /not found/i.test(message);
+        const isConflict = /unique join code|inactive quiz/i.test(message);
+        return {
+          statusCode: isNotFound ? 404 : isConflict ? 409 : 500,
+          body: {
+            ok: false,
+            code: isNotFound
+              ? "QUIZ_NOT_FOUND"
+              : isConflict
+                ? "SESSION_CONFLICT"
+                : "SESSION_CREATE_FAILED",
+            message,
+          },
+        };
+      }
+    },
+  );
+  return jsonResponse(cached.statusCode, cached.body);
 }
 
 export default toV2Handler(handler);

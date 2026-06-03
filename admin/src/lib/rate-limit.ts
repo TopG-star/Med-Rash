@@ -36,7 +36,13 @@ export type RateLimitScope =
   // client IP so a single venue's burst doesn't lock out other rooms.
   | "session_leaderboard"
   | "auth_mfa_verify"
-  | "auth_mfa_recovery";
+  | "auth_mfa_recovery"
+  // P0.5 — DB-backed replacements for the in-memory limiters previously
+  // baked into session-resolve / device-token. Both endpoints are public
+  // (no auth) so a per-instance map was useless under multiple Netlify
+  // function instances.
+  | "session_resolve"
+  | "device_token";
 
 export type RateLimitConfig = {
   scope: RateLimitScope;
@@ -151,6 +157,11 @@ export const RATE_LIMITS: Record<RateLimitScope, Omit<RateLimitConfig, "scope" |
   // because a real owner only ever consumes one code at a time.
   auth_mfa_verify: { limit: 5, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 },
   auth_mfa_recovery: { limit: 3, windowSeconds: 15 * 60, lockoutSeconds: 15 * 60 },
+  // P0.5 — public read endpoints. Matches the previous in-memory defaults
+  // (30 req/min for session-resolve, 10 req/min for device-token issuance)
+  // so behaviour stays identical from the client's perspective.
+  session_resolve: { limit: 30, windowSeconds: 60, lockoutSeconds: 60 },
+  device_token: { limit: 10, windowSeconds: 60, lockoutSeconds: 60 },
 };
 
 export function rateLimitConfig(
