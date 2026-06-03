@@ -56,11 +56,33 @@ class _MonthlyDonutCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = context.arenaTokens;
+    final TextStyle? headlineBase =
+        Theme.of(context).textTheme.titleLarge?.copyWith(
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w800,
+              color: tokens.textPrimary,
+              height: 1.25,
+            );
     return ArenaCard(
       padding: const EdgeInsets.all(MedRashSpace.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
+          Text.rich(
+            TextSpan(
+              style: headlineBase,
+              children: <InlineSpan>[
+                const TextSpan(text: 'You have played a total '),
+                TextSpan(
+                  text:
+                      '$attempts ${attempts == 1 ? 'quiz' : 'quizzes'}',
+                  style: headlineBase?.copyWith(color: tokens.primary),
+                ),
+                const TextSpan(text: ' this month!'),
+              ],
+            ),
+          ),
+          const SizedBox(height: MedRashSpace.md),
           Text(
             'MONTHLY RANKED ATTEMPTS',
             style: Theme.of(context).textTheme.labelSmall?.copyWith(
