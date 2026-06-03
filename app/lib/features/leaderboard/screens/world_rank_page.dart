@@ -18,6 +18,7 @@ import '../../../core/ui/widgets/arena_card.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../../../core/ui/widgets/empty_state.dart';
 import '../../../core/ui/widgets/gamified_avatar.dart';
+import '../../../core/ui/widgets/hex_badge.dart';
 import '../../../core/ui/widgets/pill_segmented_control.dart';
 import '../../../core/ui/widgets/podium_block.dart';
 import '../../profile/models/avatar_spec.dart';
@@ -502,8 +503,50 @@ class _LeaderRow extends StatelessWidget {
                     letterSpacing: 0.5,
                   ),
             ),
+            if (row.rank >= 1 && row.rank <= 3) ...<Widget>[
+              const SizedBox(width: MedRashSpace.sm),
+              _RankMedal(rank: row.rank),
+            ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// P9.c -- top-3 trailing hex medal used inside the scrollable leader
+/// list (the podium already has its own larger crown / medal glyphs).
+/// Gold/silver/bronze hex with a small crown icon, matching the
+/// reference leaderboard list rows.
+class _RankMedal extends StatelessWidget {
+  const _RankMedal({required this.rank});
+
+  final int rank;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    final Color metal;
+    switch (rank) {
+      case 1:
+        metal = tokens.rankGold;
+        break;
+      case 2:
+        metal = tokens.rankSilver;
+        break;
+      case 3:
+      default:
+        metal = tokens.rankBronze;
+        break;
+    }
+    return HexBadge(
+      size: 32,
+      fillColor: metal,
+      borderColor: metal,
+      child: const Icon(
+        Icons.workspace_premium_rounded,
+        color: Colors.white,
+        size: 18,
       ),
     );
   }
