@@ -86,15 +86,15 @@ Provide a foundation for future game modes, competitions, CME integrations, and 
 
 The initial pilot supports educational content across:
 
-| Product    | Disease Area                 |
-| ---------- | ---------------------------- |
-| Tavanic    | UTI & Infections             |
-| Clexane    | DVT, PE & VTE                |
-| Aprovel    | Hypertension                 |
-| Lantus     | Diabetes                     |
-| Ortacta    | VTE                          |
-| Utrogestan | Hormonal & Fertility Support |
-| Androgel   | Testosterone Deficiency      |
+| Disease Area                 |
+| ---------------------------- |
+| UTI & Infections             |
+| DVT, PE & VTE                |
+| Hypertension                 |
+| Diabetes                     |
+| VTE                          |
+| Hormonal & Fertility Support |
+| Testosterone Deficiency      |
 
 ---
 
