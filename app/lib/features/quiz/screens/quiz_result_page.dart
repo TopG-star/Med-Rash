@@ -21,6 +21,8 @@ import '../../../core/ui/widgets/arena_chip.dart';
 import '../../../core/ui/widgets/arena_scaffold.dart';
 import '../models/attempt.dart';
 import '../repositories/quiz_repository.dart';
+import '../../leaderboard/models/leaderboard_row.dart';
+import '../../leaderboard/repositories/leaderboard_repository.dart';
 import '../../session/storage/last_session_store.dart';
 
 class QuizResultPage extends StatefulWidget {
@@ -46,18 +48,29 @@ class _ResultPayload {
 
 enum _ResultSource { freshFinalize, cachedSynced, cachedPending, none }
 
+class _GlobalContext {
+  const _GlobalContext({required this.rank, required this.totalPlayers});
+
+  final int rank;
+  final int totalPlayers;
+}
+
 class _QuizResultPageState extends State<QuizResultPage> {
   late final QuizRepository _quizRepository;
+  late final LeaderboardRepository _leaderboardRepository;
   StreamSubscription<AttemptSubmittedEvent>? _attemptSubscription;
   StreamSubscription<RankedBadgeUnlockedEvent>? _badgeSubscription;
   Future<_ResultPayload>? _futureResult;
+  Future<_GlobalContext?>? _globalContextFuture;
   bool _retryInFlight = false;
 
   @override
   void initState() {
     super.initState();
     _quizRepository = getIt<QuizRepository>();
+    _leaderboardRepository = getIt<LeaderboardRepository>();
     _futureResult = _resolveResult();
+    _futureResult!.then(_maybeLoadGlobalContext).catchError((_) {});
     final EventBus bus = getIt<EventBus>();
     _attemptSubscription = bus.on<AttemptSubmittedEvent>().listen((_) {
       if (!mounted) return;
@@ -66,6 +79,7 @@ class _QuizResultPageState extends State<QuizResultPage> {
       setState(() {
         _futureResult = _resolveResult();
       });
+      _futureResult!.then(_maybeLoadGlobalContext).catchError((_) {});
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Result synced to server.')),
       );
@@ -189,6 +203,43 @@ class _QuizResultPageState extends State<QuizResultPage> {
     );
   }
 
+  // Only ranked attempts feed the global leaderboard, so a learning-mode
+  // result has no meaningful global rank to surface. Anything else (sync
+  // failure, no attempt) is also skipped — the card stays hidden.
+  void _maybeLoadGlobalContext(_ResultPayload payload) {
+    if (!mounted) return;
+    if (payload.source == _ResultSource.none) return;
+    if (payload.attempt.modeLabel != 'Ranked') return;
+    setState(() {
+      _globalContextFuture = _loadGlobalContext();
+    });
+  }
+
+  Future<_GlobalContext?> _loadGlobalContext() async {
+    try {
+      final List<dynamic> results = await Future.wait<dynamic>(<Future<dynamic>>[
+        _leaderboardRepository.fetchMyRank(
+          period: LeaderboardPeriod.allTime,
+        ),
+        _leaderboardRepository.fetchLeaderboard(
+          period: LeaderboardPeriod.allTime,
+          limit: 50,
+        ),
+      ]);
+      final LeaderboardRow? me = results[0] as LeaderboardRow?;
+      final List<LeaderboardRow> top =
+          (results[1] as List<LeaderboardRow>);
+      if (me == null) return null;
+      // The leaderboard payload caps `top` at 50 rows; the participant could
+      // sit below that window. Floor the denominator at `me.rank` so the
+      // percentile never reads negative for late-joining ranks.
+      final int totalPlayers = top.length < me.rank ? me.rank : top.length;
+      return _GlobalContext(rank: me.rank, totalPlayers: totalPlayers);
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<void> _retrySync() async {
     if (_retryInFlight) return;
     setState(() => _retryInFlight = true);
@@ -301,6 +352,16 @@ class _QuizResultPageState extends State<QuizResultPage> {
                   const SizedBox(height: MedRashSpace.lg),
                 ],
                 _ScoreHeroCard(attempt: attempt),
+                if (attempt.modeLabel == 'Ranked') ...<Widget>[
+                  const SizedBox(height: MedRashSpace.md),
+                  _GlobalContextCard(
+                    future: _globalContextFuture,
+                    onTap: () {
+                      Haptics.submit();
+                      context.go('/leaderboard');
+                    },
+                  ),
+                ],
                 const SizedBox(height: MedRashSpace.lg),
                 _CareerPointsBar(attempt: attempt),
                 const SizedBox(height: MedRashSpace.xl),
@@ -1047,6 +1108,111 @@ class _CenteredCallout extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Secondary "Global Context" card on the post-quiz summary — shows the
+/// participant's global rank as a low-emphasis, tap-through anchor without
+/// pulling them off the result page. Renders only for ranked attempts
+/// (learning mode has no global ladder). Stays hidden when the rank fetch
+/// fails so a flaky network never injects a broken card into the celebration
+/// moment.
+class _GlobalContextCard extends StatelessWidget {
+  const _GlobalContextCard({required this.future, required this.onTap});
+
+  final Future<_GlobalContext?>? future;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = context.arenaTokens;
+    return FutureBuilder<_GlobalContext?>(
+      future: future,
+      builder:
+          (BuildContext context, AsyncSnapshot<_GlobalContext?> snapshot) {
+        if (future == null ||
+            snapshot.connectionState != ConnectionState.done) {
+          return const MedRashSkeletonCard(height: 84);
+        }
+        final _GlobalContext? ctx = snapshot.data;
+        if (ctx == null) {
+          return const SizedBox.shrink();
+        }
+        final int rank = ctx.rank;
+        final int totalPlayers = ctx.totalPlayers;
+        final int percentile = totalPlayers <= 1
+            ? 0
+            : (((totalPlayers - rank) / (totalPlayers - 1)) * 100).round();
+        final String headline = rank == 1
+            ? '#1 globally — top of the ladder'
+            : 'Rank #$rank globally • ahead of $percentile% of players';
+        return Semantics(
+          button: true,
+          label: 'Global context. $headline. Tap to open the world ranking.',
+          child: PressScale(
+            onTap: onTap,
+            child: ArenaCard(
+              color: tokens.surfaceMuted,
+              padding: const EdgeInsets.all(MedRashSpace.md),
+              child: Row(
+                children: <Widget>[
+                  Container(
+                    width: 44,
+                    height: 44,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: tokens.primarySoft,
+                      borderRadius:
+                          BorderRadius.circular(tokens.radiusMedium),
+                    ),
+                    child: Icon(
+                      Icons.public_rounded,
+                      color: tokens.primaryStrong,
+                      size: MedRashIconSize.md,
+                    ),
+                  ),
+                  const SizedBox(width: MedRashSpace.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'GLOBAL CONTEXT',
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w800,
+                                    color: tokens.textSecondary,
+                                    letterSpacing: 0.8,
+                                  ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          headline,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontFamily: 'Poppins',
+                                    fontWeight: FontWeight.w600,
+                                    color: tokens.textPrimary,
+                                    height: 1.3,
+                                  ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: MedRashSpace.sm),
+                  Icon(
+                    Icons.chevron_right_rounded,
+                    color: tokens.textSecondary,
+                    size: MedRashIconSize.md,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
