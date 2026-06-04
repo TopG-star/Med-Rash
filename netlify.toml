@@ -26,6 +26,15 @@
 [functions."audit-retention-purge"]
   schedule = "17 3 * * *"
 
+# Phase 1 (P1.4) — daily KPI digest for managers.
+# Runs admin/netlify/functions/kpi-digest.ts at 08:00 UTC daily, aggregating
+# the previous UTC day's session activity via app.session_kpis_for_date(date)
+# (migration 020). POSTs a Slack-shaped JSON payload to
+# MEDRASH_KPI_DIGEST_WEBHOOK_URL when set; otherwise exits 200 as a no-op
+# heartbeat that still validates the aggregate query.
+[functions."kpi-digest"]
+  schedule = "0 8 * * *"
+
 [build.environment]
   # Node 22 required: @supabase/supabase-js Realtime client needs native
   # WebSocket (absent in Node 20). Next 16 supports Node 22.

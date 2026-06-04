@@ -20,6 +20,7 @@
 // env to do anything destructive.
 
 import { getSupabaseAdminClient } from "./_shared/supabase";
+import { getOrMintRequestId } from "../../src/lib/request-id";
 
 type PurgeOutcome = {
   ok: boolean;
@@ -30,7 +31,8 @@ type PurgeOutcome = {
   errors: string[];
 };
 
-export default async (_req: Request): Promise<Response> => {
+export default async (req: Request): Promise<Response> => {
+  const requestId = getOrMintRequestId(req.headers);
   const supabase = getSupabaseAdminClient();
   const purgedAt = new Date().toISOString();
 
@@ -66,16 +68,16 @@ export default async (_req: Request): Promise<Response> => {
   };
 
   if (!payload.ok) {
-    console.error("[audit-retention-purge] failed", payload);
+    console.error("[audit-retention-purge] failed", { requestId, ...payload });
     return new Response(JSON.stringify(payload), {
       status: 500,
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", "x-request-id": requestId },
     });
   }
 
-  console.log("[audit-retention-purge] ok", payload);
+  console.log("[audit-retention-purge] ok", { requestId, ...payload });
   return new Response(JSON.stringify(payload), {
     status: 200,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "x-request-id": requestId },
   });
 };

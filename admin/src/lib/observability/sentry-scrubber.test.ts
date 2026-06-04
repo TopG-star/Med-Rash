@@ -110,5 +110,35 @@ describe("sentry-scrubber", () => {
     expect(out.message!.length).toBeLessThan(long.length);
     expect(out.message!.endsWith("[truncated]")).toBe(true);
   });
+
+  it("promotes X-Request-ID header to a top-level tag", () => {
+    const ev = baseEvent({
+      request: {
+        url: "https://x/api",
+        headers: {
+          "X-Request-Id": "abcDEF1234567890",
+          "Content-Type": "application/json",
+        },
+      },
+    });
+    const out = scrubEvent(ev)!;
+    expect(out.tags).toMatchObject({ request_id: "abcdef1234567890" });
+  });
+
+  it("does not invent a request_id tag when the header is missing", () => {
+    const ev = baseEvent({
+      request: { url: "https://x", headers: { "Content-Type": "x" } },
+    });
+    const out = scrubEvent(ev)!;
+    expect(out.tags?.request_id).toBeUndefined();
+  });
+
+  it("rejects invalid X-Request-ID values (control chars / overlong)", () => {
+    const ev = baseEvent({
+      request: { url: "https://x", headers: { "x-request-id": "bad\u0007value" } },
+    });
+    const out = scrubEvent(ev)!;
+    expect(out.tags?.request_id).toBeUndefined();
+  });
 });
 

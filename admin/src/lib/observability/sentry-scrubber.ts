@@ -38,6 +38,15 @@ export function scrubEvent<E extends ErrorEvent | TransactionEvent>(
   }
 
   if (event.request) {
+    // P1.3 — promote X-Request-ID from incoming request headers to a top
+    // level Sentry tag so every captured event is filterable by the same
+    // ID that the client + admin middleware + functions log. Done BEFORE
+    // header redaction so the lookup sees the original value.
+    const reqId = readRequestIdFromHeaders(event.request.headers);
+    if (reqId) {
+      event.tags = { ...(event.tags ?? {}), request_id: reqId };
+    }
+
     if (typeof event.request.url === "string") {
       event.request.url = stripQueryAndFragment(event.request.url);
     }
@@ -103,4 +112,24 @@ function truncate(value: string): string {
   return value.length > MAX_STRING_LEN
     ? `${value.slice(0, MAX_STRING_LEN)}…[truncated]`
     : value;
+}
+
+/**
+ * Pull X-Request-ID out of an event.request.headers bag (case-insensitive,
+ * tolerates the shape Sentry hands us — string-keyed object). Returns
+ * null when missing or when the value would fail our `readRequestId`
+ * validation (control chars / overlong).
+ */
+function readRequestIdFromHeaders(
+  headers: Record<string, string> | undefined,
+): string | null {
+  if (!headers) return null;
+  for (const [name, value] of Object.entries(headers)) {
+    if (name.toLowerCase() !== "x-request-id") continue;
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    if (!/^[\x21-\x7e]{1,128}$/.test(trimmed)) return null;
+    return trimmed.toLowerCase();
+  }
+  return null;
 }

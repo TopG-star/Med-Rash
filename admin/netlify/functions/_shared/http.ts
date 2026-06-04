@@ -2,6 +2,7 @@ export type HandlerEvent = {
   httpMethod?: string;
   headers?: Record<string, string | undefined>;
   body?: string | null;
+  requestId?: string;
 };
 
 export type HandlerResponse = {
@@ -9,6 +10,8 @@ export type HandlerResponse = {
   headers?: Record<string, string>;
   body: string;
 };
+
+import { getOrMintRequestId } from "../../../src/lib/request-id";
 
 // Browser callers (the Flutter Web participant app on a different Netlify
 // site) require CORS headers + an OPTIONS preflight response. Participant
@@ -18,7 +21,8 @@ const CORS_HEADERS: Record<string, string> = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, OPTIONS",
   "access-control-allow-headers":
-    "content-type, authorization, x-medrash-admin-write-key, x-medrash-internal-bypass",
+    "content-type, authorization, x-medrash-admin-write-key, x-medrash-internal-bypass, x-request-id, idempotency-key",
+  "access-control-expose-headers": "x-request-id",
   "access-control-max-age": "86400",
 };
 
@@ -86,10 +90,16 @@ export function toV2Handler(legacy: LegacyHandler): (req: Request) => Promise<Re
       headers[key.toLowerCase()] = value;
     });
 
+    // P1.3 — honour incoming X-Request-ID, mint when absent. The id is
+    // exposed to legacy handlers via `event.requestId` and echoed on the
+    // response so the caller can correlate.
+    const requestId = getOrMintRequestId(headers);
+    headers["x-request-id"] = requestId;
+
     const hasBody = method !== "GET" && method !== "HEAD" && method !== "OPTIONS";
     const body = hasBody ? await req.text() : null;
 
-    const event: HandlerEvent = { httpMethod: method, headers, body };
+    const event: HandlerEvent = { httpMethod: method, headers, body, requestId };
     const result = await legacy(event);
 
     // The web Response constructor forbids a body on 1xx/204/304 responses
@@ -101,9 +111,14 @@ export function toV2Handler(legacy: LegacyHandler): (req: Request) => Promise<Re
       (result.statusCode >= 100 && result.statusCode < 200);
     const responseBody = noBody || result.body === "" ? null : result.body;
 
+    const outHeaders: Record<string, string> = {
+      ...(result.headers ?? {}),
+      "x-request-id": requestId,
+    };
+
     return new Response(noBody ? null : responseBody, {
       status: result.statusCode,
-      headers: result.headers ?? {},
+      headers: outHeaders,
     });
   };
 }

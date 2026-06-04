@@ -166,6 +166,10 @@ class MedRashHttpClient {
       if (idempotencyKey != null && idempotencyKey.isNotEmpty) {
         headers['idempotency-key'] = idempotencyKey;
       }
+      // P1.3 — mint a fresh X-Request-ID per attempt so server-side logs
+      // can correlate a retry separately from its predecessor. 16 hex
+      // chars match the server's mintRequestId() shape.
+      headers['x-request-id'] = _mintRequestId();
 
       http.Response response;
       try {
@@ -247,5 +251,15 @@ class MedRashHttpClient {
       Error.throwWithStackTrace(lastError as Object, lastStack ?? StackTrace.current);
     }
     throw lastError ?? StateError('postJson failed without an error');
+  }
+
+  /// P1.3 — mint a 16-hex-char request id (matches the server's shape in
+  /// admin/src/lib/request-id.ts so logs are uniform across runtimes).
+  String _mintRequestId() {
+    final buffer = StringBuffer();
+    for (int i = 0; i < 8; i += 1) {
+      buffer.write(_random.nextInt(256).toRadixString(16).padLeft(2, '0'));
+    }
+    return buffer.toString();
   }
 }

@@ -152,11 +152,54 @@ side via `SENTRY_DSN`. Active alert routes:
 - `function:audit-retention-purge` — purge failure.
 - `function:session-create` / `function:quiz-bank-write` — write-path
   errors. Investigate idempotency conflicts and rate-limit storms here.
+- `function:kpi-digest` — daily digest failure (see §3.8).
 - Browser CSP report alerts arrive via `/api/csp-report`; they log to
   the server console as `[csp-report] directive=… blocked=… doc=…`.
   Aggregate via Netlify function logs grep — a sudden spike means a
   third-party script was added without updating the CSP allowlist in
   `admin/next.config.ts` (and the mirrored block in `netlify.toml`).
+
+#### Recommended Sentry alert rules (pilot)
+
+Configure these in **Sentry → Alerts → Create Alert** against the
+admin project. All thresholds are tuned for pilot traffic (≤ 200
+concurrent participants); revisit at GA.
+
+| Rule | Trigger | Action |
+| --- | --- | --- |
+| Write-path error spike | `event.count` > 5 in 5 min where `tags.function:[session-create, quiz-bank-write, attempt-submit, profile-sync]` | Slack `#medrash-alerts` |
+| Audit purge failure | any event where `tags.function:audit-retention-purge` and `level:error` | Slack `#medrash-alerts` + email on-call |
+| KPI digest failure | any event where `tags.function:kpi-digest` and `level:error` | Slack `#medrash-alerts` |
+| Identity-claim anomaly | any breadcrumb/log message matching `identity_claim` with `level:warning` or higher | Slack `#medrash-alerts` |
+| Front-end crash rate | `crash_free_sessions` < 99% over 1 h | Slack `#medrash-alerts` |
+| Performance regression | p95 transaction duration > 2 s on `attempt-submit` over 15 min | Slack `#medrash-alerts` |
+
+Every server event carries a `request_id` tag (see §3.7). When triaging,
+copy the `request_id` from the Sentry event tag panel and search Netlify
+function logs to retrieve the full request lifecycle.
+
+#### Slack on-call setup
+
+1. In Slack, create channel `#medrash-alerts`.
+2. Add a Slack incoming webhook (Slack → Apps → Incoming Webhooks →
+   Add to Slack → pick `#medrash-alerts` → copy the webhook URL).
+3. In Sentry → Settings → Integrations → Slack → install + authorise
+   the workspace, then map the project to `#medrash-alerts`.
+4. For each alert rule above, set **Action = Send a Slack notification
+   to `#medrash-alerts`**.
+5. The same webhook URL is reused by the KPI digest (see §3.8); store
+   it in 1Password under "MedRash Slack alerts webhook".
+
+#### On-call rotation
+
+Pilot is **solo on-call** — the single engineer who owns the deploy
+is the responder. There is no PagerDuty/Opsgenie escalation in pilot
+scope; Slack notifications go to a channel the on-call engineer
+monitors during business hours and has push notifications enabled for
+out-of-hours. If on-call needs to hand off (vacation, sickness), pin
+the handover note in `#medrash-alerts` and update the **Owner** field
+on each Sentry alert rule. When the second engineer joins the team,
+introduce a weekly rotation and revisit this section.
 
 ### 3.4 Audit purge failure
 
@@ -200,3 +243,102 @@ curl -sS https://<admin-origin>/.netlify/functions/health
 Expected: `200` with `{"ok": true, ...}`. A `5xx` or non-JSON body
 means the function bundler or the Supabase round-trip is broken — go
 straight to [hosted-deploy.md §3](./hosted-deploy.md#3-local-smoke-test-before-redeploying).
+
+### 3.7 X-Request-ID correlation
+
+Every request that traverses the admin app picks up an `x-request-id`
+header. The chain:
+
+1. **Flutter client** (`app/lib/core/infra/medrash_http_client.dart`)
+   mints a fresh 16-hex-char id per HTTP attempt (each retry gets its
+   own id so retries are independently traceable).
+2. **Next.js middleware** (`admin/src/middleware.ts`) reads or mints
+   the header on every matched route, propagates it to the downstream
+   handler via the rewritten request headers, and echoes it on the
+   response. Early-return auth redirects (`/login`, `/denied`, session
+   expiry) intentionally do not echo — they are pre-auth and not part
+   of the traced request lifecycle.
+3. **Netlify functions** read or mint the header inside
+   `toV2Handler` (`admin/netlify/functions/_shared/http.ts`) — covers
+   all 13 wrapped functions automatically — and the three manually
+   instrumented functions (`health`, `audit-retention-purge`,
+   `kpi-digest`). Outgoing response always carries `x-request-id`.
+4. **Sentry** promotes the header value to a top-level `request_id`
+   tag inside `scrubEvent` (`admin/src/lib/observability/sentry-scrubber.ts`),
+   read **before** header redaction so the id survives PII scrubbing.
+
+To trace a failed request end-to-end:
+
+- Grab the `x-request-id` from the user's browser dev tools (Network
+  tab → failed request → Response Headers) or from the Flutter app
+  Sentry breadcrumbs.
+- In Sentry, filter events by `request_id:<value>`.
+- In Netlify function logs, grep for the same id —
+  `audit-retention-purge` and `kpi-digest` already include it in
+  every log line; toV2-wrapped functions log it via their handler
+  bodies.
+
+### 3.8 Daily KPI digest
+
+`/.netlify/functions/kpi-digest` runs on the cron schedule
+`0 8 * * *` (08:00 UTC daily; see `netlify.toml`). It calls
+`app.session_kpis_for_date(p_date)` for **yesterday (UTC)** and posts
+a Slack-formatted summary to the webhook in
+`MEDRASH_KPI_DIGEST_WEBHOOK_URL`.
+
+Setup:
+
+1. Reuse the `#medrash-alerts` Slack webhook from §3.3 (or create a
+   dedicated `#medrash-kpis` channel + webhook for less noise).
+2. In Netlify → Site settings → Environment variables, add
+   `MEDRASH_KPI_DIGEST_WEBHOOK_URL = <webhook URL>`. Without this
+   variable the function still runs and returns the aggregated JSON
+   payload but skips the Slack post (useful for dry-runs / local
+   smoke).
+3. Verify by manual invoke:
+   ```pwsh
+   curl -sS -X POST https://<admin-origin>/.netlify/functions/kpi-digest
+   ```
+   Expected `200` with `{"ok": true, "forDate": "YYYY-MM-DD",
+   "sessions": <n>, "totalJoins": <n>, "totalCompleted": <n>,
+   "webhookSent": true, ...}`.
+
+Failures show up in Sentry under `tags.function:kpi-digest` (see §3.3
+alert rule). A `5xx` with `errors:[…]` in the JSON body names the
+failing step (RPC error vs. webhook POST error). Sessions list is
+capped at 10 rows in the Slack message; a context line declares any
+overflow ("…and N more sessions").
+
+### 3.9 Right-to-erasure (soft delete)
+
+Migration `020_soft_delete_and_kpi_digest.sql` adds soft-delete columns
+to `app.users` (`deleted_at`, `is_erased`, `erased_at`) and an
+`app.erase_user(p_user_id uuid, p_actor_user_id uuid default null)`
+RPC. Erasure preserves the row (so historical attempts stay joinable
+for anonymised analytics) while scrubbing PII:
+
+- `full_name`, `nickname`, `facility`, `specialty`, `profession`,
+  `email`, `claimed_auth_user_id`, `metadata` are nulled / emptied.
+- All rows in `app.user_devices` for the user are deleted (auth
+  severed).
+- `is_erased = true`, `erased_at = now()`, `deleted_at = now()`.
+- When `p_actor_user_id` is supplied, an `app.admin_audit` row is
+  written (`action='user_erased'`); automated/background erasures may
+  omit the actor and rely on the ticket system for audit trail.
+
+Leaderboard views (`app.ranked_attempt_totals_all_time` and
+`app.ranked_attempt_totals_monthly`) filter `is_erased = false`, so an
+erased user disappears from rankings immediately but their anonymised
+attempt rows still feed aggregate KPIs.
+
+To process an erasure request:
+
+```sql
+select app.erase_user(
+  '<user-uuid>'::uuid,
+  '<admin-actor-uuid>'::uuid  -- the admin handling the ticket
+);
+```
+
+Run as `service_role` (the function is `security definer` and revoked
+from `public`).

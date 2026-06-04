@@ -7,6 +7,7 @@ import {
   signAdminSessionCookie,
   verifyAdminSessionCookie,
 } from "@/lib/admin-session-cookie";
+import { REQUEST_ID_HEADER, getOrMintRequestId } from "@/lib/request-id";
 import { getMiddlewareSupabaseClient } from "@/lib/supabase-ssr";
 
 const PUBLIC_PATHS = new Set<string>([
@@ -73,7 +74,18 @@ function buildExpireRedirect(
  */
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const response = NextResponse.next({ request });
+
+  // P1.3 — mint/propagate X-Request-ID. We forward it to the downstream
+  // handler by mutating the request's *forwarded* headers (via the
+  // NextResponse.next({ request }) shape) and echo it on the response so
+  // the caller (Flutter client / curl) can correlate.
+  const requestId = getOrMintRequestId(request.headers);
+  const forwardedHeaders = new Headers(request.headers);
+  forwardedHeaders.set(REQUEST_ID_HEADER, requestId);
+  const response = NextResponse.next({
+    request: { headers: forwardedHeaders },
+  });
+  response.headers.set(REQUEST_ID_HEADER, requestId);
 
   if (isPublic(pathname)) {
     return response;
