@@ -27,6 +27,17 @@ export function LoginForm({ next }: { next: string }) {
     initialLoginState,
   );
 
+  // On a successful verify the action returns "verified" with the resolved
+  // internal destination. Do a full-page navigation (not router.push) so the
+  // request carries the freshly-set Supabase auth cookies and follows any
+  // server 307 chain (/ -> /dashboard -> owner AAL2 -> /onboarding/mfa)
+  // natively, sidestepping the Server-Action redirect/flight-parser error.
+  useEffect(() => {
+    if (verifyState.status === "verified") {
+      window.location.assign(verifyState.next);
+    }
+  }, [verifyState]);
+
   const onStep2 = requestState.status === "code_sent";
   const knownEmail = pickEmail(requestState) || pickEmail(verifyState);
   const resendAt = pickResendAt(requestState);

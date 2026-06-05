@@ -237,11 +237,16 @@ export async function verifyOtpAction(
     userAgent,
     result: "ok",
   });
-  // Supabase has set the auth cookies via the SSR client. Hand off to the
-  // callback so it can resolve admin_users.status (invited -> verified ->
-  // /onboarding, active -> /dashboard, deactivated -> /denied). B4 will
-  // implement that logic; for now redirect straight to `next`.
-  redirect(next);
+  // Supabase has set the auth cookies via the SSR client. Hand the
+  // destination back to the client instead of calling redirect() here:
+  // a Server-Action redirect whose target ("/", then -> /dashboard, then
+  // the owner AAL2 gate -> /onboarding/mfa) is re-redirected by middleware
+  // and chained page guards makes the Next.js flight parser throw
+  // "An unexpected response was received from the server." A client-side
+  // full-page navigation follows that 307 chain natively with the
+  // freshly-set auth cookies. `next` is already constrained to an internal
+  // path by safeNext(), so there is no open-redirect risk.
+  return { status: "verified", next };
 }
 
 export async function signOutAndRedirectAction() {
