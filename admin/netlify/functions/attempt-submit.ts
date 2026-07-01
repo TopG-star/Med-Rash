@@ -245,6 +245,34 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
 
     const attemptId = String((insertedAttempt as Record<string, unknown>).id);
 
+    // --- Gamification progression (migration 021) ---
+    // Accrue XP / streak / badges for this completed attempt. Runs AFTER the
+    // attempt row is committed and is strictly non-blocking: a failure here is
+    // logged but never fails the submission (the attempt is the source of
+    // record; progression is derived state we can backfill). The `progress`
+    // block is surfaced in the response so the client renders server-
+    // authoritative XP bar, streak flame, level-up, and badge unlocks instead
+    // of the legacy device-local guesses.
+    let progress: Record<string, unknown> | undefined;
+    const { data: progressRows, error: progressError } = await supabase.rpc(
+      "record_attempt_progress",
+      {
+        p_user_id: userId,
+        p_score: recomputedScore,
+        p_total: serverTotalQuestions,
+        p_mode: mode,
+        p_completed: completedAt,
+      },
+    );
+    if (progressError) {
+      console.error(
+        "[attempt-submit] record_attempt_progress rpc failed:",
+        progressError.message,
+      );
+    } else if (Array.isArray(progressRows) && progressRows[0]) {
+      progress = progressRows[0] as Record<string, unknown>;
+    }
+
     // Insert per-question answer records for analytics, using the server-
     // recomputed is_correct (not the client-supplied flag).
     // This is non-blocking: a failure here does not fail the attempt submission.
@@ -271,6 +299,11 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       score: recomputedScore,
       totalQuestions: serverTotalQuestions,
       answersRecorded: recomputedAnswers.length > 0,
+      // Server-authoritative gamification snapshot (migration 021). Shape:
+      // { xp, level, current_streak, best_streak, xp_gained, leveled_up,
+      //   newly_earned: string[] }. Undefined only if the RPC errored (rare;
+      // logged above) — the client must tolerate its absence.
+      progress,
     });
   } catch (error) {
     if (error instanceof EmailTakenError) {
