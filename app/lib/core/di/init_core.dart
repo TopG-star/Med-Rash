@@ -19,6 +19,7 @@ import '../../features/profile/repositories/participant_stats_repository.dart';
 import '../../features/profile/repositories/profile_repository.dart';
 import '../../features/profile/repositories/recovery_repository.dart';
 import '../../features/profile/storage/guest_profile_prompt_store.dart';
+import '../../features/profile/storage/server_progress_store.dart';
 import '../../features/profile/storage/streak_store.dart';
 import '../../features/quiz/repositories/netlify_supabase_quiz_repository.dart';
 import '../../features/quiz/repositories/quiz_repository.dart';
@@ -120,6 +121,9 @@ Future<void> initCore() async {
   getIt.registerLazySingleton<StreakStore>(
     () => StreakStore(preferences, eventBus: getIt<EventBus>()),
   );
+  getIt.registerLazySingleton<ServerProgressStore>(
+    () => ServerProgressStore(preferences, eventBus: getIt<EventBus>()),
+  );
   final AuthStateManager authStateManager = AuthStateManager(
     deviceIdentityService: getIt<DeviceIdentityService>(),
   );
@@ -156,6 +160,9 @@ Future<void> initCore() async {
   // Same rationale: StreakStore must observe AttemptSubmittedEvent even when
   // the participant hasn't opened Home yet (e.g. QR-deep-link → quiz → result).
   getIt<StreakStore>();
+  // P2.1 — ServerProgressStore must observe ServerProgressUpdatedEvent from the
+  // very first attempt-submit, which can happen before Home is ever opened.
+  getIt<ServerProgressStore>();
 
   // P0.1 — fire-and-forget drain of any writes that were queued by a
   // previous session (offline at the time of profile-sync, etc.). Failure

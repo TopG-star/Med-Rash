@@ -216,7 +216,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
         )
         .toList();
 
-    await _httpClient.postJson(
+    final Map<String, dynamic> response = await _httpClient.postJson(
       'attempt-submit',
       <String, Object?>{
         ...identityPayload,
@@ -238,6 +238,10 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
       // finishAttempt) and the persisted snapshot still flips to 'synced'.
       retryPolicy: RetryPolicy.standard,
     );
+    // P2.1 — surface the server-authoritative XP/streak/badge snapshot so the
+    // UI overrides its device-local guesses. Absent on offline-practice (never
+    // reaches here) and older servers (event is a no-op then).
+    _emitServerProgress(response['progress']);
   }
 
   // ---------------- Persistence helpers ----------------
@@ -780,7 +784,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
         .toList();
 
     try {
-      await _postJson(
+      final Map<String, dynamic> response = await _postJson(
         'attempt-submit',
         <String, Object?>{
           ...identityPayload,
@@ -799,6 +803,7 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
       await _store.saveCompleted(synced);
       _cachedCompleted = synced;
       _emitAttemptSubmitted(synced);
+      _emitServerProgress(response['progress']);
     } on MedRashGateException catch (error) {
       // A 409 RANKED_ATTEMPT_ALREADY_EXISTS on retry means the server already
       // has the row (the first POST landed even though the response didn't
@@ -845,6 +850,18 @@ class NetlifySupabaseQuizRepository implements QuizRepository {
         sessionId: snapshot.sessionId,
       ),
     );
+  }
+
+  /// Parses the server `progress` block (migration 021) and, when present and
+  /// well-formed, emits [ServerProgressUpdatedEvent] so [ServerProgressStore]
+  /// and the profile repository adopt authoritative XP/streak/level/badges.
+  /// Silently no-ops on a null/older-server payload.
+  void _emitServerProgress(Object? rawProgress) {
+    final ServerProgressUpdatedEvent? event =
+        ServerProgressUpdatedEvent.fromJson(rawProgress);
+    if (event != null) {
+      _eventBus.emit(event);
+    }
   }
 }
 

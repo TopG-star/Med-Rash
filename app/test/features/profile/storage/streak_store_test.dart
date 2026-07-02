@@ -88,4 +88,59 @@ void main() {
       expect(snap.lastAttemptDate, isNull);
     });
   });
+
+  group('StreakStore — server adoption (P2.1)', () {
+    test('adoptServerStreak overwrites local values verbatim', () async {
+      final StreakStore store = await makeStore();
+      // Local thinks streak is 1; server says 12.
+      await store.recordAttempt(at: DateTime.utc(2026, 5, 26));
+      await store.adoptServerStreak(
+        currentStreak: 12,
+        bestStreak: 30,
+        at: DateTime.utc(2026, 5, 26),
+      );
+      final StreakSnapshot snap = store.read(now: DateTime.utc(2026, 5, 26));
+      expect(snap.currentStreak, 12);
+      expect(snap.bestStreak, 30);
+    });
+
+    test('adoptServerStreak keeps best >= current even if server best is low',
+        () async {
+      final StreakStore store = await makeStore();
+      await store.adoptServerStreak(
+        currentStreak: 8,
+        bestStreak: 3, // malformed/lower than current
+        at: DateTime.utc(2026, 5, 26),
+      );
+      final StreakSnapshot snap = store.read(now: DateTime.utc(2026, 5, 26));
+      expect(snap.currentStreak, 8);
+      expect(snap.bestStreak, 8);
+    });
+
+    test('adopted streak is visible on the same Accra day', () async {
+      final StreakStore store = await makeStore();
+      await store.adoptServerStreak(
+        currentStreak: 5,
+        bestStreak: 5,
+        at: DateTime.utc(2026, 5, 26, 9),
+      );
+      // A read later the same UTC/Accra day still shows the adopted value.
+      final StreakSnapshot snap = store.read(now: DateTime.utc(2026, 5, 26, 22));
+      expect(snap.currentStreak, 5);
+    });
+
+    test('clear resets the server-adopted marker too', () async {
+      final StreakStore store = await makeStore();
+      await store.adoptServerStreak(
+        currentStreak: 5,
+        bestStreak: 5,
+        at: DateTime.utc(2026, 5, 26),
+      );
+      await store.clear();
+      // After clear a fresh local record starts at 1 (not blocked by the marker).
+      final StreakSnapshot snap =
+          await store.recordAttempt(at: DateTime.utc(2026, 5, 27));
+      expect(snap.currentStreak, 1);
+    });
+  });
 }

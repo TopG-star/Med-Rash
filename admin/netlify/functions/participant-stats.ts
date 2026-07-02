@@ -160,11 +160,50 @@ export async function handler(event: HandlerEvent): Promise<HandlerResponse> {
       .sort((a, b) => b.attempts - a.attempts)
       .slice(0, MAX_CATEGORY_ROWS);
 
+    // P2.1 — cold-load gamification snapshot (migration 021). Two cheap reads
+    // so Home/Profile can paint the XP bar, level pill, streak, and earned
+    // badges without waiting for the next attempt-submit. Both are best-effort:
+    // a missing progress row (participant hasn't completed an attempt yet) or a
+    // pre-021 database returns zeros/empties rather than failing the stats read.
+    let progress = { xp: 0, level: 1, currentStreak: 0, bestStreak: 0 };
+    let earnedBadgeCodes: string[] = [];
+    const [{ data: progRow }, { data: badgeRows }] = await Promise.all([
+      supabase
+        .from("user_progress")
+        .select("xp, current_streak, best_streak")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("user_badges")
+        .select("badge_code")
+        .eq("user_id", userId),
+    ]);
+    if (progRow) {
+      const xp = Number((progRow as Record<string, unknown>).xp ?? 0);
+      progress = {
+        xp,
+        level: Math.max(1, Math.floor(xp / 250) + 1),
+        currentStreak: Number(
+          (progRow as Record<string, unknown>).current_streak ?? 0,
+        ),
+        bestStreak: Number(
+          (progRow as Record<string, unknown>).best_streak ?? 0,
+        ),
+      };
+    }
+    if (Array.isArray(badgeRows)) {
+      earnedBadgeCodes = badgeRows
+        .map((r) => (r as Record<string, unknown>).badge_code)
+        .filter((c): c is string => typeof c === "string");
+    }
+
     return jsonResponse(200, {
       ok: true,
       monthlyAttempts,
       monthlyTarget: MONTHLY_ATTEMPT_TARGET,
       accuracyByCategory,
+      progress,
+      earnedBadgeCodes,
       generatedAt: new Date().toISOString(),
     });
   } catch (err) {

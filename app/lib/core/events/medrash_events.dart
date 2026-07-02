@@ -59,6 +59,58 @@ class ProfileUpdatedEvent extends MedRashEvent {
   final String specialty;
 }
 
+/// Emitted by the quiz repository when `attempt-submit` returns a
+/// server-authoritative gamification `progress` block (migration 021). This is
+/// the canonical source of XP / streak / level / badges — it overrides the
+/// device-local [StreakStore] and career-points guesses, which remain only as
+/// an offline fallback until the next successful sync.
+///
+/// Fields mirror the RPC `app.record_attempt_progress` return shape. Carries
+/// primitives + a `List<String>` of newly-earned badge codes to keep this file
+/// free of feature-layer imports.
+class ServerProgressUpdatedEvent extends MedRashEvent {
+  const ServerProgressUpdatedEvent({
+    required this.xp,
+    required this.level,
+    required this.currentStreak,
+    required this.bestStreak,
+    required this.xpGained,
+    required this.leveledUp,
+    required this.newlyEarned,
+  });
+
+  /// Builds an event from the raw `progress` JSON returned by the gate, or
+  /// `null` when the block is absent/malformed (older server, RPC failure).
+  static ServerProgressUpdatedEvent? fromJson(Object? raw) {
+    if (raw is! Map) return null;
+    final Object? xp = raw['xp'];
+    final Object? streak = raw['current_streak'];
+    // xp + current_streak are the load-bearing fields; bail if either is missing.
+    if (xp is! num || streak is! num) return null;
+    final Object? earnedRaw = raw['newly_earned'];
+    final List<String> earned = earnedRaw is List
+        ? earnedRaw.whereType<String>().toList(growable: false)
+        : const <String>[];
+    return ServerProgressUpdatedEvent(
+      xp: xp.toInt(),
+      level: (raw['level'] as num?)?.toInt() ?? 1,
+      currentStreak: streak.toInt(),
+      bestStreak: (raw['best_streak'] as num?)?.toInt() ?? streak.toInt(),
+      xpGained: (raw['xp_gained'] as num?)?.toInt() ?? 0,
+      leveledUp: raw['leveled_up'] == true,
+      newlyEarned: earned,
+    );
+  }
+
+  final int xp;
+  final int level;
+  final int currentStreak;
+  final int bestStreak;
+  final int xpGained;
+  final bool leveledUp;
+  final List<String> newlyEarned;
+}
+
 /// Emitted when the user signs out / hands the device to someone else. The
 /// participant id (and optionally the device install id) has just been
 /// rotated, so any cache keyed on identity — leaderboard snapshots, persisted

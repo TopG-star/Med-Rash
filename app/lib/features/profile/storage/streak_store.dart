@@ -38,6 +38,12 @@ class StreakSnapshot {
 class StreakStore {
   StreakStore(this._preferences, {EventBus? eventBus}) {
     if (eventBus != null) {
+      // P2.1 — the server streak (migration 021) is authoritative. When it
+      // arrives we adopt it and skip the local increment; the local
+      // AttemptSubmittedEvent path stays only as an offline fallback.
+      _serverSub = eventBus
+          .on<ServerProgressUpdatedEvent>()
+          .listen(_onServerProgress);
       _attemptSub =
           eventBus.on<AttemptSubmittedEvent>().listen(_onAttemptSubmitted);
       _identitySub =
@@ -51,9 +57,15 @@ class StreakStore {
 
   final SharedPreferences _preferences;
   StreamSubscription<AttemptSubmittedEvent>? _attemptSub;
+  StreamSubscription<ServerProgressUpdatedEvent>? _serverSub;
   StreamSubscription<IdentityResetEvent>? _identitySub;
   final StreamController<StreakSnapshot> _changes =
       StreamController<StreakSnapshot>.broadcast();
+
+  /// Set once a server snapshot has been adopted for the current Accra day, so
+  /// a subsequent local [AttemptSubmittedEvent] for the *same* submission does
+  /// not double-increment. Reset by [clear] (identity handover).
+  DateTime? _serverAdoptedForDate;
 
   /// Emits the latest snapshot whenever the persisted streak changes (record
   /// or clear). UI listens to refresh "Day Streak" KPI tiles without polling.
@@ -124,19 +136,58 @@ class StreakStore {
     return snap;
   }
 
+  /// Overwrites the persisted streak with the authoritative server values
+  /// (migration 021). The server owns the streak math, so we trust it verbatim
+  /// and stamp today's Accra date so the follow-on local event no-ops.
+  Future<void> adoptServerStreak({
+    required int currentStreak,
+    required int bestStreak,
+    DateTime? at,
+  }) async {
+    final DateTime today = _accraDate(at ?? DateTime.now());
+    await _preferences.setInt(_keyCurrent, currentStreak);
+    await _preferences.setInt(
+      _keyBest,
+      bestStreak > currentStreak ? bestStreak : currentStreak,
+    );
+    await _preferences.setString(_keyLastDateIso, today.toIso8601String());
+    _serverAdoptedForDate = today;
+    final StreakSnapshot snap = StreakSnapshot(
+      currentStreak: currentStreak,
+      bestStreak: bestStreak,
+      lastAttemptDate: today,
+    );
+    if (!_changes.isClosed) _changes.add(snap);
+  }
+
   Future<void> clear() async {
     await _preferences.remove(_keyCurrent);
     await _preferences.remove(_keyBest);
     await _preferences.remove(_keyLastDateIso);
+    _serverAdoptedForDate = null;
     if (!_changes.isClosed) _changes.add(StreakSnapshot.empty);
   }
 
+  Future<void> _onServerProgress(ServerProgressUpdatedEvent e) async {
+    await adoptServerStreak(
+      currentStreak: e.currentStreak,
+      bestStreak: e.bestStreak,
+    );
+  }
+
   Future<void> _onAttemptSubmitted(AttemptSubmittedEvent _) async {
+    // Offline fallback only: if the server already adopted a streak for today,
+    // the local increment would double-count — skip it.
+    if (_serverAdoptedForDate != null &&
+        _serverAdoptedForDate == _accraDate(DateTime.now())) {
+      return;
+    }
     await recordAttempt();
   }
 
   Future<void> dispose() async {
     await _attemptSub?.cancel();
+    await _serverSub?.cancel();
     await _identitySub?.cancel();
     await _changes.close();
   }
