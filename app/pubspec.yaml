@@ -21,7 +21,7 @@ dependencies:
   flutter_cache_manager: ^3.4.1
   # Slice B7 — client-side telemetry. DSN is supplied at build time via
   # --dart-define=SENTRY_DSN=...; when empty, SentryFlutter.init no-ops.
-  sentry_flutter: ^9.1.0
+  sentry_flutter: ^10.0.0-alpha.3
 
 dev_dependencies:
   flutter_test:
